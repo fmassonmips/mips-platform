@@ -1,0 +1,25 @@
+# Public docroot .htaccess
+
+Options -Indexes
+ServerSignature Off
+AddDefaultCharset UTF-8
+
+# Deny dotfiles
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Force HTTPS. Enable in production if TLS is not handled by a reverse proxy.
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} !=on
+#     RewriteCond %{HTTP:X-Forwarded-Proto} !https
+#     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# Strong caching for static assets
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2?|png|jpg|jpeg|gif|svg|ico)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+</IfModule>
