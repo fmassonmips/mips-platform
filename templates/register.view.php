@@ -13,21 +13,29 @@
 </head>
 <body class="auth-body">
   <main class="auth-card" aria-labelledby="auth-title">
-    <h1 id="auth-title">Sign in</h1>
-    <p class="auth-subtitle">Access the MIPS dashboard.</p>
+    <h1 id="auth-title">Create account</h1>
+    <p class="auth-subtitle">Register for the MIPS dashboard.</p>
 
-    <?php if (isset($_GET['registered']) && $_GET['registered'] === '1'): ?>
-      <p class="success" role="status">Account created successfully. An administrator will activate your account.</p>
-    <?php endif; ?>
+    <form id="register-form" novalidate autocomplete="on">
+      <div class="field">
+        <label for="name">Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          autocomplete="name"
+          required
+          maxlength="120"
+          spellcheck="false">
+      </div>
 
-    <form id="login-form" novalidate autocomplete="on">
       <div class="field">
         <label for="email">Email</label>
         <input
           type="email"
           id="email"
           name="email"
-          autocomplete="username"
+          autocomplete="email"
           required
           spellcheck="false"
           autocapitalize="off">
@@ -39,18 +47,18 @@
           type="password"
           id="password"
           name="password"
-          autocomplete="current-password"
+          autocomplete="new-password"
           required
           minlength="8">
       </div>
 
-      <button type="submit" id="submit-btn" class="btn-primary">Sign in</button>
+      <button type="submit" id="submit-btn" class="btn-primary">Create account</button>
 
       <p id="error-message" class="error" role="alert" hidden></p>
     </form>
 
-    <p class="auth-link">Don&rsquo;t have an account? <a href="/register.php">Create one</a></p>
+    <p class="auth-link">Already have an account? <a href="/login.php">Sign in</a></p>
   </main>
-  <script src="/assets/js/login.js"></script>
+  <script src="/assets/js/register.js"></script>
 </body>
 </html>

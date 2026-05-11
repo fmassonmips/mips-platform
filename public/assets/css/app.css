@@ -65,7 +65,8 @@ label {
 }
 
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="text"] {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--color-border);
@@ -77,7 +78,8 @@ input[type="password"] {
 }
 
 input[type="email"]:focus,
-input[type="password"]:focus {
+input[type="password"]:focus,
+input[type="text"]:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.15);
@@ -116,6 +118,29 @@ input[type="password"]:focus {
     color: var(--color-error);
     font-size: 14px;
     text-align: center;
+}
+
+.success {
+    margin-top: 16px;
+    color: #1a7f37;
+    font-size: 14px;
+    text-align: center;
+}
+
+.auth-link {
+    margin-top: 16px;
+    font-size: 14px;
+    text-align: center;
+    color: var(--color-muted);
+}
+
+.auth-link a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
 }
 
 /* -------- Dashboard layout -------- */
