@@ -39,4 +39,17 @@ final class Validator
         }
         return null;
     }
+
+    /** Returns null when valid, an error message otherwise. */
+    public static function name(string $name): ?string
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return 'Name is required.';
+        }
+        if (strlen($name) > 120) {
+            return 'Name must be no more than 120 characters.';
+        }
+        return null;
+    }
 }
