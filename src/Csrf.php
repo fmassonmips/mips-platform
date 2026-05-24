@@ -32,4 +32,16 @@ final class Csrf
         }
         return hash_equals((string) $_SESSION['csrf_token'], $token);
     }
+
+    /**
+     * Validate the token and abort with 403 if invalid.
+     * Used by form-based controllers: Csrf::validate($_POST['csrf_token'] ?? '').
+     */
+    public static function validate(string $token): void
+    {
+        if (!self::verify($token)) {
+            http_response_code(403);
+            exit('Invalid or missing CSRF token.');
+        }
+    }
 }

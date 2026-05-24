@@ -1,20 +1,60 @@
-# Root .htaccess
-# Ideally, set Apache DocumentRoot directly to the /public directory.
-# This file is a fallback that redirects every request into /public so
-# nothing outside the public folder is ever served.
+# Root .htaccess — ICD Soft shared hosting (Apache + PHP 8.x)
+# Project root IS the web root (public_html).
 
+# ── Directory listing ──────────────────────────────────────────────────────────
 Options -Indexes
 ServerSignature Off
+
+# ── PHP upload / memory limits (mod_php / CGI) ────────────────────────────────
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 16M
+    php_value post_max_size       20M
+    php_value memory_limit        128M
+    php_value max_execution_time  60
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 16M
+    php_value post_max_size       20M
+    php_value memory_limit        128M
+    php_value max_execution_time  60
+</IfModule>
+
+# ── Block sensitive files at the root ─────────────────────────────────────────
+<FilesMatch "^(composer\.(json|lock)|\.env.*|\.git.*|.*\.md|.*\.sql|config\.php)$">
+    Require all denied
+</FilesMatch>
+
+# ── Protect internal directories from HTTP access (return 403) ────────────────
+# Belt-and-suspenders: deny via mod_authz_core (Apache 2.4+) AND mod_rewrite.
+# Both layers are needed because shared hosts sometimes have AllowOverride limits.
+
+# Apache 2.4+ native deny — fired before mod_rewrite even runs.
+# DirectoryMatch is relative to DocumentRoot on shared hosting .htaccess.
+<IfModule mod_authz_core.c>
+    <If "%{REQUEST_URI} =~ m|^/(src|app|sql|cron|storage)(/|$)|">
+        Require all denied
+    </If>
+</IfModule>
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Do not rewrite requests that already target /public/
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    # Block direct HTTP requests to protected directories — return 403
+    RewriteRule ^(src|app|sql|cron|storage)(/.*)?$ - [F,L]
+
+    # Allow install.php to be reached directly (no rewrite to front controller)
+    RewriteRule ^install\.php$ - [L]
+
+    # Do not rewrite actual files or directories that exist on disk
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Send everything else to the front controller
+    RewriteRule ^ index.php [L]
 </IfModule>
 
-# Block access to sensitive files at the repo root
-<FilesMatch "^(composer\.(json|lock)|\.env.*|\.git.*|README.*|.*\.md|.*\.sql)$">
-    Require all denied
-</FilesMatch>
+# Fallback for hosts without mod_rewrite: show index.php, no directory listing
+<IfModule !mod_rewrite.c>
+    DirectoryIndex index.php
+</IfModule>
