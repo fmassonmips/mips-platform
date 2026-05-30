@@ -1,0 +1,8 @@
+{
+  "extraKnownMarketplaces": {
+    "daymade-skills": {
+      "source": "github",
+      "repo": "daymade/claude-code-skills"
+    }
+  }
+}
