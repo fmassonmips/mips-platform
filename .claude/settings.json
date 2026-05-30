@@ -7,6 +7,7 @@
   },
   "enabledPlugins": {
     "daymade-skill@daymade-skills": true,
-    "daymade-docs@daymade-skills": true
+    "daymade-docs@daymade-skills": true,
+    "daymade-claude-code@daymade-skills": true
   }
 }
