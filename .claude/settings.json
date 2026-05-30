@@ -4,5 +4,8 @@
       "source": "github",
       "repo": "daymade/claude-code-skills"
     }
+  },
+  "enabledPlugins": {
+    "daymade-skill@daymade-skills": true
   }
 }
