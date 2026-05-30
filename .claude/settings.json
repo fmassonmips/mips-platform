@@ -6,6 +6,7 @@
     }
   },
   "enabledPlugins": {
-    "daymade-skill@daymade-skills": true
+    "daymade-skill@daymade-skills": true,
+    "daymade-docs@daymade-skills": true
   }
 }
