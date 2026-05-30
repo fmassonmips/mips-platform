@@ -1,0 +1,39 @@
+{
+  "extraKnownMarketplaces": {
+    "daymade-skills": {
+      "source": "github",
+      "repo": "daymade/claude-code-skills"
+    }
+  },
+  "enabledPlugins": {
+    "daymade-skill@daymade-skills": true,
+    "daymade-docs@daymade-skills": true,
+    "daymade-claude-code@daymade-skills": true,
+    "github-ops@daymade-skills": true,
+    "teams-channel-post-writer@daymade-skills": true,
+    "repomix-unmixer@daymade-skills": true,
+    "llm-icon-finder@daymade-skills": true,
+    "cli-demo-generator@daymade-skills": true,
+    "cloudflare-troubleshooting@daymade-skills": true,
+    "ui-designer@daymade-skills": true,
+    "youtube-downloader@daymade-skills": true,
+    "repomix-safe-mixer@daymade-skills": true,
+    "daymade-audio@daymade-skills": true,
+    "video-comparer@daymade-skills": true,
+    "qa-expert@daymade-skills": true,
+    "prompt-optimizer@daymade-skills": true,
+    "promptfoo-evaluation@daymade-skills": true,
+    "iOS-APP-developer@daymade-skills": true,
+    "twitter-reader@daymade-skills": true,
+    "github-contributor@daymade-skills": true,
+    "windows-remote-desktop-connection-doctor@daymade-skills": true,
+    "product-analysis@daymade-skills": true,
+    "financial-data-collector@daymade-skills": true,
+    "excel-automation@daymade-skills": true,
+    "capture-screen@daymade-skills": true,
+    "scrapling-skill@daymade-skills": true,
+    "ima-copilot@daymade-skills": true,
+    "douban-skill@daymade-skills": true,
+    "terraform-skill@daymade-skills": true
+  }
+}
