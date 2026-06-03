@@ -7,9 +7,20 @@ declare(strict_types=1);
 
 return [
     'app' => [
-        'name'    => 'MIPS Dashboard',
+        'name'    => 'MIPS Assurance',
         // 'development' enables error display. Use 'production' on live servers.
         'env'     => 'production',
+        // Currency used across the platform (Mauritian rupee by default).
+        'currency_symbol' => 'Rs',
+        'currency_code'   => 'MUR',
+    ],
+
+    'i18n' => [
+        'default'   => 'en',
+        // Locales available in the language selector. Keys map to src/lang/<key>.php
+        'available' => ['en' => 'English', 'fr' => 'Français'],
+        // Cookie remembering the visitor's language choice.
+        'cookie'    => 'mips_lang',
     ],
 
     'db' => [
