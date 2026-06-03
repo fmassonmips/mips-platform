@@ -65,3 +65,6 @@ if ($isHttps) {
 
 // Start the secure session.
 App\Session::start($config['session']);
+
+// Resolve the active locale (EN/FR) and load its messages.
+App\I18n::init($config['i18n'] ?? []);

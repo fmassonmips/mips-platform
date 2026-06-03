@@ -9,6 +9,15 @@ AddDefaultCharset UTF-8
     Require all denied
 </FilesMatch>
 
+# Map extensionless API routes to their PHP handler, e.g. /api/clients -> /api/clients.php
+# Only applies when the requested path is not already a real file or directory.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(api/.+)$ $1.php [L]
+</IfModule>
+
 # Force HTTPS. Enable in production if TLS is not handled by a reverse proxy.
 # <IfModule mod_rewrite.c>
 #     RewriteEngine On
