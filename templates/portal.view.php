@@ -33,6 +33,13 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
   <main class="app-main">
 
+    <?php if ($sections['kpis']): ?>
+    <section class="card portal-section" data-section="kpis">
+      <h2>Dashboard</h2>
+      <div id="kpi-grid" class="muted">Loading…</div>
+    </section>
+    <?php endif; ?>
+
     <?php if ($sections['merchant']): ?>
     <section class="card portal-section" data-section="merchant">
       <h2>Merchant onboarding</h2>
@@ -101,6 +108,19 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
         <button class="btn-secondary" type="submit">Simulate PAID</button>
       </form>
       <div class="notice" id="finance-notice"></div>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($sections['reconciliation']): ?>
+    <section class="card portal-section" data-section="reconciliation">
+      <h2>Reconciliation</h2>
+      <p class="muted">Three-way match (transaction ↔ settlement ↔ bank file). Without a bank file it reconciles against settlements; matched items advance to RECONCILED.</p>
+      <form id="recon-form" class="row">
+        <div class="field"><label>Merchant reference (optional)</label><input type="text" name="merchant_reference" placeholder="all merchants"></div>
+        <button class="btn-primary" type="submit">Run reconciliation</button>
+      </form>
+      <div class="notice" id="recon-notice"></div>
+      <div id="recon-result"></div>
     </section>
     <?php endif; ?>
 

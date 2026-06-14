@@ -162,6 +162,57 @@
         });
     }
 
+    // ---- KPI dashboard ----
+    async function initKpis() {
+        const el = document.getElementById('kpi-grid');
+        const res = await api('GET', '/api/reports/kpis.php');
+        const k = res.data.kpis;
+        if (!k) { el.innerHTML = '<p class="muted">No data.</p>'; return; }
+        const cards = [
+            ['Total merchants', k.merchants_total],
+            ['Active merchants', k.merchants_active],
+            ['Pending KYC', k.merchants_pending_kyc],
+            ['Approved merchants', k.merchants_approved],
+            ['Transactions', k.transactions_total],
+            ['Successful', k.transactions_successful],
+            ['Failed', k.transactions_failed],
+            ['Volume (' + k.currency + ')', k.volume_display],
+            ['Settlements', k.settlements_total],
+            ['Settled net (' + k.currency + ')', k.settlements_net_display],
+            ['Fees generated (' + k.currency + ')', k.fees_generated_display],
+            ['Pending reconciliation', k.pending_reconciliation],
+            ['Settlement exceptions', k.settlement_exceptions],
+        ];
+        el.className = 'kpi-grid';
+        el.innerHTML = cards.map(([label, value]) =>
+            '<div class="kpi"><div class="kpi-value">' + value + '</div><div class="kpi-label">' + label + '</div></div>'
+        ).join('');
+    }
+
+    // ---- Reconciliation ----
+    function initReconciliation() {
+        const form = document.getElementById('recon-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = Object.fromEntries(new FormData(form).entries());
+            const body = {};
+            if (fd.merchant_reference) body.merchant_reference = fd.merchant_reference;
+            const r = await api('POST', '/api/reconciliation/run.php', body);
+            if (r.ok) {
+                const s = r.data.reconciliation;
+                notice(document.getElementById('recon-notice'),
+                    'Batch ' + s.batch_reference + ' (' + s.source + ')', 'success');
+                document.getElementById('recon-result').innerHTML =
+                    '<table class="data"><tr><th>Matched</th><td>' + badge('MATCHED') + ' ' + s.matched + '</td></tr>'
+                    + '<tr><th>Exceptions</th><td>' + (s.exceptions ? badge('FAILED') : badge('PAID')) + ' ' + s.exceptions + '</td></tr>'
+                    + '<tr><th>Total items</th><td>' + s.total + '</td></tr></table>';
+            } else {
+                notice(document.getElementById('recon-notice'), r.data.error || 'Failed', 'error');
+                document.getElementById('recon-result').innerHTML = '';
+            }
+        });
+    }
+
     // ---- Routing table ----
     async function initRouting() {
         const el = document.getElementById('routing-table');
@@ -172,9 +223,11 @@
             + '</tbody></table>';
     }
 
+    if (document.querySelector('[data-section="kpis"]')) initKpis();
     if (document.querySelector('[data-section="merchant"]')) initMerchant();
     if (document.querySelector('[data-section="pay"]')) initPay();
     if (document.querySelector('[data-section="compliance"]')) initCompliance();
     if (document.querySelector('[data-section="finance"]')) initFinance();
+    if (document.querySelector('[data-section="reconciliation"]')) initReconciliation();
     if (document.querySelector('[data-section="routing"]')) initRouting();
 })();

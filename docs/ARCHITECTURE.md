@@ -312,9 +312,9 @@ Pending reconciliation · Settlement exceptions. (Derivable from
 | 4 | Merchant onboarding & KYC | ✅ service + API + portal (verified e2e) |
 | 5 | Payments & routing | ✅ engine + providers + service + API + portal |
 | 6 | Settlement engine | ✅ batch settle + state transitions (verified e2e) |
-| 7 | Reconciliation engine | ⏳ schema + taxonomy ready |
-| 8 | Dashboards | ◑ role-aware portal + routing/KPI APIs · full KPI dashboard ⏳ |
-| 9 | Testing | ◑ scenarios documented · slice verified end-to-end |
+| 7 | Reconciliation engine | ✅ 3-way match + exception taxonomy (verified e2e) |
+| 8 | Dashboards | ✅ role-aware portal + KPI dashboard + routing view |
+| 9 | Testing | ◑ scenarios documented · slices verified end-to-end |
 | 10 | Deployment | ✅ Docker + guides |
 
 ### Vertical slice (implemented & verified end-to-end)
@@ -336,6 +336,18 @@ events) and was exercised against a live MariaDB:
 
 Endpoints (file-based, under `public/api/`): `merchants/{create,show,pending}`,
 `kyc/submit`, `compliance/{decision,score}`, `payments/{create,show,simulate,routing}`,
-`settlements/{create,list}`. The role-aware portal lives at `public/portal.php`.
+`settlements/{create,list}`, `reconciliation/{run,list}`, `reports/kpis`. The
+role-aware portal lives at `public/portal.php`.
+
+### Reconciliation & KPIs (implemented & verified)
+
+`ReconciliationService` performs 3-way matching (transaction ↔ settlement ↔ bank
+file). Without a supplied bank file it reconciles against settlements (happy
+path → matched → `SETTLED`→`RECONCILED`); a supplied bank file with discrepancies
+yields the exception taxonomy (`MISSING_SETTLEMENT`, `DUPLICATE_SETTLEMENT`,
+`AMOUNT_MISMATCH`, `REFERENCE_MISMATCH`), recorded in `reconciliation_items` and
+surfaced as `transactions.reconciliation_status`. `ReportService` derives the
+admin KPIs (merchants, transactions, volume, settlements, fees, pending
+reconciliation, settlement exceptions) live from the operational tables.
 
 See `COMPLIANCE.md`, `API.md`, `INSTALL_DEPLOY.md`, `TEST_SCENARIOS.md`.

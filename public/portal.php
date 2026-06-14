@@ -19,11 +19,13 @@ $page_title = 'Portal';
 $role       = Role::fromRaw((string) ($user['role'] ?? 'consumer'));
 
 $sections = [
-    'merchant'   => Rbac::can($user, 'merchant.self.update'),
-    'pay'        => Rbac::can($user, 'payment.initiate'),
-    'compliance' => Rbac::can($user, 'kyc.decide'),
-    'finance'    => Rbac::can($user, 'settlement.batch.manage'),
-    'routing'    => Rbac::can($user, 'platform.routing.manage'),
+    'merchant'       => Rbac::can($user, 'merchant.self.update'),
+    'pay'            => Rbac::can($user, 'payment.initiate'),
+    'compliance'     => Rbac::can($user, 'kyc.decide'),
+    'finance'        => Rbac::can($user, 'settlement.batch.manage'),
+    'reconciliation' => Rbac::can($user, 'reconciliation.manage'),
+    'kpis'           => Rbac::can($user, 'report.read.all'),
+    'routing'        => Rbac::can($user, 'platform.routing.manage'),
 ];
 
 $disclaimer = (string) ($GLOBALS['config']['platform']['legal_disclaimer'] ?? '');
