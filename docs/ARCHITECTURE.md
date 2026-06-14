@@ -157,7 +157,11 @@ src/
     ProviderRegistry.php
   Routing/
     PaymentRouter.php       # NEW — configurable routing engine
-  Controllers/             # auth controllers exist; module controllers are next phase
+  Services/                # NEW — persistence + orchestration over providers
+    MerchantService.php ComplianceService.php PaymentService.php SettlementService.php
+  Support/
+    Money.php Reference.php Http.php Audit.php   # Http/Audit NEW
+  Controllers/             # auth (existing) + Merchant/Kyc/Compliance/Payment/Settlement (NEW)
 ```
 
 ### Frontend structure (`/public`, `/templates`)
@@ -302,15 +306,36 @@ Pending reconciliation · Settlement exceptions. (Derivable from
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 1 | Architecture & file structure | ✅ this branch |
-| 2 | Database & schema (MariaDB) | ✅ this branch |
+| 1 | Architecture & file structure | ✅ |
+| 2 | Database & schema (MariaDB) | ✅ |
 | 3 | Auth & RBAC | ✅ auth existing · RBAC added |
-| 4 | Merchant onboarding & KYC | ⏳ schema + provider verbs ready |
-| 5 | Payments & routing | ✅ engine + providers · ⏳ service/API |
-| 6 | Settlement engine | ⏳ schema + provider verb ready |
+| 4 | Merchant onboarding & KYC | ✅ service + API + portal (verified e2e) |
+| 5 | Payments & routing | ✅ engine + providers + service + API + portal |
+| 6 | Settlement engine | ✅ batch settle + state transitions (verified e2e) |
 | 7 | Reconciliation engine | ⏳ schema + taxonomy ready |
-| 8 | Dashboards | ⏳ |
-| 9 | Testing | ⏳ scenarios documented |
+| 8 | Dashboards | ◑ role-aware portal + routing/KPI APIs · full KPI dashboard ⏳ |
+| 9 | Testing | ◑ scenarios documented · slice verified end-to-end |
 | 10 | Deployment | ✅ Docker + guides |
+
+### Vertical slice (implemented & verified end-to-end)
+
+The onboarding → KYC → Pay by Bank → settlement path is wired through every
+layer (controllers → services → providers → router → DB → state machine →
+events) and was exercised against a live MariaDB:
+
+1. **Merchant** creates account (PassPass issues `regulated_merchant_id`) and
+   submits KYC → `DRAFT → SUBMITTED`.
+2. **Compliance officer** (PassPass) scores risk and approves → `APPROVED` /
+   `CLEARED`. Merchants cannot self-approve (RBAC `403`); un-cleared merchants
+   cannot be paid (compliance gate `422`).
+3. **Consumer** initiates Pay by Bank → routed to `passpass`, fee computed from
+   `fee_rules`, transaction `CREATED → PROCESSING`, `regulated_transaction_id`
+   issued. Idempotency key dedupes retries.
+4. **Finance officer** confirms the provider callback (sandbox simulate) →
+   `PAID`, then settles → `SETTLED`, with a settlement batch + net payout.
+
+Endpoints (file-based, under `public/api/`): `merchants/{create,show,pending}`,
+`kyc/submit`, `compliance/{decision,score}`, `payments/{create,show,simulate,routing}`,
+`settlements/{create,list}`. The role-aware portal lives at `public/portal.php`.
 
 See `COMPLIANCE.md`, `API.md`, `INSTALL_DEPLOY.md`, `TEST_SCENARIOS.md`.

@@ -28,8 +28,13 @@ final class Session
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_httponly', '1');
         ini_set('session.use_trans_sid', '0');
-        ini_set('session.sid_length', '64');
-        ini_set('session.sid_bits_per_character', '6');
+        // sid_length / sid_bits_per_character were deprecated in PHP 8.4 (the
+        // engine now uses secure defaults). Only set them on older versions to
+        // avoid emitting E_DEPRECATED into responses.
+        if (PHP_VERSION_ID < 80400) {
+            ini_set('session.sid_length', '64');
+            ini_set('session.sid_bits_per_character', '6');
+        }
 
         session_name((string) $cfg['name']);
         session_set_cookie_params([

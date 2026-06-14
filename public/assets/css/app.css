@@ -199,3 +199,48 @@ code {
     border-radius: 4px;
     font-size: 0.92em;
 }
+
+/* -------- PassPass portal -------- */
+.disclaimer {
+    max-width: 960px;
+    margin: 16px auto 0;
+    padding: 10px 16px;
+    background: #fff8e6;
+    border: 1px solid #f3e1a9;
+    border-radius: 8px;
+    color: #7a5d00;
+    font-size: 13px;
+}
+
+.portal-section { margin-bottom: 24px; }
+.portal-section h2 { font-size: 18px; }
+.muted { color: var(--color-muted); font-size: 14px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.row .field { flex: 1 1 180px; margin-bottom: 12px; }
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--color-border);
+    background: #f0f1f3;
+    color: var(--color-text);
+}
+.badge.ok      { background: #e6f4ea; border-color: #b7e1c2; color: #1a7f37; }
+.badge.warn    { background: #fff8e6; border-color: #f3e1a9; color: #7a5d00; }
+.badge.danger  { background: #fdecea; border-color: #f5c2c0; color: #c5221f; }
+.badge.info    { background: #e8f0fe; border-color: #c3d6fb; color: #1a4fce; }
+
+table.data { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+table.data th { color: var(--color-muted); font-weight: 600; }
+
+.notice { margin-top: 12px; font-size: 14px; }
+.notice.error { color: var(--color-error); text-align: left; }
+.notice.success { color: #1a7f37; text-align: left; }
+
+.btn-sm { padding: 5px 10px; font-size: 13px; }
+.stack > * + * { margin-top: 8px; }

@@ -17,6 +17,21 @@ AddDefaultCharset UTF-8
 #     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # </IfModule>
 
+# Extensionless routing: map /api/foo -> /api/foo.php when the file exists.
+# This makes clean URLs work explicitly rather than relying on MultiViews.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.+?)/?$ $1.php [L]
+</IfModule>
+
+# Disable MultiViews so the explicit rewrite above is the single source of truth.
+<IfModule mod_negotiation.c>
+    Options -MultiViews
+</IfModule>
+
 # Strong caching for static assets
 <IfModule mod_headers.c>
     <FilesMatch "\.(css|js|woff2?|png|jpg|jpeg|gif|svg|ico)$">

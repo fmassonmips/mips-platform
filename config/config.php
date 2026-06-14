@@ -111,8 +111,9 @@ return [
         'idle_timeout' => 1800,     // 30 min of inactivity = auto logout
         'path'         => '/',
         'domain'       => '',
-        // MUST be true over HTTPS in production.
-        'secure'       => true,
+        // MUST be true over HTTPS in production. Set SESSION_SECURE=0 only for
+        // local HTTP development behind no TLS.
+        'secure'       => (bool) $env('SESSION_SECURE', true),
         'httponly'     => true,
         'samesite'     => 'Lax',    // 'Strict' is even safer if you don't use cross-site links
     ],

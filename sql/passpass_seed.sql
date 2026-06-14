@@ -30,6 +30,7 @@ INSERT INTO users (email, password_hash, name, role, is_active) VALUES
     ('compliance@passpass.test', '$2y$12$jeRa/sKMFiQgFVA4vq5v9.eGOQezewMHCN8ljxOuN6svf9sIwYeAS', 'Compliance Officer', 'compliance_officer', 1),
     ('finance@mipsit.test',      '$2y$12$jeRa/sKMFiQgFVA4vq5v9.eGOQezewMHCN8ljxOuN6svf9sIwYeAS', 'Finance Officer',    'finance_officer',    1),
     ('merchant@demo.test',       '$2y$12$jeRa/sKMFiQgFVA4vq5v9.eGOQezewMHCN8ljxOuN6svf9sIwYeAS', 'Demo Merchant',      'merchant',           1),
+    ('newmerchant@demo.test',    '$2y$12$jeRa/sKMFiQgFVA4vq5v9.eGOQezewMHCN8ljxOuN6svf9sIwYeAS', 'New Merchant',       'merchant',           1),
     ('consumer@demo.test',       '$2y$12$jeRa/sKMFiQgFVA4vq5v9.eGOQezewMHCN8ljxOuN6svf9sIwYeAS', 'Demo Consumer',      'consumer',           1)
 ON DUPLICATE KEY UPDATE
     password_hash = VALUES(password_hash),

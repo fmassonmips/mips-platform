@@ -81,6 +81,12 @@ normalised results) are real.
 
 ## Status
 
-Phase 1–3 delivered (architecture, schema, RBAC), payment routing engine +
-provider abstractions in place. Module APIs and portal UIs are the next phases —
-see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.
+Phases 1–6 delivered. The **onboarding → KYC → Pay by Bank → settlement** path is
+wired through every layer (controllers → services → providers → router → DB →
+state machine → events) and verified end-to-end against a live MariaDB. A
+role-aware portal (`public/portal.php`) drives the flow for merchant, consumer,
+compliance, finance and admin users.
+
+Next: reconciliation engine, full KPI dashboards, remaining product surfaces
+(links/QR/virtual credentials), and an automated test suite. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.
