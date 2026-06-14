@@ -87,6 +87,10 @@ state machine → events) and verified end-to-end against a live MariaDB. A
 role-aware portal (`public/portal.php`) drives the flow for merchant, consumer,
 compliance, finance and admin users.
 
-Next: reconciliation engine, full KPI dashboards, remaining product surfaces
-(links/QR/virtual credentials), and an automated test suite. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.
+All MVP payment products are implemented and verified end-to-end: Pay by Bank,
+Payment Links (with a hosted `/pay.php` checkout), Merchant QR (static/dynamic/
+request), and Virtual Payment Credentials/aliases — alongside settlement and the
+reconciliation engine + KPI dashboard.
+
+Next: merchant API keys with HMAC auth, real provider integrations, and an
+automated test suite. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.

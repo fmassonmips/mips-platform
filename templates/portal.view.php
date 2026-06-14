@@ -64,6 +64,35 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     </section>
     <?php endif; ?>
 
+    <?php if ($sections['links']): ?>
+    <section class="card portal-section" data-section="links">
+      <h2>Payment links</h2>
+      <form id="link-form" class="row">
+        <div class="field"><label>Amount (MUR, blank = payer chooses)</label><input type="text" name="amount" placeholder="optional"></div>
+        <div class="field"><label>Description</label><input type="text" name="description" placeholder="e.g. Invoice #42"></div>
+        <button class="btn-primary" type="submit">Create link</button>
+      </form>
+      <div class="notice" id="link-notice"></div>
+      <div id="link-list"></div>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($sections['qr']): ?>
+    <section class="card portal-section" data-section="qr">
+      <h2>Merchant QR</h2>
+      <form id="qr-form" class="row">
+        <div class="field"><label>Type</label>
+          <input type="text" name="qr_type" value="DYNAMIC" list="qrtypes">
+          <datalist id="qrtypes"><option value="STATIC"><option value="DYNAMIC"><option value="REQUEST"></datalist>
+        </div>
+        <div class="field"><label>Amount (MUR, required unless STATIC)</label><input type="text" name="amount" placeholder="e.g. 250.00"></div>
+        <button class="btn-primary" type="submit">Create QR</button>
+      </form>
+      <div class="notice" id="qr-notice"></div>
+      <div id="qr-list"></div>
+    </section>
+    <?php endif; ?>
+
     <?php if ($sections['pay']): ?>
     <section class="card portal-section" data-section="pay">
       <h2>Pay by Bank</h2>
@@ -83,6 +112,30 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
       </form>
       <div class="notice" id="pay-notice"></div>
       <div id="pay-result"></div>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($sections['credentials']): ?>
+    <section class="card portal-section" data-section="credentials">
+      <h2>Virtual payment credentials</h2>
+      <p class="muted">Aliases and virtual credentials (opaque identifiers — never a real card; no PAN stored).</p>
+      <form id="alias-form" class="row">
+        <div class="field"><label>Alias</label><input type="text" name="alias" placeholder="@yourhandle"></div>
+        <div class="field"><label>Type</label>
+          <input type="text" name="alias_type" value="HANDLE" list="aliastypes">
+          <datalist id="aliastypes"><option value="HANDLE"><option value="PHONE"><option value="EMAIL"><option value="VPA"></datalist>
+        </div>
+        <button class="btn-secondary" type="submit">Add alias</button>
+      </form>
+      <form id="cred-form" class="row" style="margin-top:8px">
+        <div class="field"><label>Credential type</label>
+          <input type="text" name="type" value="BANK_ROUTING" list="credtypes">
+          <datalist id="credtypes"><option value="BANK_ROUTING"><option value="PAYMENT_ALIAS"><option value="QR_PROFILE"><option value="CARD_TOKEN"><option value="WALLET"></datalist>
+        </div>
+        <button class="btn-secondary" type="submit">Issue credential</button>
+      </form>
+      <div class="notice" id="cred-notice"></div>
+      <div id="cred-overview"></div>
     </section>
     <?php endif; ?>
 

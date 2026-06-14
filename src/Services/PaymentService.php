@@ -84,10 +84,10 @@ final class PaymentService
             'INSERT INTO transactions
                 (transaction_reference, regulated_entity, regulated_merchant_id, merchant_id, consumer_id,
                  payment_type, amount_minor, fee_minor, net_minor, currency, status,
-                 merchant_reference, source, idempotency_key, metadata, created_at, updated_at)
+                 merchant_reference, source, source_reference, idempotency_key, metadata, created_at, updated_at)
              VALUES
                 (:ref, :entity, :rmid, :mid, :cid, :ptype, :amount, :fee, :net, :cur, :status,
-                 :mref, :source, :idem, :meta, NOW(), NOW())'
+                 :mref, :source, :sref, :idem, :meta, NOW(), NOW())'
         );
         $stmt->execute([
             ':ref'    => $reference,
@@ -103,6 +103,7 @@ final class PaymentService
             ':status' => TransactionStatus::Created->value,
             ':mref'   => $input['merchant_reference_external'] ?? null,
             ':source' => strtoupper((string) ($input['source'] ?? 'API')),
+            ':sref'   => $input['source_reference'] ?? null,
             ':idem'   => $idempotencyKey,
             ':meta'   => isset($input['metadata']) ? json_encode($input['metadata'], JSON_UNESCAPED_SLASHES) : null,
         ]);

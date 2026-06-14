@@ -113,6 +113,82 @@
         });
     }
 
+    // ---- Payment links ----
+    async function refreshLinks() {
+        const res = await api('GET', '/api/links/list.php');
+        const list = res.data.links || [];
+        const el = document.getElementById('link-list');
+        if (!list.length) { el.innerHTML = '<p class="muted">No links yet.</p>'; return; }
+        el.innerHTML = '<table class="data"><thead><tr><th>Link</th><th>Amount</th><th>Uses</th><th>Pay URL</th></tr></thead><tbody>'
+            + list.map((l) => '<tr><td><code>' + l.link_reference + '</code></td>'
+                + '<td>' + (l.amount_display ? l.amount_display + ' ' + l.currency : 'payer-entered') + '</td>'
+                + '<td>' + l.uses + (l.max_uses ? '/' + l.max_uses : '') + '</td>'
+                + '<td><a href="' + l.pay_url + '" target="_blank">' + l.pay_url + '</a></td></tr>').join('')
+            + '</tbody></table>';
+    }
+    function initLinks() {
+        const form = document.getElementById('link-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(form).entries());
+            const r = await api('POST', '/api/links/create.php', body);
+            if (r.ok) { notice(document.getElementById('link-notice'), 'Created ' + r.data.link.pay_url, 'success'); form.reset(); refreshLinks(); }
+            else notice(document.getElementById('link-notice'), r.data.error || 'Failed', 'error');
+        });
+        refreshLinks();
+    }
+
+    // ---- Merchant QR ----
+    async function refreshQr() {
+        const res = await api('GET', '/api/qr/list.php');
+        const list = res.data.qr || [];
+        const el = document.getElementById('qr-list');
+        if (!list.length) { el.innerHTML = '<p class="muted">No QR profiles yet.</p>'; return; }
+        el.innerHTML = '<table class="data"><thead><tr><th>QR</th><th>Type</th><th>Amount</th></tr></thead><tbody>'
+            + list.map((q) => '<tr><td><code>' + q.qr_reference + '</code></td><td>' + q.qr_type + '</td>'
+                + '<td>' + (q.amount_display ? q.amount_display + ' ' + q.currency : 'open') + '</td></tr>').join('')
+            + '</tbody></table>';
+    }
+    function initQr() {
+        const form = document.getElementById('qr-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = Object.fromEntries(new FormData(form).entries());
+            const r = await api('POST', '/api/qr/create.php', body);
+            if (r.ok) { notice(document.getElementById('qr-notice'), 'Created ' + r.data.qr.qr_reference, 'success'); form.reset(); refreshQr(); }
+            else notice(document.getElementById('qr-notice'), r.data.error || 'Failed', 'error');
+        });
+        refreshQr();
+    }
+
+    // ---- Virtual credentials ----
+    async function refreshCreds() {
+        const res = await api('GET', '/api/credentials/overview.php');
+        const el = document.getElementById('cred-overview');
+        const aliases = (res.data.aliases || []).map((a) => '<span class="badge info">' + a.alias + ' (' + a.alias_type + ')</span>').join(' ');
+        const creds = (res.data.credentials || []).map((c) => '<span class="badge">' + c.type + ' · ' + c.credential_reference + '</span>').join(' ');
+        el.innerHTML = '<p class="muted">Profile <code>' + (res.data.profile_reference || '') + '</code></p>'
+            + '<div class="stack"><div>' + (aliases || '<span class="muted">no aliases</span>') + '</div>'
+            + '<div>' + (creds || '<span class="muted">no credentials</span>') + '</div></div>';
+    }
+    function initCredentials() {
+        const aliasForm = document.getElementById('alias-form');
+        const credForm = document.getElementById('cred-form');
+        aliasForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const r = await api('POST', '/api/credentials/alias.php', Object.fromEntries(new FormData(aliasForm).entries()));
+            if (r.ok) { notice(document.getElementById('cred-notice'), 'Alias added', 'success'); aliasForm.reset(); refreshCreds(); }
+            else notice(document.getElementById('cred-notice'), r.data.error || 'Failed', 'error');
+        });
+        credForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const r = await api('POST', '/api/credentials/create.php', Object.fromEntries(new FormData(credForm).entries()));
+            if (r.ok) { notice(document.getElementById('cred-notice'), 'Credential issued: ' + r.data.credential.credential_reference, 'success'); refreshCreds(); }
+            else notice(document.getElementById('cred-notice'), r.data.error || 'Failed', 'error');
+        });
+        refreshCreds();
+    }
+
     // ---- Compliance queue ----
     async function initCompliance() {
         const queue = document.getElementById('compliance-queue');
@@ -225,7 +301,10 @@
 
     if (document.querySelector('[data-section="kpis"]')) initKpis();
     if (document.querySelector('[data-section="merchant"]')) initMerchant();
+    if (document.querySelector('[data-section="links"]')) initLinks();
+    if (document.querySelector('[data-section="qr"]')) initQr();
     if (document.querySelector('[data-section="pay"]')) initPay();
+    if (document.querySelector('[data-section="credentials"]')) initCredentials();
     if (document.querySelector('[data-section="compliance"]')) initCompliance();
     if (document.querySelector('[data-section="finance"]')) initFinance();
     if (document.querySelector('[data-section="reconciliation"]')) initReconciliation();

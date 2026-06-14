@@ -20,7 +20,10 @@ $role       = Role::fromRaw((string) ($user['role'] ?? 'consumer'));
 
 $sections = [
     'merchant'       => Rbac::can($user, 'merchant.self.update'),
+    'links'          => Rbac::can($user, 'paymentlink.manage'),
+    'qr'             => Rbac::can($user, 'qr.manage'),
     'pay'            => Rbac::can($user, 'payment.initiate'),
+    'credentials'    => Rbac::can($user, 'credential.self.manage'),
     'compliance'     => Rbac::can($user, 'kyc.decide'),
     'finance'        => Rbac::can($user, 'settlement.batch.manage'),
     'reconciliation' => Rbac::can($user, 'reconciliation.manage'),

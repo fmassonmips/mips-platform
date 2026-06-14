@@ -336,8 +336,22 @@ events) and was exercised against a live MariaDB:
 
 Endpoints (file-based, under `public/api/`): `merchants/{create,show,pending}`,
 `kyc/submit`, `compliance/{decision,score}`, `payments/{create,show,simulate,routing}`,
-`settlements/{create,list}`, `reconciliation/{run,list}`, `reports/kpis`. The
-role-aware portal lives at `public/portal.php`.
+`links/{create,list,show,pay}`, `qr/{create,list,show,pay}`,
+`credentials/{overview,alias,create}`, `settlements/{create,list}`,
+`reconciliation/{run,list}`, `reports/kpis`. The role-aware portal lives at
+`public/portal.php`; the hosted link checkout at `public/pay.php`.
+
+### Payment products (implemented & verified)
+
+- **Pay by Bank** — direct A2A via `payments/create` (routed to `passpass`).
+- **Payment Links** — merchant generates a link (fixed or payer-entered amount);
+  hosted checkout at `/pay.php?link=<slug>`; paying creates a `PAYMENT_LINK`
+  transaction tagged with the originating `source_reference`.
+- **Merchant QR** — STATIC (open amount), DYNAMIC and REQUEST (fixed); paying
+  creates a `QR` transaction.
+- **Virtual Payment Credentials** — opaque profiles, aliases and credentials
+  (`BANK_ROUTING`/`PAYMENT_ALIAS`/`QR_PROFILE`/`CARD_TOKEN`/`WALLET`); **no PAN
+  stored**, only opaque token references.
 
 ### Reconciliation & KPIs (implemented & verified)
 
