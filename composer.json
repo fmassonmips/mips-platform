@@ -2,6 +2,7 @@
     "name": "mipsit/passpass-platform",
     "description": "PassPass payment platform (MIPSIT Digital Ltd).",
     "type": "project",
+    "license": "proprietary",
     "require": {
         "php": ">=8.1"
     },
