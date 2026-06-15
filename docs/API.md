@@ -29,6 +29,35 @@ clients authenticate with an API key instead (see §Auth).
 
 Errors: `405` method, `419` CSRF, `422` validation, `429` rate-limited, `401` auth.
 
+## Merchant API — HMAC request signing (implemented)
+
+Machine-to-machine endpoints under `/api/v1/*` authenticate with a signed
+request (no session/CSRF). Keys are issued from the merchant portal / the
+session endpoints below; the **secret is shown once**.
+
+Signing:
+
+```
+signing_string = "<unix_ts>\n<METHOD>\n<request_target>\n<raw_body>"
+X-Api-Key:   <key_id>            # pk_...
+X-Timestamp: <unix_ts>           # within API_SIGNATURE_TTL (default 300s)
+X-Signature: hex( HMAC-SHA256(signing_string, secret) )
+```
+
+The secret is stored encrypted at rest (AES-256-GCM, `App\Support\Crypto`) so
+the server can recompute the HMAC; only `sha256(secret)` and the ciphertext are
+persisted — never the plaintext.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST | `/api/apikeys/create` | session + `apikey.self.manage` | returns the secret once |
+| GET  | `/api/apikeys/list` | session + `apikey.self.manage` | never returns secrets |
+| POST | `/api/apikeys/revoke` | session + `apikey.self.manage` | `{key_id}` |
+| POST | `/api/v1/links/create` | **HMAC** | create a payment link as the merchant |
+| GET  | `/api/v1/transactions/show?ref=TXN_…` | **HMAC** | merchant-scoped transaction |
+
+Failures: `401` (bad/absent/expired signature), `403` (merchant not cleared).
+
 ## Merchants & onboarding (spec)
 
 | Method | Path | Permission | Notes |

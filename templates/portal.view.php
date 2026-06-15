@@ -93,6 +93,19 @@ $h = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     </section>
     <?php endif; ?>
 
+    <?php if ($sections['apikeys']): ?>
+    <section class="card portal-section" data-section="apikeys">
+      <h2>API keys</h2>
+      <p class="muted">For the merchant API (HMAC-signed). The secret is shown once on creation.</p>
+      <form id="apikey-form" class="row">
+        <div class="field"><label>Label</label><input type="text" name="label" placeholder="e.g. Production server"></div>
+        <button class="btn-primary" type="submit">Create API key</button>
+      </form>
+      <div class="notice" id="apikey-notice"></div>
+      <div id="apikey-list"></div>
+    </section>
+    <?php endif; ?>
+
     <?php if ($sections['pay']): ?>
     <section class="card portal-section" data-section="pay">
       <h2>Pay by Bank</h2>

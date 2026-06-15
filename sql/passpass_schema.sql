@@ -454,9 +454,10 @@ CREATE TABLE IF NOT EXISTS provider_configs (
 CREATE TABLE IF NOT EXISTS api_keys (
     id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     merchant_id  BIGINT UNSIGNED NOT NULL,
-    key_id       VARCHAR(40)  NOT NULL,            -- public identifier (pk_...)
-    key_hash     VARCHAR(255) NOT NULL,            -- hash of the secret; never plaintext
-    label        VARCHAR(120)  NULL,
+    key_id           VARCHAR(40)  NOT NULL,        -- public identifier (pk_...)
+    key_hash         VARCHAR(255) NOT NULL,        -- sha256 of the secret (integrity / bearer fallback)
+    secret_encrypted VARCHAR(512)  NULL,           -- AES-256-GCM of the secret (for HMAC verification)
+    label            VARCHAR(120)  NULL,
     scopes       VARCHAR(255)  NULL,
     last_used_at DATETIME      NULL,
     is_active    TINYINT(1)   NOT NULL DEFAULT 1,

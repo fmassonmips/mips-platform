@@ -89,8 +89,19 @@ compliance, finance and admin users.
 
 All MVP payment products are implemented and verified end-to-end: Pay by Bank,
 Payment Links (with a hosted `/pay.php` checkout), Merchant QR (static/dynamic/
-request), and Virtual Payment Credentials/aliases — alongside settlement and the
-reconciliation engine + KPI dashboard.
+request), and Virtual Payment Credentials/aliases — alongside settlement, the
+reconciliation engine, KPI dashboard, and a **merchant API with HMAC request
+signing** (`/api/v1/*`).
 
-Next: merchant API keys with HMAC auth, real provider integrations, and an
-automated test suite. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.
+Quality: a PHPUnit suite (unit + DB-backed integration) runs in CI on every
+push/PR (`.github/workflows/ci.yml`).
+
+```bash
+composer install
+vendor/bin/phpunit            # unit suite always runs
+# integration tests run when DB_* env points at a database:
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=mips_user DB_PASS=... vendor/bin/phpunit
+```
+
+Next: real provider integrations and the remaining admin/reporting surfaces. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §9.

@@ -22,6 +22,7 @@ $sections = [
     'merchant'       => Rbac::can($user, 'merchant.self.update'),
     'links'          => Rbac::can($user, 'paymentlink.manage'),
     'qr'             => Rbac::can($user, 'qr.manage'),
+    'apikeys'        => Rbac::can($user, 'apikey.self.manage'),
     'pay'            => Rbac::can($user, 'payment.initiate'),
     'credentials'    => Rbac::can($user, 'credential.self.manage'),
     'compliance'     => Rbac::can($user, 'kyc.decide'),

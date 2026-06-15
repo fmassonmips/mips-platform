@@ -120,6 +120,12 @@ return [
 
     'security' => [
         'password_min_length' => 8,
+        // base64 of 32 random bytes; used by App\Support\Crypto to encrypt
+        // recoverable secrets (API signing secrets). Generate with:
+        //   php -r 'echo base64_encode(random_bytes(32)), "\n";'
+        'app_key'             => (string) $env('APP_KEY', ''),
+        // Max clock skew (seconds) tolerated on signed API requests.
+        'api_signature_ttl'   => (int) $env('API_SIGNATURE_TTL', 300),
     ],
 
     'rate_limit' => [

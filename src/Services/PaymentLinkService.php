@@ -33,8 +33,16 @@ final class PaymentLinkService
      */
     public function create(int $userId, array $input): array
     {
-        $merchant = $this->merchantForUser($userId);
+        return $this->createForMerchant($this->merchantForUser($userId), $input);
+    }
 
+    /**
+     * @param array<string,mixed> $merchant A merchants row.
+     * @param array<string,mixed> $input
+     * @return array<string,mixed> The created link row.
+     */
+    public function createForMerchant(array $merchant, array $input): array
+    {
         $amountMinor = null;
         if (isset($input['amount']) && (string) $input['amount'] !== '') {
             $amountMinor = Money::toMinor((string) $input['amount'], (string) ($input['currency'] ?? Money::DEFAULT_CURRENCY));

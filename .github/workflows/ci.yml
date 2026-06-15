@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: rootpw
+          MARIADB_DATABASE: mips_platform
+          MARIADB_USER: mips_user
+          MARIADB_PASSWORD: mips_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: mips_platform
+      DB_USER: mips_user
+      DB_PASS: mips_pass
+      APP_ENV: testing
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, openssl, sodium
+          coverage: none
+          tools: composer
+
+      - name: Generate APP_KEY
+        run: echo "APP_KEY=$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint PHP sources
+        run: |
+          set -e
+          find src public tests -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Load database schema and seed
+        run: |
+          for f in sql/schema.sql sql/seed.sql sql/passpass_schema.sql sql/passpass_seed.sql; do
+            mysql -h 127.0.0.1 -P 3306 -uroot -prootpw < "$f"
+          done
+
+      - name: Run test suite (unit + integration)
+        run: vendor/bin/phpunit --testdox

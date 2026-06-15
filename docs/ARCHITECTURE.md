@@ -314,7 +314,7 @@ Pending reconciliation · Settlement exceptions. (Derivable from
 | 6 | Settlement engine | ✅ batch settle + state transitions (verified e2e) |
 | 7 | Reconciliation engine | ✅ 3-way match + exception taxonomy (verified e2e) |
 | 8 | Dashboards | ✅ role-aware portal + KPI dashboard + routing view |
-| 9 | Testing | ◑ scenarios documented · slices verified end-to-end |
+| 9 | Testing | ✅ PHPUnit suite (unit + integration) + CI workflow |
 | 10 | Deployment | ✅ Docker + guides |
 
 ### Vertical slice (implemented & verified end-to-end)

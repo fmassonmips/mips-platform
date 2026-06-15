@@ -189,6 +189,39 @@
         refreshCreds();
     }
 
+    // ---- API keys ----
+    async function refreshApiKeys() {
+        const res = await api('GET', '/api/apikeys/list.php');
+        const list = res.data.keys || [];
+        const el = document.getElementById('apikey-list');
+        if (!list.length) { el.innerHTML = '<p class="muted">No API keys yet.</p>'; return; }
+        el.innerHTML = '<table class="data"><thead><tr><th>Key ID</th><th>Label</th><th>Status</th><th>Last used</th><th></th></tr></thead><tbody>'
+            + list.map((k) => '<tr><td><code>' + k.key_id + '</code></td><td>' + (k.label || '') + '</td>'
+                + '<td>' + badge(k.is_active == 1 ? 'CLEARED' : 'SUSPENDED') + '</td>'
+                + '<td>' + (k.last_used_at || '—') + '</td>'
+                + '<td>' + (k.is_active == 1 ? '<button class="btn-secondary btn-sm" data-revoke="' + k.key_id + '">Revoke</button>' : '') + '</td></tr>').join('')
+            + '</tbody></table>';
+        el.querySelectorAll('button[data-revoke]').forEach((b) => b.addEventListener('click', async () => {
+            await api('POST', '/api/apikeys/revoke.php', { key_id: b.dataset.revoke });
+            refreshApiKeys();
+        }));
+    }
+    function initApiKeys() {
+        const form = document.getElementById('apikey-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const r = await api('POST', '/api/apikeys/create.php', Object.fromEntries(new FormData(form).entries()));
+            if (r.ok) {
+                const k = r.data.api_key;
+                notice(document.getElementById('apikey-notice'),
+                    'Key ' + k.key_id + ' — SECRET (shown once): ' + k.secret, 'success');
+                form.reset();
+                refreshApiKeys();
+            } else notice(document.getElementById('apikey-notice'), r.data.error || 'Failed', 'error');
+        });
+        refreshApiKeys();
+    }
+
     // ---- Compliance queue ----
     async function initCompliance() {
         const queue = document.getElementById('compliance-queue');
@@ -303,6 +336,7 @@
     if (document.querySelector('[data-section="merchant"]')) initMerchant();
     if (document.querySelector('[data-section="links"]')) initLinks();
     if (document.querySelector('[data-section="qr"]')) initQr();
+    if (document.querySelector('[data-section="apikeys"]')) initApiKeys();
     if (document.querySelector('[data-section="pay"]')) initPay();
     if (document.querySelector('[data-section="credentials"]')) initCredentials();
     if (document.querySelector('[data-section="compliance"]')) initCompliance();

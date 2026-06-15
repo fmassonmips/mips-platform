@@ -9,6 +9,8 @@ config/config.local.php
 # Dependencies / build
 /vendor/
 node_modules/
+.phpunit.cache/
+.phpunit.result.cache
 
 # Logs & OS cruft
 *.log
