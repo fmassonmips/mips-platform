@@ -1,0 +1,23 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local config overrides
+config/config.local.php
+
+# Dependencies / build
+/vendor/
+node_modules/
+.phpunit.cache/
+.phpunit.result.cache
+
+# Logs & OS cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp

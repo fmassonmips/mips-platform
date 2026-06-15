@@ -1,0 +1,261 @@
+/* MIPS Dashboard — minimal, production-friendly stylesheet */
+
+:root {
+    --color-bg: #f5f6f8;
+    --color-surface: #ffffff;
+    --color-text: #1b1f24;
+    --color-muted: #6a737d;
+    --color-border: #e1e4e8;
+    --color-primary: #2b6cb0;
+    --color-primary-hover: #234e8a;
+    --color-error: #c5221f;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(16, 24, 40, 0.08);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+    min-height: 100%;
+}
+
+/* -------- Auth page -------- */
+.auth-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow);
+}
+
+.auth-card h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+}
+
+.auth-subtitle {
+    margin: 0 0 24px;
+    color: var(--color-muted);
+}
+
+.field { margin-bottom: 16px; }
+
+label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--color-text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.15);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 11px 16px;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-secondary {
+    padding: 8px 14px;
+    background: #fff;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover { background: #f0f1f3; }
+
+.error {
+    margin-top: 16px;
+    color: var(--color-error);
+    font-size: 14px;
+    text-align: center;
+}
+
+.success {
+    margin-top: 16px;
+    color: #1a7f37;
+    font-size: 14px;
+    text-align: center;
+}
+
+.auth-link {
+    margin-top: 16px;
+    font-size: 14px;
+    text-align: center;
+    color: var(--color-muted);
+}
+
+.auth-link a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* -------- Dashboard layout -------- */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--color-muted);
+}
+
+.app-main {
+    max-width: 960px;
+    margin: 32px auto;
+    padding: 0 24px;
+}
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.card h2 { margin-top: 0; }
+
+.meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+.meta dt { color: var(--color-muted); font-weight: 600; }
+.meta dd { margin: 0; }
+
+code {
+    background: #f0f1f3;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.92em;
+}
+
+/* -------- PassPass portal -------- */
+.disclaimer {
+    max-width: 960px;
+    margin: 16px auto 0;
+    padding: 10px 16px;
+    background: #fff8e6;
+    border: 1px solid #f3e1a9;
+    border-radius: 8px;
+    color: #7a5d00;
+    font-size: 13px;
+}
+
+.portal-section { margin-bottom: 24px; }
+.portal-section h2 { font-size: 18px; }
+.muted { color: var(--color-muted); font-size: 14px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.row .field { flex: 1 1 180px; margin-bottom: 12px; }
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--color-border);
+    background: #f0f1f3;
+    color: var(--color-text);
+}
+.badge.ok      { background: #e6f4ea; border-color: #b7e1c2; color: #1a7f37; }
+.badge.warn    { background: #fff8e6; border-color: #f3e1a9; color: #7a5d00; }
+.badge.danger  { background: #fdecea; border-color: #f5c2c0; color: #c5221f; }
+.badge.info    { background: #e8f0fe; border-color: #c3d6fb; color: #1a4fce; }
+
+table.data { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+table.data th { color: var(--color-muted); font-weight: 600; }
+
+.notice { margin-top: 12px; font-size: 14px; }
+.notice.error { color: var(--color-error); text-align: left; }
+.notice.success { color: #1a7f37; text-align: left; }
+
+.btn-sm { padding: 5px 10px; font-size: 13px; }
+.stack > * + * { margin-top: 8px; }
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+.kpi {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+.kpi-value { font-size: 22px; font-weight: 700; }
+.kpi-label { font-size: 12px; color: var(--color-muted); margin-top: 2px; }

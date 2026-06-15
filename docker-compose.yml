@@ -1,0 +1,56 @@
+# PassPass Platform — local sandbox stack (PHP/Apache + MariaDB)
+#
+#   cp .env.example .env   # then adjust if needed
+#   docker compose up --build
+#   # app:  http://localhost:8080   (login: admin@example.com / Admin123!)
+#   # DB schema + seed are applied automatically on first run.
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-mips_platform}
+      DB_USER: ${DB_USER:-mips_user}
+      DB_PASS: ${DB_PASS:-change_me_in_production}
+      REGULATED_ENTITY: ${REGULATED_ENTITY:-PassPass}
+      TECHNOLOGY_PROVIDER: ${TECHNOLOGY_PROVIDER:-MIPSIT Digital Ltd}
+      PARTNER_BANK: ${PARTNER_BANK:-Partner Bank}
+      PLATFORM_SANDBOX: ${PLATFORM_SANDBOX:-1}
+      PASSPASS_WEBHOOK_SECRET: ${PASSPASS_WEBHOOK_SECRET:-}
+      PAYPUMP_WEBHOOK_SECRET: ${PAYPUMP_WEBHOOK_SECRET:-}
+      INFLOW_WEBHOOK_SECRET: ${INFLOW_WEBHOOK_SECRET:-}
+    volumes:
+      # Live-mount source for development; comment out for an immutable image.
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-root_change_me}
+      MARIADB_DATABASE: ${DB_NAME:-mips_platform}
+      MARIADB_USER: ${DB_USER:-mips_user}
+      MARIADB_PASSWORD: ${DB_PASS:-change_me_in_production}
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      # *.sql files here run in filename order on first init.
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+      - ./sql/passpass_schema.sql:/docker-entrypoint-initdb.d/03_passpass_schema.sql:ro
+      - ./sql/passpass_seed.sql:/docker-entrypoint-initdb.d/04_passpass_seed.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata:
