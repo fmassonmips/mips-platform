@@ -41,4 +41,28 @@ return [
         'max_attempts'   => 5,     // failed attempts before blocking
         'window_seconds' => 900,   // sliding window = 15 minutes
     ],
+
+    // Inflow server-to-server (S2S) payments.
+    // See: https://docs.inflowpay.com/docs/server-to-server-payments
+    //
+    // The API key is a live secret — it is read from the environment so it
+    // is NEVER committed to the repository. Provision INFLOW_API_KEY in the
+    // server/process environment (e.g. via your process manager or .env loader).
+    'inflow' => [
+        'api_key'              => getenv('INFLOW_API_KEY') ?: '',
+        // PCI-scoped endpoint that receives card data (payment creation).
+        'card_base_url'        => getenv('INFLOW_CARD_BASE_URL') ?: 'https://api-card.inflowpay.com',
+        // Main API used for confirmation and status lookups.
+        'api_base_url'         => getenv('INFLOW_API_BASE_URL') ?: 'https://api.inflowpay.xyz',
+        // Where the customer is returned after 3-D Secure authentication.
+        'three_ds_success_url' => getenv('INFLOW_3DS_SUCCESS_URL') ?: '',
+        'three_ds_failure_url' => getenv('INFLOW_3DS_FAILURE_URL') ?: '',
+        // Outbound HTTP timeout, in seconds.
+        'timeout'              => 30,
+        // Minimum charge per currency, in minor units (cents), as documented.
+        'min_amount_cents'     => [
+            'EUR' => 150,
+            'USD' => 200,
+        ],
+    ],
 ];
