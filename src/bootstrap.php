@@ -22,6 +22,19 @@ define('TEMPLATES_PATH', ROOT_PATH . '/templates');
 
 /** @var array<string,mixed> $config */
 $config = require CONFIG_PATH . '/config.php';
+
+// Optional, environment-specific overrides (DB credentials, API keys, ...).
+// This file holds real secrets, is NOT committed to git, and is deployed
+// only to the target server. See config/config.local.example.php.
+$localConfig = CONFIG_PATH . '/config.local.php';
+if (is_file($localConfig)) {
+    /** @var mixed $overrides */
+    $overrides = require $localConfig;
+    if (is_array($overrides)) {
+        $config = array_replace_recursive($config, $overrides);
+    }
+}
+
 $GLOBALS['config'] = $config;
 
 if (($config['app']['env'] ?? 'production') === 'development') {

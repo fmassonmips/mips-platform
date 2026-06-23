@@ -1,0 +1,7 @@
+# Local, environment-specific config containing real secrets.
+# Deployed to the server, never committed.
+/config/config.local.php
+
+# OS / editor noise
+.DS_Store
+*.swp

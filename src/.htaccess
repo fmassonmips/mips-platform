@@ -1,0 +1,2 @@
+# Application classes are never entry points; deny direct HTTP access.
+Require all denied

@@ -1,0 +1,4 @@
+# Never serve application config over HTTP. These files only return arrays,
+# but deny direct access as defense in depth in case the document root is the
+# repository root rather than /public.
+Require all denied
