@@ -4,6 +4,7 @@
  * - Document actions (issue, status, convert, delete) on [data-doc-action] buttons.
  * - Clients page: create/edit/delete via POST /api/facturo/clients.
  * - Company page: save via POST /api/suite/organization.
+ * - Send by e-mail: POST /api/facturo/documents { action: 'email' }.
  * The server recomputes every amount; the totals shown here are a preview only.
  */
 (function () {
@@ -142,7 +143,7 @@
                     type: form.dataset.type,
                     client_id: form.client_id.value,
                     issue_date: form.issue_date.value,
-                    due_date: form.due_date.value,
+                    due_date: form.due_date ? form.due_date.value : '',
                     currency: form.currency.value,
                     notes: form.notes.value,
                     lines: lines,
@@ -199,6 +200,29 @@
                     showError(err.message);
                 }
             });
+        });
+    }
+
+    // ---- Send by e-mail -------------------------------------------------
+    const emailForm = document.getElementById('email-form');
+    if (emailForm) {
+        emailForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            const submit = emailForm.querySelector('[type="submit"]');
+            submit.disabled = true;
+            try {
+                await post('/api/facturo/documents', {
+                    action: 'email',
+                    id: Number(emailForm.dataset.id),
+                    to: emailForm.elements.to.value,
+                    subject: emailForm.elements.subject.value,
+                    message: emailForm.elements.message.value,
+                });
+                window.location.reload();
+            } catch (err) {
+                showError(err.message);
+                submit.disabled = false;
+            }
         });
     }
 

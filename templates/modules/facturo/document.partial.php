@@ -11,8 +11,9 @@ use App\Facturo\Money;
 $seller   = is_array($doc['seller']) ? $doc['seller'] : [];
 $client   = is_array($doc['client']) ? $doc['client'] : [];
 $isQuote  = $doc['type'] === 'quote';
+$isCredit = $doc['type'] === 'credit_note';
 $cur      = (string) $doc['currency'];
-$title    = $isQuote ? 'Quotation' : (($seller['vat_number'] ?? '') !== '' ? 'VAT Invoice' : 'Invoice');
+$title    = $isQuote ? 'Quotation' : ($isCredit ? 'Credit Note' : (($seller['vat_number'] ?? '') !== '' ? 'VAT Invoice' : 'Invoice'));
 ?>
 <article class="doc">
   <header class="doc-head">
@@ -28,6 +29,9 @@ $title    = $isQuote ? 'Quotation' : (($seller['vat_number'] ?? '') !== '' ? 'VA
       <h2><?= $e($title) ?></h2>
       <div><strong><?= $e($doc['number']) ?></strong></div>
       <div>Date: <?= $e($doc['issue_date']) ?></div>
+      <?php if ($isCredit && isset($doc['source']['number'])): ?>
+        <div>Relating to invoice <?= $e($doc['source']['number']) ?></div>
+      <?php endif; ?>
       <?php if ($doc['due_date'] !== null): ?>
         <div><?= $isQuote ? 'Valid until' : 'Due date' ?>: <?= $e($doc['due_date']) ?></div>
       <?php endif; ?>
@@ -35,7 +39,7 @@ $title    = $isQuote ? 'Quotation' : (($seller['vat_number'] ?? '') !== '' ? 'VA
   </header>
 
   <section class="doc-client">
-    <div class="muted small"><?= $isQuote ? 'Quotation for' : 'Bill to' ?></div>
+    <div class="muted small"><?= $isQuote ? 'Quotation for' : ($isCredit ? 'Credit to' : 'Bill to') ?></div>
     <strong><?= $e($client['name'] ?? '') ?></strong>
     <?php if (!empty($client['address'])): ?><div class="pre"><?= $e($client['address']) ?></div><?php endif; ?>
     <?php if (!empty($client['brn'])): ?><div>BRN: <?= $e($client['brn']) ?></div><?php endif; ?>
@@ -62,7 +66,7 @@ $title    = $isQuote ? 'Quotation' : (($seller['vat_number'] ?? '') !== '' ? 'VA
   <dl class="totals">
     <dt>Subtotal</dt><dd><?= $e(Money::format((int) $doc['subtotal_cents'], $cur)) ?></dd>
     <dt>VAT</dt><dd><?= $e(Money::format((int) $doc['tax_cents'], $cur)) ?></dd>
-    <dt>Total</dt><dd><strong><?= $e(Money::format((int) $doc['total_cents'], $cur)) ?></strong></dd>
+    <dt><?= $isCredit ? 'Total credited' : 'Total' ?></dt><dd><strong><?= $e(Money::format((int) $doc['total_cents'], $cur)) ?></strong></dd>
   </dl>
 
   <?php if ($doc['notes'] !== null && $doc['notes'] !== ''): ?>

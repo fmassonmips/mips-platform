@@ -39,10 +39,12 @@ my.mips.mu
 | Clients | Par entreprise ; suppression impossible s'ils ont des documents. |
 | Brouillon | Modifiable et supprimable, sans numéro. |
 | Émission | Numéro séquentiel sans trou par entreprise, type et année : `FAC-2026-0001`, `DEV-2026-0001`. Le document devient non modifiable ; les coordonnées vendeur et client sont figées à cet instant. |
-| Facture | `draft → issued ⇄ paid`. Émission refusée sans raison sociale et BRN. |
+| Facture | `draft → issued ⇄ paid` ; `issued → credited` quand des avoirs couvrent tout le montant. Émission refusée sans raison sociale et BRN. |
+| Avoir | Créé depuis une facture émise ou payée (`AVO-2026-0001`), même client et devise, jamais daté avant elle. Total ou partiel, jamais au-delà du reste à créditer (vérifié à l'enregistrement et, sous verrou, à l'émission). Une facture payée puis entièrement créditée reste `paid` : un remboursement est dû. |
 | Devis | `draft → sent → accepted / declined` ; « Create invoice » crée un brouillon de facture (une seule par devis). |
 | Montants | Entiers en cents, calculés côté serveur, arrondi au plus proche par ligne. TVA par ligne, 15 % par défaut si l'entreprise a un n° TVA, sinon 0 %. |
 | PDF | Page imprimable `/facturo/print.php?id=…` → « Enregistrer en PDF » du navigateur. |
+| E-mail | Documents émis uniquement. Message modifiable + lien privé `/facturo/view.php?t=…` (jeton aléatoire, sans connexion, non indexé) où le client consulte, imprime ou télécharge. Envoyé via SMTP (`config.php` → `mail`), expéditeur = raison sociale, réponse vers l'e-mail de l'entreprise. Chaque envoi, réussi ou non, est journalisé. |
 
 **Hors périmètre, à faire avant de vendre à des entreprises assujetties à la TVA :**
 
@@ -50,8 +52,8 @@ my.mips.mu
   (JSON, numéro IRN + QR code en retour). Obligatoire depuis mai 2024 au-dessus de MUR 100 M de chiffre
   d'affaires, étendu au-dessus de MUR 80 M pour 2025-26 ; les phases suivantes ne sont pas confirmées.
   À vérifier sur https://www.mra.mu/index.php/e-invoicing avant toute commercialisation.
-- **Avoirs** : une facture émise ne peut être ni modifiée ni annulée ; la correction légale passe par un avoir (non implémenté).
-- Envoi par e-mail, relances, paiements partiels, multi-taux de change, export comptable.
+- Pièce jointe PDF dans l'e-mail (le client passe par le lien), relances automatiques, paiements partiels,
+  multi-taux de change, export comptable.
 
 ## Ajouter une app
 
@@ -65,7 +67,11 @@ my.mips.mu
 ```
 mysql -u root -p mips_platform < sql/migrations/001_suite.sql
 mysql -u root -p mips_platform < sql/migrations/002_facturo.sql
+mysql -u root -p mips_platform < sql/migrations/003_facturo_credit_notes_email.sql
 ```
+
+Puis renseigner `app.url` et le bloc `mail` (serveur SMTP) dans `config/config.php` : sans `mail.host`,
+l'envoi est désactivé et l'interface l'indique.
 
 ## Reste à décider
 

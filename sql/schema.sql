@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS facturo_clients (
 CREATE TABLE IF NOT EXISTS facturo_documents (
     id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id    BIGINT UNSIGNED NOT NULL,
-    type               VARCHAR(16)  NOT NULL,               -- quote | invoice
+    type               VARCHAR(16)  NOT NULL,               -- quote | invoice | credit_note
     number             VARCHAR(32)  NULL,
     status             VARCHAR(16)  NOT NULL DEFAULT 'draft',
     client_id          BIGINT UNSIGNED NOT NULL,
@@ -120,9 +120,10 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     subtotal_cents     BIGINT       NOT NULL DEFAULT 0,
     tax_cents          BIGINT       NOT NULL DEFAULT 0,
     total_cents        BIGINT       NOT NULL DEFAULT 0,
-    source_document_id BIGINT UNSIGNED NULL,               -- invoice created from a quote
+    source_document_id BIGINT UNSIGNED NULL,               -- quote of an invoice; invoice of a credit note
     seller_snapshot    TEXT         NULL,
     client_snapshot    TEXT         NULL,
+    public_token       VARCHAR(64)  NULL,                   -- unguessable link sent to the client
     issued_at          DATETIME     NULL,
     paid_at            DATETIME     NULL,
     created_by         BIGINT UNSIGNED NULL,
@@ -131,6 +132,7 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
                                        ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_facturo_documents_number (organization_id, type, number),
+    UNIQUE KEY uq_facturo_documents_public_token (public_token),
     KEY idx_facturo_documents_org_type (organization_id, type, created_at),
     CONSTRAINT fk_facturo_documents_org    FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
     CONSTRAINT fk_facturo_documents_client FOREIGN KEY (client_id)       REFERENCES facturo_clients (id)
@@ -160,6 +162,23 @@ CREATE TABLE IF NOT EXISTS facturo_sequences (
     last_value      INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (organization_id, type, year),
     CONSTRAINT fk_facturo_sequences_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- facturo_document_emails (send log) --------------------------------
+CREATE TABLE IF NOT EXISTS facturo_document_emails (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    document_id     BIGINT UNSIGNED NOT NULL,
+    recipient       VARCHAR(254) NOT NULL,
+    subject         VARCHAR(250) NOT NULL,
+    status          VARCHAR(16)  NOT NULL,                  -- sent | failed
+    error           VARCHAR(500) NULL,
+    sent_by         BIGINT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_facturo_emails_doc (document_id, created_at),
+    CONSTRAINT fk_facturo_emails_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_facturo_emails_doc FOREIGN KEY (document_id)     REFERENCES facturo_documents (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

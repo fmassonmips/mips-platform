@@ -10,6 +10,8 @@ return [
         'name'    => 'MIPS Dashboard',
         // 'development' enables error display. Use 'production' on live servers.
         'env'     => 'production',
+        // Public base URL, used in links sent by e-mail (no trailing slash).
+        'url'     => 'https://my.mips.mu',
     ],
 
     'db' => [
@@ -35,6 +37,17 @@ return [
 
     'security' => [
         'password_min_length' => 8,
+    ],
+
+    // Outgoing e-mail (SMTP). Leave 'host' empty to disable sending.
+    'mail' => [
+        'host'         => '',
+        'port'         => 587,
+        'encryption'   => 'tls',              // 'tls' (STARTTLS), 'ssl' (implicit TLS) or 'none'
+        'username'     => '',
+        'password'     => '',
+        'from_address' => 'no-reply@mips.mu',
+        'timeout'      => 15,
     ],
 
     'rate_limit' => [

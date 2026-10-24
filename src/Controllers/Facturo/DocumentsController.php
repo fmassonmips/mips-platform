@@ -8,6 +8,8 @@
  *   issue   { "id" }
  *   status  { "id", "status" }
  *   convert { "id" }                      quote → draft invoice
+ *   credit  { "id" }                      invoice → draft credit note (remaining amount)
+ *   email   { "id", "to", "subject", "message" }   issued documents only
  *   delete  { "id" }                      drafts only
  *
  * Responses:
@@ -20,6 +22,7 @@ declare(strict_types=1);
 namespace App\Controllers\Facturo;
 
 use App\Facturo\Api;
+use App\Facturo\DocumentMailer;
 use App\Facturo\Documents;
 use App\Request;
 use App\Response;
@@ -34,7 +37,7 @@ final class DocumentsController
 
         switch (Request::str($data, 'action', 16)) {
             case 'save':
-                [$draft, $error] = Documents::validate($org['id'], $data);
+                [$draft, $error] = Documents::validate($org['id'], $data, $id);
                 if ($error !== null) {
                     Response::json(['error' => $error], 422);
                 }
@@ -50,6 +53,20 @@ final class DocumentsController
             case 'convert':
                 [$invoiceId, $error] = Documents::convertToInvoice($org['id'], (int) $user['id'], $id);
                 $this->done($invoiceId, $error);
+
+            case 'credit':
+                [$creditId, $error] = Documents::createCreditNote($org['id'], (int) $user['id'], $id);
+                $this->done($creditId, $error);
+
+            case 'email':
+                $this->done($id, DocumentMailer::send(
+                    $org['id'],
+                    (int) $user['id'],
+                    $id,
+                    Request::str($data, 'to', 300),
+                    Request::str($data, 'subject', 300),
+                    is_string($data['message'] ?? null) ? trim($data['message']) : ''
+                ));
 
             case 'delete':
                 $this->done($id, Documents::delete($org['id'], $id));

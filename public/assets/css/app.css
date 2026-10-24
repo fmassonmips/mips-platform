@@ -379,3 +379,11 @@ a.btn-secondary { text-decoration: none; display: inline-block; }
     .print-toolbar { display: none; }
     .print-body { padding: 0; max-width: none; }
 }
+
+.status--credited { background: #f3eefc; color: #6d4ae8; }
+.related { margin-bottom: 16px; padding: 10px 12px; background: #f7f8fa; border-radius: 8px; font-size: 14px; }
+.related a { color: var(--color-primary); }
+.send summary { cursor: pointer; }
+.send form { margin-top: 16px; }
+.send-log { margin: 16px 0 0; padding-left: 18px; font-size: 14px; color: var(--color-muted); }
+.error-text { color: var(--color-error); }

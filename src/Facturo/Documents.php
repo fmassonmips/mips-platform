@@ -1,10 +1,12 @@
 <?php
 /**
- * Facturo quotes and invoices, always scoped to one organization.
+ * Facturo quotes, invoices and credit notes, always scoped to one organization.
  *
  * Lifecycle:
- *   quote   : draft → sent → accepted | declined   (accepted/sent → converted to an invoice)
- *   invoice : draft → issued ⇄ paid
+ *   quote       : draft → sent → accepted | declined   (accepted/sent → converted to an invoice)
+ *   invoice     : draft → issued ⇄ paid; issued → credited once fully covered by credit notes
+ *   credit_note : draft → issued   (always created from an issued/paid invoice, never above
+ *                                   what remains to be credited on it)
  *
  * Only drafts can be edited or deleted. Issuing assigns the next gap-free
  * number for (organization, type, year) and freezes seller and client
@@ -19,12 +21,17 @@ use App\Suite\Tenant;
 
 final class Documents
 {
-    public const TYPES = ['quote', 'invoice'];
+    public const TYPES = ['quote', 'invoice', 'credit_note'];
 
-    private const PREFIX = ['quote' => 'DEV', 'invoice' => 'FAC'];
+    public const LABELS = ['quote' => 'quote', 'invoice' => 'invoice', 'credit_note' => 'credit note'];
+
+    private const PREFIX = ['quote' => 'DEV', 'invoice' => 'FAC', 'credit_note' => 'AVO'];
 
     /** Status the document takes when issued. */
-    private const ISSUED_STATUS = ['quote' => 'sent', 'invoice' => 'issued'];
+    private const ISSUED_STATUS = ['quote' => 'sent', 'invoice' => 'issued', 'credit_note' => 'issued'];
+
+    /** Invoice statuses a credit note can be raised against. */
+    private const CREDITABLE_STATUSES = ['issued', 'paid'];
 
     /** Allowed manual status changes after issue: type => from => [to]. */
     private const TRANSITIONS = [
@@ -84,20 +91,76 @@ final class Documents
 
         $doc['seller'] = $doc['seller_snapshot'] !== null ? json_decode((string) $doc['seller_snapshot'], true) : null;
         $doc['client'] = $doc['client_snapshot'] !== null ? json_decode((string) $doc['client_snapshot'], true) : null;
+
+        // Credit note ↔ invoice links.
+        $doc['source']       = null;
+        $doc['credit_notes'] = [];
+        if ($doc['type'] === 'credit_note' && $doc['source_document_id'] !== null) {
+            $src = $pdo->prepare('SELECT id, number, total_cents FROM facturo_documents WHERE organization_id = :oid AND id = :id');
+            $src->execute([':oid' => $orgId, ':id' => (int) $doc['source_document_id']]);
+            $doc['source'] = $src->fetch() ?: null;
+        }
+        if ($doc['type'] === 'invoice') {
+            $cn = $pdo->prepare(
+                'SELECT id, number, status, total_cents FROM facturo_documents
+                 WHERE organization_id = :oid AND type = \'credit_note\' AND source_document_id = :id
+                 ORDER BY id'
+            );
+            $cn->execute([':oid' => $orgId, ':id' => $id]);
+            $doc['credit_notes'] = $cn->fetchAll();
+        }
+        $doc['credited_cents'] = array_sum(array_map(
+            static fn (array $c): int => $c['status'] === 'issued' ? (int) $c['total_cents'] : 0,
+            $doc['credit_notes']
+        ));
         return $doc;
     }
 
     /**
-     * Validate a draft payload. Returns [clean draft, error|null].
+     * Amount still creditable on an invoice: its total minus issued credit notes.
+     */
+    public static function creditableCents(int $orgId, int $invoiceId): int
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT i.total_cents - COALESCE((
+                 SELECT SUM(c.total_cents) FROM facturo_documents c
+                 WHERE c.organization_id = i.organization_id AND c.type = \'credit_note\'
+                   AND c.status = \'issued\' AND c.source_document_id = i.id
+             ), 0)
+             FROM facturo_documents i
+             WHERE i.organization_id = :oid AND i.id = :id AND i.type = \'invoice\''
+        );
+        $stmt->execute([':oid' => $orgId, ':id' => $invoiceId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Validate a draft payload for document $id (0 = new). Returns [clean draft, error|null].
      *
      * @param array<string,mixed> $input
      * @return array{0:array<string,mixed>,1:?string}
      */
-    public static function validate(int $orgId, array $input): array
+    public static function validate(int $orgId, array $input, int $id = 0): array
     {
         $type = is_string($input['type'] ?? null) ? $input['type'] : '';
         if (!in_array($type, self::TYPES, true)) {
             return [[], 'Invalid document type.'];
+        }
+
+        // A credit note is bound to its invoice: same client and currency, never dated before it.
+        $invoice = null;
+        if ($type === 'credit_note') {
+            $current = $id > 0 ? self::find($orgId, $id) : null;
+            if ($current === null || $current['type'] !== 'credit_note' || $current['source_document_id'] === null) {
+                return [[], 'Credit notes are created from an issued invoice.'];
+            }
+            $invoice = self::find($orgId, (int) $current['source_document_id']);
+            if ($invoice === null) {
+                return [[], 'The credited invoice no longer exists.'];
+            }
+            $input['client_id'] = (int) $invoice['client_id'];
+            $input['currency']  = (string) $invoice['currency'];
+            $input['due_date']  = '';
         }
 
         $clientId = is_int($input['client_id'] ?? null) || ctype_digit((string) ($input['client_id'] ?? ''))
@@ -173,6 +236,20 @@ final class Documents
 
         if ($subtotal + $tax < 0) {
             return [[], 'The total cannot be negative.'];
+        }
+
+        if ($invoice !== null) {
+            if ($issueDate < (string) $invoice['issue_date']) {
+                return [[], 'A credit note cannot be dated before its invoice.'];
+            }
+            if ($subtotal + $tax <= 0) {
+                return [[], 'A credit note must have a positive total.'];
+            }
+            $creditable = self::creditableCents($orgId, (int) $invoice['id']);
+            if ($subtotal + $tax > $creditable) {
+                return [[], 'A credit note cannot exceed what remains to be credited on the invoice ('
+                    . Money::format($creditable, (string) $invoice['currency']) . ').'];
+            }
         }
 
         return [[
@@ -287,11 +364,20 @@ final class Documents
             }
 
             $seller = Tenant::profile($orgId);
-            if ($doc['type'] === 'invoice' && ($seller['legal_name'] === '' || $seller['brn'] === '')) {
+            if ($doc['type'] !== 'quote' && ($seller['legal_name'] === '' || $seller['brn'] === '')) {
                 $pdo->rollBack();
-                return 'Fill in your company details (legal name, BRN) before issuing an invoice.';
+                return 'Fill in your company details (legal name, BRN) before issuing an invoice or credit note.';
             }
             $client = Clients::find($orgId, (int) $doc['client_id']);
+
+            $remainingAfter = null;
+            if ($doc['type'] === 'credit_note') {
+                [$remainingAfter, $error] = self::checkCreditOnIssue($orgId, $doc);
+                if ($error !== null) {
+                    $pdo->rollBack();
+                    return $error;
+                }
+            }
 
             $type = (string) $doc['type'];
             $year = (int) substr((string) $doc['issue_date'], 0, 4);
@@ -325,6 +411,14 @@ final class Documents
                 ':id'     => $id,
             ]);
 
+            // A fully credited, unpaid invoice is closed. A paid one stays paid (a refund is owed).
+            if ($remainingAfter === 0) {
+                $pdo->prepare(
+                    'UPDATE facturo_documents SET status = \'credited\'
+                     WHERE organization_id = :oid AND id = :id AND status = \'issued\''
+                )->execute([':oid' => $orgId, ':id' => (int) $doc['source_document_id']]);
+            }
+
             $pdo->commit();
             return null;
         } catch (\Throwable $e) {
@@ -345,6 +439,10 @@ final class Documents
         $allowed = self::TRANSITIONS[$doc['type']][$doc['status']] ?? [];
         if (!in_array($status, $allowed, true)) {
             return 'This status change is not allowed.';
+        }
+        // Un-paying a fully credited invoice closes it rather than reopening it.
+        if ($doc['type'] === 'invoice' && $status === 'issued' && self::creditableCents($orgId, $id) <= 0) {
+            $status = 'credited';
         }
 
         Database::connection()->prepare(
@@ -405,6 +503,90 @@ final class Documents
         return [$invoiceId, $error];
     }
 
+    /**
+     * Create a draft credit note for the full remaining amount of an invoice.
+     * The user can then reduce lines for a partial credit before issuing.
+     *
+     * @return array{0:int,1:?string} [credit note id, error|null]
+     */
+    public static function createCreditNote(int $orgId, int $userId, int $invoiceId): array
+    {
+        $invoice = self::find($orgId, $invoiceId);
+        if ($invoice === null || $invoice['type'] !== 'invoice'
+            || !in_array($invoice['status'], self::CREDITABLE_STATUSES, true)) {
+            return [0, 'Only an issued or paid invoice can be credited.'];
+        }
+        if (self::creditableCents($orgId, $invoiceId) <= 0) {
+            return [0, 'This invoice is already fully credited.'];
+        }
+        foreach ($invoice['credit_notes'] as $cn) {
+            if ($cn['status'] === 'draft') {
+                return [(int) $cn['id'], null];   // finish the pending draft first
+            }
+        }
+
+        $remaining = self::creditableCents($orgId, $invoiceId);
+        $lines     = $remaining === (int) $invoice['total_cents'] ? $invoice['lines'] : [[
+            'description'      => 'Balance of invoice ' . $invoice['number'],
+            'quantity_milli'   => 1000,
+            'unit_price_cents' => $remaining,
+            'tax_rate_bp'      => 0,
+            'line_total_cents' => $remaining,
+            'line_tax_cents'   => 0,
+        ]];
+        $sub = array_sum(array_column($lines, 'line_total_cents'));
+        $tax = array_sum(array_column($lines, 'line_tax_cents'));
+
+        return self::saveDraft($orgId, $userId, 0, [
+            'type'               => 'credit_note',
+            'client_id'          => (int) $invoice['client_id'],
+            'issue_date'         => max(date('Y-m-d'), (string) $invoice['issue_date']),
+            'due_date'           => null,
+            'currency'           => (string) $invoice['currency'],
+            'notes'              => null,
+            'subtotal_cents'     => $sub,
+            'tax_cents'          => $tax,
+            'total_cents'        => $sub + $tax,
+            'source_document_id' => $invoiceId,
+            'lines'              => $lines,
+        ]);
+    }
+
+    /**
+     * Unguessable token for the client-facing link of an issued document,
+     * created on first use and stable afterwards (so resent links keep working).
+     */
+    public static function publicToken(int $orgId, int $id): string
+    {
+        $pdo = Database::connection();
+        $pdo->prepare(
+            'UPDATE facturo_documents SET public_token = :token
+             WHERE organization_id = :oid AND id = :id AND public_token IS NULL AND status <> \'draft\''
+        )->execute([':token' => bin2hex(random_bytes(24)), ':oid' => $orgId, ':id' => $id]);
+
+        $stmt = $pdo->prepare('SELECT public_token FROM facturo_documents WHERE organization_id = :oid AND id = :id');
+        $stmt->execute([':oid' => $orgId, ':id' => $id]);
+        return (string) $stmt->fetchColumn();
+    }
+
+    /**
+     * Issued document reached through its public link, or null.
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function findByToken(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{48}$/', $token)) {
+            return null;
+        }
+        $stmt = Database::connection()->prepare(
+            'SELECT organization_id, id FROM facturo_documents WHERE public_token = :token AND status <> \'draft\''
+        );
+        $stmt->execute([':token' => $token]);
+        $row = $stmt->fetch();
+        return is_array($row) ? self::find((int) $row['organization_id'], (int) $row['id']) : null;
+    }
+
     public static function delete(int $orgId, int $id): ?string
     {
         $stmt = Database::connection()->prepare(
@@ -415,6 +597,47 @@ final class Documents
     }
 
     /**
+     * Re-check a credit note against its invoice at issue time. Locking reads
+     * (FOR UPDATE) serialize concurrent credit notes on the same invoice and
+     * see their latest committed state, so the invoice can never be over-credited.
+     *
+     * @param array<string,mixed> $creditNote locked draft row
+     * @return array{0:?int,1:?string} [amount left to credit after this one, error|null]
+     */
+    private static function checkCreditOnIssue(int $orgId, array $creditNote): array
+    {
+        $pdo       = Database::connection();
+        $invoiceId = (int) $creditNote['source_document_id'];
+
+        $inv = $pdo->prepare(
+            'SELECT status, total_cents FROM facturo_documents
+             WHERE organization_id = :oid AND id = :id AND type = \'invoice\' FOR UPDATE'
+        );
+        $inv->execute([':oid' => $orgId, ':id' => $invoiceId]);
+        $invoice = $inv->fetch();
+        if (!is_array($invoice) || !in_array($invoice['status'], self::CREDITABLE_STATUSES, true)) {
+            return [null, 'The credited invoice is no longer open to credit.'];
+        }
+
+        $issued = $pdo->prepare(
+            'SELECT total_cents FROM facturo_documents
+             WHERE organization_id = :oid AND type = \'credit_note\' AND status = \'issued\'
+               AND source_document_id = :id FOR UPDATE'
+        );
+        $issued->execute([':oid' => $orgId, ':id' => $invoiceId]);
+        $credited = array_sum(array_map('intval', $issued->fetchAll(\PDO::FETCH_COLUMN)));
+
+        $own = $pdo->prepare('SELECT total_cents FROM facturo_documents WHERE id = :id');
+        $own->execute([':id' => (int) $creditNote['id']]);
+
+        $remaining = (int) $invoice['total_cents'] - $credited - (int) $own->fetchColumn();
+        if ($remaining < 0) {
+            return [null, 'This credit note exceeds what remains to be credited on the invoice.'];
+        }
+        return [$remaining, null];
+    }
+
+    /**
      * Lock a draft row for update inside the caller's transaction.
      *
      * @return array<string,mixed>|null
@@ -422,7 +645,7 @@ final class Documents
     private static function lockDraft(int $orgId, int $id): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, type, client_id, issue_date FROM facturo_documents
+            'SELECT id, type, client_id, issue_date, source_document_id FROM facturo_documents
              WHERE organization_id = :oid AND id = :id AND status = \'draft\' FOR UPDATE'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);

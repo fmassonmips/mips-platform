@@ -4,14 +4,19 @@
  * @var string $type
  * @var list<array<string,mixed>> $documents
  */
+use App\Facturo\Documents;
 use App\Facturo\Money;
 
-$label = $type === 'quote' ? 'quote' : 'invoice';
+$label = Documents::LABELS[$type];
 ?>
 <section class="card">
   <div class="card-head">
-    <h2><?= $type === 'quote' ? 'Quotes' : 'Invoices' ?></h2>
-    <a class="btn-secondary" href="/app.php?m=facturo&amp;p=edit&amp;type=<?= $e($type) ?>">New <?= $e($label) ?></a>
+    <h2><?= $e(ucfirst($label)) ?>s</h2>
+    <?php if ($type === 'credit_note'): ?>
+      <span class="muted small">Open an issued invoice and choose “Credit note”.</span>
+    <?php else: ?>
+      <a class="btn-secondary" href="/app.php?m=facturo&amp;p=edit&amp;type=<?= $e($type) ?>">New <?= $e($label) ?></a>
+    <?php endif; ?>
   </div>
 
   <?php if ($documents === []): ?>
