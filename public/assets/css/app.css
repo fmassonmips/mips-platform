@@ -199,3 +199,73 @@ code {
     border-radius: 4px;
     font-size: 0.92em;
 }
+
+/* -------- Suite: app launcher -------- */
+.suite { margin-top: 32px; }
+.suite h2 { font-size: 18px; margin: 0 0 16px; }
+
+.app-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 16px;
+}
+
+.app-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.app-tile.is-enabled { border-color: var(--color-primary); }
+
+.app-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 20px;
+    background: var(--color-muted);
+}
+
+.app-icon--bizpilot    { background: #0fb5ba; }
+.app-icon--bookora     { background: #6d4ae8; }
+.app-icon--facturo     { background: #f2711c; }
+.app-icon--teamnest    { background: #1f6fe5; }
+.app-icon--shoplokal   { background: #e8467c; }
+.app-icon--clientbloom { background: #21a35b; }
+.app-icon--staffzen    { background: #12a387; }
+.app-icon--formelio    { background: #5b4fe0; }
+.app-icon--rendezvous  { background: #e5483d; }
+.app-icon--flowdesk    { background: #1d8fe1; }
+
+.app-name    { font-weight: 600; }
+.app-tagline { font-size: 13px; color: var(--color-muted); }
+.app-badge   { font-size: 12px; color: var(--color-muted); }
+
+.app-tile .btn-secondary { margin-top: 6px; text-decoration: none; }
+
+.btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    color: var(--color-muted);
+    cursor: pointer;
+}
+.btn-link:hover { text-decoration: underline; }
+
+.app-home  { color: inherit; text-decoration: none; }
+.app-crumb { color: var(--color-muted); font-weight: 400; }
