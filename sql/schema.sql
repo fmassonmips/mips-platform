@@ -50,6 +50,11 @@ CREATE TABLE IF NOT EXISTS organizations (
     vat_number      VARCHAR(40)  NULL,
     email           VARCHAR(254) NULL,
     phone           VARCHAR(40)  NULL,
+    -- MRA e-invoicing credentials (password encrypted with app.secret_key)
+    mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
+    mra_username     VARCHAR(100) NULL,
+    mra_password_enc TEXT         NULL,
+    mra_ebs_id       VARCHAR(50)  NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,
@@ -124,6 +129,14 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     seller_snapshot    TEXT         NULL,
     client_snapshot    TEXT         NULL,
     public_token       VARCHAR(64)  NULL,                   -- unguessable link sent to the client
+    -- MRA fiscalisation (invoices and credit notes of organizations with e-invoicing on)
+    mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected
+    mra_counter        INT UNSIGNED NULL,                   -- EBS invoice counter, never reset
+    mra_irn            VARCHAR(100) NULL,                   -- identifier returned by MRA
+    mra_qr             MEDIUMTEXT   NULL,                   -- base64 PNG returned by MRA
+    mra_error          VARCHAR(1000) NULL,
+    mra_attempts       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    mra_fiscalised_at  DATETIME     NULL,
     issued_at          DATETIME     NULL,
     paid_at            DATETIME     NULL,
     created_by         BIGINT UNSIGNED NULL,
@@ -134,6 +147,7 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     UNIQUE KEY uq_facturo_documents_number (organization_id, type, number),
     UNIQUE KEY uq_facturo_documents_public_token (public_token),
     KEY idx_facturo_documents_org_type (organization_id, type, created_at),
+    KEY idx_facturo_documents_mra (organization_id, mra_status, mra_counter),
     CONSTRAINT fk_facturo_documents_org    FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
     CONSTRAINT fk_facturo_documents_client FOREIGN KEY (client_id)       REFERENCES facturo_clients (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -147,6 +161,8 @@ CREATE TABLE IF NOT EXISTS facturo_document_lines (
     quantity         DECIMAL(12,3) NOT NULL,
     unit_price_cents BIGINT        NOT NULL,
     tax_rate         DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    tax_code         VARCHAR(4)    NULL,                    -- MRA: TC01 15% | TC02 zero-rated | TC03 exempt
+    nature           VARCHAR(8)    NULL,                    -- MRA: GOODS | SERVICES
     line_total_cents BIGINT        NOT NULL,                -- excl. tax
     line_tax_cents   BIGINT        NOT NULL,
     PRIMARY KEY (id),
@@ -179,6 +195,16 @@ CREATE TABLE IF NOT EXISTS facturo_document_emails (
     KEY idx_facturo_emails_doc (document_id, created_at),
     CONSTRAINT fk_facturo_emails_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
     CONSTRAINT fk_facturo_emails_doc FOREIGN KEY (document_id)     REFERENCES facturo_documents (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- mra_tokens (cached MRA authentication per organization) -----------
+CREATE TABLE IF NOT EXISTS mra_tokens (
+    organization_id BIGINT UNSIGNED NOT NULL,
+    token           VARCHAR(1000) NOT NULL,
+    session_key_enc TEXT          NOT NULL,                 -- AES key returned by MRA, encrypted at rest
+    expires_at      DATETIME      NOT NULL,
+    PRIMARY KEY (organization_id),
+    CONSTRAINT fk_mra_tokens_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

@@ -51,6 +51,7 @@ switch ($page) {
 
     case 'company':
         $profile    = Tenant::profile($org['id']);
+        $mra        = \App\Mra\Settings::get($org['id']);
         $can_manage = Tenant::canManage($org);
         $view       = 'company';
         break;

@@ -52,6 +52,21 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
     </div>
   </div>
 
+  <?php if ($doc['mra_status'] !== null): ?>
+    <div class="mra-box mra-box--<?= $e($doc['mra_status']) ?>">
+      <?php if ($doc['mra_status'] === 'fiscalised'): ?>
+        <span><strong>MRA:</strong> fiscalised on <?= $e($doc['mra_fiscalised_at']) ?> · IRN <?= $e($doc['mra_irn']) ?></span>
+      <?php else: ?>
+        <span>
+          <strong>MRA:</strong>
+          <?= $doc['mra_status'] === 'pending' ? 'waiting to be fiscalised (MRA unreachable, retried automatically).' : 'rejected.' ?>
+          <?php if ($doc['mra_error'] !== null): ?><br><span class="small"><?= $e($doc['mra_error']) ?></span><?php endif; ?>
+        </span>
+        <button type="button" class="btn-secondary" data-doc-action="mra" data-id="<?= $id ?>">Send to MRA now</button>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if ($isInvoice && $doc['credit_notes'] !== []): ?>
     <div class="related">
       <strong>Credit notes:</strong>

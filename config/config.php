@@ -12,6 +12,11 @@ return [
         'env'     => 'production',
         // Public base URL, used in links sent by e-mail (no trailing slash).
         'url'     => 'https://my.mips.mu',
+        // 32 random bytes, base64. Encrypts secrets stored in the database
+        // (MRA passwords and session keys). Generate once per environment with:
+        //   php -r 'echo base64_encode(random_bytes(32)), PHP_EOL;'
+        // Changing it makes stored MRA passwords unreadable (re-enter them).
+        'secret_key' => '',
     ],
 
     'db' => [
@@ -48,6 +53,17 @@ return [
         'password'     => '',
         'from_address' => 'no-reply@mips.mu',
         'timeout'      => 15,
+    ],
+
+    // MRA e-invoicing. Defaults are the SANDBOX endpoints from the MRA Technical
+    // Guidelines; take the LIVE URLs from the MRA e-Invoicing Developer Portal
+    // once the EBS has passed its test drive.
+    'mra' => [
+        'auth_url'        => 'https://einvoice-sandbox.mra.mu/einvoice-token-service/token-api/generate-token',
+        'transmit_url'    => 'https://einvoice-sandbox.mra.mu/realtime/invoice/transmit-simulation',
+        // MRA public key downloaded from the Developer Portal (PEM public key or certificate).
+        'public_key_file' => __DIR__ . '/mra_public_key.pem',
+        'timeout'         => 20,
     ],
 
     'rate_limit' => [

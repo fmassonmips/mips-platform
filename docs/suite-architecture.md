@@ -46,12 +46,33 @@ my.mips.mu
 | PDF | Page imprimable `/facturo/print.php?id=…` → « Enregistrer en PDF » du navigateur. |
 | E-mail | Documents émis uniquement. Message modifiable + lien privé `/facturo/view.php?t=…` (jeton aléatoire, sans connexion, non indexé) où le client consulte, imprime ou télécharge. Envoyé via SMTP (`config.php` → `mail`), expéditeur = raison sociale, réponse vers l'e-mail de l'entreprise. Chaque envoi, réussi ou non, est journalisé. |
 
-**Hors périmètre, à faire avant de vendre à des entreprises assujetties à la TVA :**
+### e-Invoicing MRA
 
-- **e-Invoicing MRA** : les factures des entreprises concernées doivent être transmises en temps réel à la MRA
-  (JSON, numéro IRN + QR code en retour). Obligatoire depuis mai 2024 au-dessus de MUR 100 M de chiffre
-  d'affaires, étendu au-dessus de MUR 80 M pour 2025-26 ; les phases suivantes ne sont pas confirmées.
-  À vérifier sur https://www.mra.mu/index.php/e-invoicing avant toute commercialisation.
+Activable par entreprise (page Company). Sources : *MRA Technical Guidelines 2023*, *Data Structure of an
+e-Invoice v1.0*, *Functional Specifications of the EBS* (juin 2023) et cas de test du portail développeur MRA.
+
+| Élément | Règle |
+|---|---|
+| Identifiants | Propres à chaque entreprise (username, mot de passe, EBS MRA ID du portail MRA) : la MRA rejette une facture dont le TAN vendeur diffère de celui du compte. Mot de passe chiffré en base (`app.secret_key`). |
+| Authentification | Clé AES-256 aléatoire, identifiants chiffrés RSA avec la clé publique MRA ; jeton + clé de session mis en cache ~24 h ; ré-authentification automatique si la MRA refuse le jeton. |
+| Transmission | Factures (`STD`) et avoirs (`CRN`, avec facture de référence et motif) à l'émission, chiffrés AES-256-ECB. IRN + QR code stockés et imprimés sur le document. Devis non transmis. |
+| Compteur / chaînage | Compteur EBS par entreprise, jamais remis à zéro ; `previousNoteHash` = SHA-256 de (date-heure + montant + BRN + numéro) du document précédent du même type, `0` pour le premier. |
+| Lignes | TVA par ligne : 15 % (TC01), taux zéro (TC02), exonéré (TC03) ; bien ou service. |
+| Panne MRA | Le document est émis quand même, statut « en attente », renvoyé dans l'ordre par le bouton « Send to MRA now », à l'émission suivante ou par `tools/mra_retry.php` (cron). |
+| Garde-fous | Envoi par e-mail bloqué tant que le document n'est pas fiscalisé ; avoir impossible sur une facture non fiscalisée ; documents en MUR uniquement ; TVA, BRN et adresse vendeur obligatoires. |
+| Rejet | Le motif MRA est affiché. Le document émis est figé : si l'erreur vient des données (ex. TAN erroné), corriger le profil puis émettre un avoir et une nouvelle facture. |
+
+**Non vérifié contre la vraie MRA** (testé contre un serveur simulant la spécification) : à valider en SANDBOX
+puis TEST DRIVE sur le portail MRA avant la mise en production — notamment le format exact de la clé de
+session renvoyée, le hash du premier document (`0`), et les noms de champs, qui diffèrent légèrement entre
+les documents MRA. Le mapping est centralisé dans `src/Facturo/Fiscalisation.php::payload()`.
+
+Calendrier de l'obligation : MUR 100 M+ depuis mai 2024, MUR 80 M+ annoncé pour 2025-26 ; phases suivantes
+non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
+
+**Hors périmètre :**
+
+- Factures en devise étrangère avec e-invoicing (montants MUR requis), notes de débit (DRN), signature (`signedHash`, optionnelle).
 - Pièce jointe PDF dans l'e-mail (le client passe par le lien), relances automatiques, paiements partiels,
   multi-taux de change, export comptable.
 
@@ -68,10 +89,15 @@ my.mips.mu
 mysql -u root -p mips_platform < sql/migrations/001_suite.sql
 mysql -u root -p mips_platform < sql/migrations/002_facturo.sql
 mysql -u root -p mips_platform < sql/migrations/003_facturo_credit_notes_email.sql
+mysql -u root -p mips_platform < sql/migrations/004_mra_einvoicing.sql
 ```
 
-Puis renseigner `app.url` et le bloc `mail` (serveur SMTP) dans `config/config.php` : sans `mail.host`,
-l'envoi est désactivé et l'interface l'indique.
+Puis dans `config/config.php` :
+- `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
+- `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
+- bloc `mra` : URLs (sandbox par défaut) et clé publique MRA téléchargée sur le portail (`config/mra_public_key.pem`).
+
+Cron : `*/5 * * * * php tools/mra_retry.php`.
 
 ## Reste à décider
 

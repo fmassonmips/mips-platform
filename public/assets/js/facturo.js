@@ -5,6 +5,7 @@
  * - Clients page: create/edit/delete via POST /api/facturo/clients.
  * - Company page: save via POST /api/suite/organization.
  * - Send by e-mail: POST /api/facturo/documents { action: 'email' }.
+ * - MRA e-invoicing settings: POST /api/suite/mra.
  * The server recomputes every amount; the totals shown here are a preview only.
  */
 (function () {
@@ -94,9 +95,10 @@
             tbody.querySelectorAll('tr.line').forEach(function (row) {
                 const qty  = toInt(row.querySelector('[name="quantity"]').value, 3);
                 const unit = toInt(row.querySelector('[name="unit_price"]').value, 2);
-                const rate = toInt(row.querySelector('[name="tax_rate"]').value, 2);
+                const taxSel = row.querySelector('[name="tax_code"]');
+                const rate = Number(taxSel.options[taxSel.selectedIndex].dataset.rate);
                 const cell = row.querySelector('.line-amount');
-                if (qty === null || unit === null || rate === null) {
+                if (qty === null || unit === null) {
                     cell.textContent = '—';
                     return;
                 }
@@ -122,6 +124,7 @@
             }
         });
         form.addEventListener('input', recalc);
+        form.addEventListener('change', recalc);
         recalc();
 
         form.addEventListener('submit', async function (ev) {
@@ -133,7 +136,8 @@
                     description: row.querySelector('[name="description"]').value,
                     quantity:    row.querySelector('[name="quantity"]').value,
                     unit_price:  row.querySelector('[name="unit_price"]').value,
-                    tax_rate:    row.querySelector('[name="tax_rate"]').value,
+                    tax_code:    row.querySelector('[name="tax_code"]').value,
+                    nature:      row.querySelector('[name="nature"]').value,
                 };
             });
             try {
@@ -222,6 +226,41 @@
             } catch (err) {
                 showError(err.message);
                 submit.disabled = false;
+            }
+        });
+    }
+
+    // ---- MRA e-invoicing settings -----------------------------------------
+    const mraForm = document.getElementById('mra-form');
+    if (mraForm) {
+        const result = document.getElementById('mra-result');
+        const say = function (text) { result.textContent = text; result.hidden = false; };
+
+        mraForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            result.hidden = true;
+            try {
+                await post('/api/suite/mra', {
+                    action: 'save',
+                    enabled: mraForm.elements.enabled.checked,
+                    username: mraForm.elements.username.value,
+                    password: mraForm.elements.password.value,
+                    ebs_id: mraForm.elements.ebs_id.value,
+                });
+                mraForm.elements.password.value = '';
+                say('Saved.');
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        document.getElementById('mra-test').addEventListener('click', async function () {
+            result.hidden = true;
+            try {
+                const body = await post('/api/suite/mra', { action: 'test' });
+                say(body.message);
+            } catch (err) {
+                showError(err.message);
             }
         });
     }

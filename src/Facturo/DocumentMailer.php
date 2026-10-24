@@ -69,6 +69,9 @@ final class DocumentMailer
         if ($doc === null || $doc['status'] === 'draft') {
             return 'Only issued documents can be sent.';
         }
+        if (in_array($doc['mra_status'], ['pending', 'rejected'], true)) {
+            return 'This document is not fiscalised by MRA yet; it cannot be sent before it carries its QR code.';
+        }
         if (!filter_var($to, FILTER_VALIDATE_EMAIL) || strlen($to) > 254) {
             return 'Recipient e-mail is invalid.';
         }

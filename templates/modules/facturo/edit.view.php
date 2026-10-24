@@ -14,11 +14,33 @@ use App\Facturo\Money;
 $isQuote     = $type === 'quote';
 $isCredit    = $type === 'credit_note';
 $label       = Documents::LABELS[$type];
-$defaultRate = $profile['vat_number'] !== '' ? '15' : '0';
-$lines       = $doc['lines'] ?? [[
+$blankLine   = [
     'description' => '', 'quantity_milli' => 1000, 'unit_price_cents' => 0,
-    'tax_rate_bp' => (int) $defaultRate * 100,
-]];
+    'tax_code' => $profile['vat_number'] !== '' ? 'TC01' : 'TC03', 'nature' => 'SERVICES',
+];
+$lines = $doc['lines'] ?? [$blankLine];
+
+/** One editable line; also used for the "Add line" template. */
+$lineRow = static function (array $l) use ($e): string {
+    $tax = '';
+    foreach (Documents::TAX_CODES as $code => $t) {
+        $tax .= '<option value="' . $code . '" data-rate="' . $t['rate_bp'] . '"' . ($l['tax_code'] === $code ? ' selected' : '') . '>'
+              . $e($t['label']) . '</option>';
+    }
+    $nature = '';
+    foreach (Documents::NATURES as $code => $label) {
+        $nature .= '<option value="' . $code . '"' . ($l['nature'] === $code ? ' selected' : '') . '>' . $e($label) . '</option>';
+    }
+    return '<tr class="line">'
+        . '<td><input type="text" name="description" maxlength="500" value="' . $e($l['description']) . '" aria-label="Description"></td>'
+        . '<td><select name="nature" aria-label="Goods or service">' . $nature . '</select></td>'
+        . '<td><input type="text" inputmode="decimal" name="quantity" value="' . $e(Money::quantityToInput((int) $l['quantity_milli'])) . '" aria-label="Quantity"></td>'
+        . '<td><input type="text" inputmode="decimal" name="unit_price" value="' . $e(Money::toInput((int) $l['unit_price_cents'])) . '" aria-label="Unit price"></td>'
+        . '<td><select name="tax_code" aria-label="VAT">' . $tax . '</select></td>'
+        . '<td class="num line-amount"></td>'
+        . '<td><button type="button" class="btn-link" data-remove-line aria-label="Remove line">✕</button></td>'
+        . '</tr>';
+};
 ?>
 <section class="card">
   <div class="card-head">
@@ -38,8 +60,7 @@ $lines       = $doc['lines'] ?? [[
   <?php else: ?>
   <form id="document-form" novalidate
         data-id="<?= (int) ($doc['id'] ?? 0) ?>"
-        data-type="<?= $e($type) ?>"
-        data-default-rate="<?= $e($defaultRate) ?>">
+        data-type="<?= $e($type) ?>">
     <div class="form-grid">
       <div class="field">
         <label for="client_id">Client</label>
@@ -73,18 +94,11 @@ $lines       = $doc['lines'] ?? [[
     <div class="table-wrap">
       <table class="table lines">
         <thead>
-          <tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">VAT %</th><th class="num">Amount</th><th></th></tr>
+          <tr><th>Description</th><th>Type</th><th class="num">Qty</th><th class="num">Unit price</th><th>VAT</th><th class="num">Amount</th><th></th></tr>
         </thead>
         <tbody id="lines">
           <?php foreach ($lines as $l): ?>
-            <tr class="line">
-              <td><input type="text" name="description" maxlength="500" value="<?= $e($l['description']) ?>" aria-label="Description"></td>
-              <td><input type="text" inputmode="decimal" name="quantity" value="<?= $e(Money::quantityToInput((int) $l['quantity_milli'])) ?>" aria-label="Quantity"></td>
-              <td><input type="text" inputmode="decimal" name="unit_price" value="<?= $e(Money::toInput((int) $l['unit_price_cents'])) ?>" aria-label="Unit price"></td>
-              <td><input type="text" inputmode="decimal" name="tax_rate" value="<?= $e(Money::rateToInput((int) $l['tax_rate_bp'])) ?>" aria-label="VAT rate"></td>
-              <td class="num line-amount"></td>
-              <td><button type="button" class="btn-link" data-remove-line aria-label="Remove line">✕</button></td>
-            </tr>
+            <?= $lineRow($l) ?>
           <?php endforeach; ?>
         </tbody>
       </table>
@@ -99,7 +113,7 @@ $lines       = $doc['lines'] ?? [[
     <p class="muted small">Totals are recalculated by the server when you save.</p>
 
     <div class="field">
-      <label for="notes">Notes (payment terms, bank details…)</label>
+      <label for="notes"><?= $isCredit ? 'Reason for the credit note (required for MRA e-invoicing)' : 'Notes (payment terms, bank details…)' ?></label>
       <textarea id="notes" name="notes" rows="3" maxlength="5000"><?= $e($doc['notes'] ?? '') ?></textarea>
     </div>
 
@@ -116,15 +130,6 @@ $lines       = $doc['lines'] ?? [[
     </div>
   </form>
 
-  <template id="line-template">
-    <tr class="line">
-      <td><input type="text" name="description" maxlength="500" aria-label="Description"></td>
-      <td><input type="text" inputmode="decimal" name="quantity" value="1" aria-label="Quantity"></td>
-      <td><input type="text" inputmode="decimal" name="unit_price" value="0.00" aria-label="Unit price"></td>
-      <td><input type="text" inputmode="decimal" name="tax_rate" value="<?= $e($defaultRate) ?>" aria-label="VAT rate"></td>
-      <td class="num line-amount"></td>
-      <td><button type="button" class="btn-link" data-remove-line aria-label="Remove line">✕</button></td>
-    </tr>
-  </template>
+  <template id="line-template"><?= $lineRow($blankLine) ?></template>
   <?php endif; ?>
 </section>

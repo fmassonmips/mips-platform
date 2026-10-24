@@ -333,11 +333,11 @@ a.btn-secondary { text-decoration: none; display: inline-block; }
 .table .num { text-align: right; white-space: nowrap; }
 .table a { color: var(--color-primary); }
 
-.lines input { padding: 6px 8px; font-size: 14px; }
-.lines td:nth-child(1) { min-width: 220px; }
-.lines td:nth-child(2) input,
-.lines td:nth-child(4) input { width: 70px; text-align: right; }
-.lines td:nth-child(3) input { width: 110px; text-align: right; }
+.lines input, .lines select { padding: 6px 8px; font-size: 14px; width: auto; }
+.lines td:nth-child(1) { min-width: 200px; }
+.lines td:nth-child(1) input { width: 100%; }
+.lines td:nth-child(3) input { width: 70px; text-align: right; }
+.lines td:nth-child(4) input { width: 110px; text-align: right; }
 
 .totals {
     display: grid;
@@ -387,3 +387,14 @@ a.btn-secondary { text-decoration: none; display: inline-block; }
 .send form { margin-top: 16px; }
 .send-log { margin: 16px 0 0; padding-left: 18px; font-size: 14px; color: var(--color-muted); }
 .error-text { color: var(--color-error); }
+
+/* MRA e-invoicing */
+.mra-box { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; font-size: 14px; background: #f7f8fa; }
+.mra-box--fiscalised { background: #e5f5ea; }
+.mra-box--pending { background: #fff6e0; }
+.mra-box--rejected { background: #fdecea; }
+.doc-mra { display: flex; gap: 16px; align-items: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 12px; }
+.doc-mra img { width: 110px; height: 110px; image-rendering: pixelated; }
+.mra-warning { margin-top: 24px; padding: 8px 12px; border: 1px dashed var(--color-error); color: var(--color-error); font-size: 13px; }
+.checkbox { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 16px; }
+.checkbox input { width: auto; }

@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Facturo;
 
 use App\Database;
+use App\Mra\Settings;
 use App\Suite\Tenant;
 
 final class Documents
@@ -40,6 +41,15 @@ final class Documents
     ];
 
     public const MAX_LINES = 200;
+
+    /** VAT treatment per line (MRA tax codes) and the rate each one applies, in basis points. */
+    public const TAX_CODES = [
+        'TC01' => ['label' => 'VAT 15%',           'rate_bp' => 1500],
+        'TC02' => ['label' => 'Zero-rated (0%)',   'rate_bp' => 0],
+        'TC03' => ['label' => 'Exempt / no VAT',   'rate_bp' => 0],
+    ];
+
+    public const NATURES = ['SERVICES' => 'Service', 'GOODS' => 'Goods'];
 
     /**
      * @return list<array<string,mixed>>
@@ -74,7 +84,7 @@ final class Documents
         }
 
         $lines = $pdo->prepare(
-            'SELECT description, quantity, unit_price_cents, tax_rate, line_total_cents, line_tax_cents
+            'SELECT description, quantity, unit_price_cents, tax_rate, tax_code, nature, line_total_cents, line_tax_cents
              FROM facturo_document_lines WHERE document_id = :id ORDER BY position'
         );
         $lines->execute([':id' => $id]);
@@ -84,6 +94,10 @@ final class Documents
                 'quantity_milli'   => (int) Money::parseQuantity((string) $l['quantity']),
                 'unit_price_cents' => (int) $l['unit_price_cents'],
                 'tax_rate_bp'      => (int) Money::parseRate((string) $l['tax_rate']),
+                // Lines saved before tax codes existed: 15% → standard, anything else → zero-rated.
+                'tax_code'         => $l['tax_code'] !== null ? (string) $l['tax_code']
+                                      : ((string) $l['tax_rate'] === '15.00' ? 'TC01' : 'TC02'),
+                'nature'           => (string) ($l['nature'] ?? 'SERVICES'),
                 'line_total_cents' => (int) $l['line_total_cents'],
                 'line_tax_cents'   => (int) $l['line_tax_cents'],
             ];
@@ -206,7 +220,8 @@ final class Documents
             $description = is_string($raw['description'] ?? null) ? trim($raw['description']) : '';
             $quantity    = Money::parseQuantity(trim((string) ($raw['quantity'] ?? '')));
             $unit        = Money::parseCents(trim((string) ($raw['unit_price'] ?? '')));
-            $rate        = Money::parseRate(trim((string) ($raw['tax_rate'] ?? '')));
+            $taxCode     = is_string($raw['tax_code'] ?? null) ? $raw['tax_code'] : '';
+            $nature      = is_string($raw['nature'] ?? null) ? $raw['nature'] : 'SERVICES';
 
             if ($description === '' || mb_strlen($description) > 500) {
                 return [[], "Line $n: description is required (max 500 characters)."];
@@ -217,9 +232,13 @@ final class Documents
             if ($unit === null || abs($unit) > Money::MAX_UNIT_CENTS) {
                 return [[], "Line $n: unit price is invalid (max 2 decimals)."];
             }
-            if ($rate === null) {
-                return [[], "Line $n: tax rate must be between 0 and 100."];
+            if (!isset(self::TAX_CODES[$taxCode])) {
+                return [[], "Line $n: choose the VAT treatment."];
             }
+            if (!isset(self::NATURES[$nature])) {
+                return [[], "Line $n: choose goods or service."];
+            }
+            $rate = self::TAX_CODES[$taxCode]['rate_bp'];
 
             [$lineTotal, $lineTax] = Money::line($quantity, $unit, $rate);
             $subtotal += $lineTotal;
@@ -229,6 +248,8 @@ final class Documents
                 'quantity_milli'   => $quantity,
                 'unit_price_cents' => $unit,
                 'tax_rate_bp'      => $rate,
+                'tax_code'         => $taxCode,
+                'nature'           => $nature,
                 'line_total_cents' => $lineTotal,
                 'line_tax_cents'   => $lineTax,
             ];
@@ -325,8 +346,8 @@ final class Documents
             $insert = $pdo->prepare(
                 'INSERT INTO facturo_document_lines
                     (document_id, position, description, quantity, unit_price_cents, tax_rate,
-                     line_total_cents, line_tax_cents)
-                 VALUES (:doc, :pos, :descr, :qty, :unit, :rate, :lt, :ltax)'
+                     tax_code, nature, line_total_cents, line_tax_cents)
+                 VALUES (:doc, :pos, :descr, :qty, :unit, :rate, :code, :nature, :lt, :ltax)'
             );
             foreach ($draft['lines'] as $pos => $line) {
                 $insert->execute([
@@ -336,6 +357,8 @@ final class Documents
                     ':qty'   => Money::quantityToInput($line['quantity_milli']),
                     ':unit'  => $line['unit_price_cents'],
                     ':rate'  => Money::rateToInput($line['tax_rate_bp']),
+                    ':code'  => $line['tax_code'] ?? null,
+                    ':nature'=> $line['nature'] ?? null,
                     ':lt'    => $line['line_total_cents'],
                     ':ltax'  => $line['line_tax_cents'],
                 ]);
@@ -370,6 +393,23 @@ final class Documents
             }
             $client = Clients::find($orgId, (int) $doc['client_id']);
 
+            // MRA e-invoicing: invoices and credit notes are queued for fiscalisation.
+            $fiscalise = isset(Fiscalisation::MRA_TYPES[$doc['type']]) && Settings::isEnabled($orgId);
+            if ($fiscalise) {
+                $error = Fiscalisation::issueBlocker($doc, $seller);
+                if ($error === null && $doc['type'] === 'credit_note') {
+                    $src = $pdo->prepare('SELECT mra_status FROM facturo_documents WHERE organization_id = :oid AND id = :id');
+                    $src->execute([':oid' => $orgId, ':id' => (int) $doc['source_document_id']]);
+                    if (in_array($src->fetchColumn(), ['pending', 'rejected'], true)) {
+                        $error = 'The invoice must be fiscalised by MRA before it can be credited.';
+                    }
+                }
+                if ($error !== null) {
+                    $pdo->rollBack();
+                    return $error;
+                }
+            }
+
             $remainingAfter = null;
             if ($doc['type'] === 'credit_note') {
                 [$remainingAfter, $error] = self::checkCreditOnIssue($orgId, $doc);
@@ -400,10 +440,13 @@ final class Documents
             $pdo->prepare(
                 'UPDATE facturo_documents
                  SET number = :number, status = :status, issued_at = NOW(),
-                     seller_snapshot = :seller, client_snapshot = :client
+                     seller_snapshot = :seller, client_snapshot = :client,
+                     mra_status = :mra_status, mra_counter = :mra_counter
                  WHERE organization_id = :oid AND id = :id'
             )->execute([
-                ':number' => $number,
+                ':number'      => $number,
+                ':mra_status'  => $fiscalise ? 'pending' : null,
+                ':mra_counter' => $fiscalise ? Fiscalisation::nextCounter($orgId) : null,
                 ':status' => self::ISSUED_STATUS[$type],
                 ':seller' => json_encode($seller, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 ':client' => json_encode($client, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
@@ -504,8 +547,9 @@ final class Documents
     }
 
     /**
-     * Create a draft credit note for the full remaining amount of an invoice.
-     * The user can then reduce lines for a partial credit before issuing.
+     * Create a draft credit note copying the invoice lines (same VAT treatment).
+     * The user reduces them for a partial credit; saving refuses any amount
+     * above what remains to be credited.
      *
      * @return array{0:int,1:?string} [credit note id, error|null]
      */
@@ -525,16 +569,8 @@ final class Documents
             }
         }
 
-        $remaining = self::creditableCents($orgId, $invoiceId);
-        $lines     = $remaining === (int) $invoice['total_cents'] ? $invoice['lines'] : [[
-            'description'      => 'Balance of invoice ' . $invoice['number'],
-            'quantity_milli'   => 1000,
-            'unit_price_cents' => $remaining,
-            'tax_rate_bp'      => 0,
-            'line_total_cents' => $remaining,
-            'line_tax_cents'   => 0,
-        ]];
-        $sub = array_sum(array_column($lines, 'line_total_cents'));
+        $lines = $invoice['lines'];
+        $sub   = array_sum(array_column($lines, 'line_total_cents'));
         $tax = array_sum(array_column($lines, 'line_tax_cents'));
 
         return self::saveDraft($orgId, $userId, 0, [
@@ -645,7 +681,7 @@ final class Documents
     private static function lockDraft(int $orgId, int $id): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, type, client_id, issue_date, source_document_id FROM facturo_documents
+            'SELECT id, type, client_id, issue_date, source_document_id, currency, notes FROM facturo_documents
              WHERE organization_id = :oid AND id = :id AND status = \'draft\' FOR UPDATE'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);

@@ -6,6 +6,7 @@
  * @var callable $e
  * @var array<string,mixed> $doc
  */
+use App\Facturo\Documents;
 use App\Facturo\Money;
 
 $seller   = is_array($doc['seller']) ? $doc['seller'] : [];
@@ -56,7 +57,7 @@ $title    = $isQuote ? 'Quotation' : ($isCredit ? 'Credit Note' : (($seller['vat
           <td><?= $e($l['description']) ?></td>
           <td class="num"><?= $e(Money::quantityToInput($l['quantity_milli'])) ?></td>
           <td class="num"><?= $e(Money::format($l['unit_price_cents'], $cur)) ?></td>
-          <td class="num"><?= $e(Money::rateToInput($l['tax_rate_bp'])) ?>%</td>
+          <td class="num"><?= $e($l['tax_code'] === 'TC03' ? 'Exempt' : Money::rateToInput($l['tax_rate_bp']) . '%') ?></td>
           <td class="num"><?= $e(Money::format($l['line_total_cents'], $cur)) ?></td>
         </tr>
       <?php endforeach; ?>
@@ -70,6 +71,15 @@ $title    = $isQuote ? 'Quotation' : ($isCredit ? 'Credit Note' : (($seller['vat
   </dl>
 
   <?php if ($doc['notes'] !== null && $doc['notes'] !== ''): ?>
-    <section class="doc-notes pre"><?= $e($doc['notes']) ?></section>
+    <section class="doc-notes pre"><?php if ($isCredit): ?><strong>Reason:</strong> <?php endif; ?><?= $e($doc['notes']) ?></section>
+  <?php endif; ?>
+
+  <?php if ($doc['mra_status'] === 'fiscalised' && $doc['mra_qr'] !== null): ?>
+    <section class="doc-mra">
+      <img src="data:image/png;base64,<?= $e($doc['mra_qr']) ?>" alt="MRA QR code">
+      <div>Fiscalised with the Mauritius Revenue Authority<br>IRN: <?= $e($doc['mra_irn']) ?></div>
+    </section>
+  <?php elseif (in_array($doc['mra_status'], ['pending', 'rejected'], true)): ?>
+    <p class="mra-warning">Not yet fiscalised by MRA — this copy is not valid for VAT purposes.</p>
   <?php endif; ?>
 </article>

@@ -10,6 +10,7 @@
  *   convert { "id" }                      quote → draft invoice
  *   credit  { "id" }                      invoice → draft credit note (remaining amount)
  *   email   { "id", "to", "subject", "message" }   issued documents only
+ *   mra     { "id" }                      retry MRA fiscalisation of a pending/rejected document
  *   delete  { "id" }                      drafts only
  *
  * Responses:
@@ -24,6 +25,7 @@ namespace App\Controllers\Facturo;
 use App\Facturo\Api;
 use App\Facturo\DocumentMailer;
 use App\Facturo\Documents;
+use App\Facturo\Fiscalisation;
 use App\Request;
 use App\Response;
 
@@ -45,7 +47,18 @@ final class DocumentsController
                 $this->done($id, $error);
 
             case 'issue':
-                $this->done($id, Documents::issue($org['id'], $id));
+                $error = Documents::issue($org['id'], $id);
+                if ($error === null) {
+                    Fiscalisation::processPending($org['id']);   // outcome is shown on the document
+                }
+                $this->done($id, $error);
+
+            case 'mra':
+                $error = Fiscalisation::requeue($org['id'], $id);
+                if ($error === null) {
+                    Fiscalisation::processPending($org['id']);
+                }
+                $this->done($id, $error);
 
             case 'status':
                 $this->done($id, Documents::setStatus($org['id'], $id, Request::str($data, 'status', 16)));

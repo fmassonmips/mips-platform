@@ -1,9 +1,10 @@
 <?php
 /**
- * Company profile printed on quotes and invoices.
+ * Company profile printed on quotes and invoices, and MRA e-invoicing settings.
  *
  * @var callable $e
  * @var array<string,string> $profile
+ * @var array{enabled:bool,username:string,ebs_id:string,has_password:bool} $mra
  * @var bool $can_manage
  */
 $ro = $can_manage ? '' : ' disabled';
@@ -30,4 +31,28 @@ $ro = $can_manage ? '' : ' disabled';
       <p id="company-saved" class="success" role="status" hidden>Saved.</p>
     <?php endif; ?>
   </form>
+</section>
+
+<section class="card">
+  <h2>MRA e-invoicing</h2>
+  <p class="muted">When enabled, every invoice and credit note is sent to the Mauritius Revenue Authority when issued,
+     and receives an IRN and a QR code printed on it. Use the credentials of the EBS registered for your company
+     on the MRA e-Invoicing portal.</p>
+  <?php if ($can_manage): ?>
+  <form id="mra-form" novalidate>
+    <label class="checkbox"><input type="checkbox" name="enabled"<?= $mra['enabled'] ? ' checked' : '' ?>> Fiscalise invoices and credit notes with MRA</label>
+    <div class="form-grid">
+      <div class="field"><label for="mra-user">MRA username</label><input type="text" id="mra-user" name="username" maxlength="100" autocomplete="off" value="<?= $e($mra['username']) ?>"></div>
+      <div class="field"><label for="mra-pass">MRA password</label><input type="password" id="mra-pass" name="password" maxlength="200" autocomplete="new-password" placeholder="<?= $mra['has_password'] ? 'Saved — leave empty to keep' : '' ?>"></div>
+      <div class="field"><label for="mra-ebs">EBS MRA ID</label><input type="text" id="mra-ebs" name="ebs_id" maxlength="50" autocomplete="off" value="<?= $e($mra['ebs_id']) ?>"></div>
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn-primary btn-inline">Save</button>
+      <button type="button" id="mra-test" class="btn-secondary">Test connection</button>
+    </div>
+    <p id="mra-result" class="success" role="status" hidden></p>
+  </form>
+  <?php else: ?>
+    <p>Status: <strong><?= $mra['enabled'] ? 'enabled' : 'disabled' ?></strong></p>
+  <?php endif; ?>
 </section>
