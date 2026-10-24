@@ -22,7 +22,7 @@ final class Catalog
     private const MODULES = [
         'bizpilot'    => ['name' => 'BizPilot',    'domain' => 'bizpilot.mu',     'tagline' => 'Gestion des PME',         'status' => 'coming_soon'],
         'bookora'     => ['name' => 'Bookora',     'domain' => 'bookora.com',     'tagline' => 'Réservations en ligne',   'status' => 'coming_soon'],
-        'facturo'     => ['name' => 'Facturo',     'domain' => 'facturo.mu',      'tagline' => 'Devis & factures',        'status' => 'coming_soon'],
+        'facturo'     => ['name' => 'Facturo',     'domain' => 'facturo.mu',      'tagline' => 'Devis & factures',        'status' => 'available'],
         'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'coming_soon'],
         'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'coming_soon'],
         'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'coming_soon'],

@@ -33,5 +33,8 @@
   </main>
 
   <script src="/assets/js/dashboard.js"></script>
+  <?php if (is_file(ROOT_PATH . '/public/assets/js/' . $slug . '.js')): ?>
+    <script src="/assets/js/<?= rawurlencode($slug) ?>.js"></script>
+  <?php endif; ?>
 </body>
 </html>

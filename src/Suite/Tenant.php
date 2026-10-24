@@ -40,6 +40,47 @@ final class Tenant
         return self::createFor($user);
     }
 
+    /** Company profile fields printed on documents. */
+    public const PROFILE_FIELDS = [
+        'legal_name' => 200, 'address' => 500, 'brn' => 40,
+        'vat_number' => 40,  'email'   => 254, 'phone' => 40,
+    ];
+
+    /**
+     * @return array<string,string>
+     */
+    public static function profile(int $orgId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT name, legal_name, address, brn, vat_number, email, phone
+             FROM organizations WHERE id = :id'
+        );
+        $stmt->execute([':id' => $orgId]);
+        $row = $stmt->fetch() ?: [];
+
+        $profile = ['name' => (string) ($row['name'] ?? '')];
+        foreach (array_keys(self::PROFILE_FIELDS) as $field) {
+            $profile[$field] = (string) ($row[$field] ?? '');
+        }
+        return $profile;
+    }
+
+    /**
+     * @param array<string,string> $profile name + PROFILE_FIELDS, already validated
+     */
+    public static function updateProfile(int $orgId, array $profile): void
+    {
+        $sets   = ['name = :name'];
+        $params = [':id' => $orgId, ':name' => $profile['name']];
+        foreach (array_keys(self::PROFILE_FIELDS) as $field) {
+            $sets[]            = $field . ' = :' . $field;
+            $params[':' . $field] = ($profile[$field] ?? '') !== '' ? $profile[$field] : null;
+        }
+        Database::connection()
+            ->prepare('UPDATE organizations SET ' . implode(', ', $sets) . ' WHERE id = :id')
+            ->execute($params);
+    }
+
     /**
      * @param array{role:string} $org
      */

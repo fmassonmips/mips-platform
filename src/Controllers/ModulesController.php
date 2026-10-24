@@ -12,7 +12,7 @@
  *   403 { "error": "..." }
  *   404 { "error": "Unknown module." }
  *   405 { "error": "Method Not Allowed" }
- *   409 { "error": "This module is not available yet." }
+ *   409 { "error": "This module is not available yet." | "Your free trial of this app has ended." }
  *   419 { "error": "Invalid CSRF token." }
  *   422 { "error": "Invalid action." }
  */
@@ -73,6 +73,9 @@ final class ModulesController
             if (!Catalog::isAvailable($slug)) {
                 Response::json(['error' => 'This module is not available yet.'], 409);
             }
+            if (in_array($slug, Modules::trialEndedFor($org['id']), true)) {
+                Response::json(['error' => 'Your free trial of this app has ended.'], 409);
+            }
             Modules::activate($org['id'], $slug);
         } elseif ($action === 'deactivate') {
             Modules::deactivate($org['id'], $slug);
@@ -87,6 +90,7 @@ final class ModulesController
     private function respond(array $org): never
     {
         $enabled = Modules::enabledFor($org['id']);
+        $ended   = Modules::trialEndedFor($org['id']);
 
         $modules = [];
         foreach (Catalog::all() as $slug => $m) {
@@ -97,6 +101,7 @@ final class ModulesController
                 'tagline'       => $m['tagline'],
                 'status'        => $m['status'],
                 'enabled'       => isset($enabled[$slug]),
+                'trial_ended'   => in_array($slug, $ended, true),
                 'trial_ends_at' => $enabled[$slug]['trial_ends_at'] ?? null,
             ];
         }

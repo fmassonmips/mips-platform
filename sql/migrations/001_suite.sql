@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS organization_users (
 CREATE TABLE IF NOT EXISTS organization_modules (
     organization_id BIGINT UNSIGNED NOT NULL,
     module_slug     VARCHAR(40)  NOT NULL,
-    status          VARCHAR(16)  NOT NULL DEFAULT 'trial',  -- trial | active
+    status          VARCHAR(16)  NOT NULL DEFAULT 'trial',  -- trial | active | disabled
     activated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     trial_ends_at   DATETIME     NULL,
     PRIMARY KEY (organization_id, module_slug),

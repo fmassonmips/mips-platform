@@ -3,6 +3,7 @@
 /** @var array{id:int,name:string,role:string} $org */
 /** @var array<string,array{name:string,domain:string,tagline:string,status:string}> $catalog */
 /** @var array<string,array{status:string,activated_at:string,trial_ends_at:?string}> $enabled */
+/** @var list<string> $trial_ended */
 /** @var bool $can_manage */
 /** @var string $csrf_token */
 /** @var string $page_title */
@@ -63,6 +64,8 @@
               <?php endif; ?>
             <?php elseif ($m['status'] !== 'available'): ?>
               <span class="app-badge">Coming soon</span>
+            <?php elseif (in_array($slug, $trial_ended, true)): ?>
+              <span class="app-badge">Free trial ended</span>
             <?php elseif ($can_manage): ?>
               <button type="button" class="btn-secondary" data-action="activate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Start free trial</button>
             <?php else: ?>

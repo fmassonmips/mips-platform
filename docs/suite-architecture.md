@@ -26,9 +26,32 @@ my.mips.mu
 
 ## État actuel
 
-- Les 10 apps sont listées dans le lanceur avec le statut **coming_soon** : aucune n'est encore construite.
+- **Facturo** est disponible. Les 9 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
-- Activer une app passe son statut à `trial` pour 30 jours ; seules les apps `available` peuvent être activées.
+- Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
+  une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
+- Le profil entreprise (raison sociale, BRN, n° TVA, adresse) est partagé par toutes les apps (`/api/suite/organization`).
+
+## Facturo (devis & factures)
+
+| Élément | Règle |
+|---|---|
+| Clients | Par entreprise ; suppression impossible s'ils ont des documents. |
+| Brouillon | Modifiable et supprimable, sans numéro. |
+| Émission | Numéro séquentiel sans trou par entreprise, type et année : `FAC-2026-0001`, `DEV-2026-0001`. Le document devient non modifiable ; les coordonnées vendeur et client sont figées à cet instant. |
+| Facture | `draft → issued ⇄ paid`. Émission refusée sans raison sociale et BRN. |
+| Devis | `draft → sent → accepted / declined` ; « Create invoice » crée un brouillon de facture (une seule par devis). |
+| Montants | Entiers en cents, calculés côté serveur, arrondi au plus proche par ligne. TVA par ligne, 15 % par défaut si l'entreprise a un n° TVA, sinon 0 %. |
+| PDF | Page imprimable `/facturo/print.php?id=…` → « Enregistrer en PDF » du navigateur. |
+
+**Hors périmètre, à faire avant de vendre à des entreprises assujetties à la TVA :**
+
+- **e-Invoicing MRA** : les factures des entreprises concernées doivent être transmises en temps réel à la MRA
+  (JSON, numéro IRN + QR code en retour). Obligatoire depuis mai 2024 au-dessus de MUR 100 M de chiffre
+  d'affaires, étendu au-dessus de MUR 80 M pour 2025-26 ; les phases suivantes ne sont pas confirmées.
+  À vérifier sur https://www.mra.mu/index.php/e-invoicing avant toute commercialisation.
+- **Avoirs** : une facture émise ne peut être ni modifiée ni annulée ; la correction légale passe par un avoir (non implémenté).
+- Envoi par e-mail, relances, paiements partiels, multi-taux de change, export comptable.
 
 ## Ajouter une app
 
@@ -41,11 +64,12 @@ my.mips.mu
 
 ```
 mysql -u root -p mips_platform < sql/migrations/001_suite.sql
+mysql -u root -p mips_platform < sql/migrations/002_facturo.sql
 ```
 
 ## Reste à décider
 
-- Ordre de construction des apps (recommandation : Facturo, puis ClientBloom, puis Bookora).
+- Ordre de construction des apps suivantes (recommandation : ClientBloom, puis Bookora).
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
 - Invitation de collègues dans une entreprise (pas encore d'écran).

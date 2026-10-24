@@ -11,6 +11,7 @@ $user       = \App\Auth::require_auth();
 $org        = \App\Suite\Tenant::forUser($user);
 $catalog    = \App\Suite\Catalog::all();
 $enabled    = \App\Suite\Modules::enabledFor($org['id']);
+$trial_ended = \App\Suite\Modules::trialEndedFor($org['id']);
 $can_manage = \App\Suite\Tenant::canManage($org);
 $csrf_token = \App\Csrf::token();
 $page_title = 'Dashboard';
