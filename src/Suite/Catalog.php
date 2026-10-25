@@ -25,7 +25,7 @@ final class Catalog
         'facturo'     => ['name' => 'Facturo',     'domain' => 'facturo.mu',      'tagline' => 'Devis & factures',        'status' => 'available'],
         'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'coming_soon'],
         'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'coming_soon'],
-        'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'coming_soon'],
+        'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'available'],
         'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'coming_soon'],
         'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'coming_soon'],
         'rendezvous'  => ['name' => 'RendezVous',  'domain' => 'rendezvous.mu',   'tagline' => 'Prise de rendez-vous',    'status' => 'coming_soon'],

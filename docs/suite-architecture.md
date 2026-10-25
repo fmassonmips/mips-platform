@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo** est disponible. Les 9 autres apps sont listées en **coming_soon**.
+- **Facturo** et **ClientBloom** sont disponibles. Les 8 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -76,6 +76,23 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 - Pièce jointe PDF dans l'e-mail (le client passe par le lien), relances automatiques, paiements partiels,
   multi-taux de change, export comptable.
 
+## ClientBloom (CRM & fidélité)
+
+| Élément | Règle |
+|---|---|
+| Cible | Commerces B2C : le client est identifié au comptoir par son téléphone (format local, +230 retiré). |
+| Cashback | % du montant **payé** (hors cashback utilisé), arrondi à l'inférieur. Utilisable à partir d'un minimum, jamais au-delà du solde ni du montant de l'achat. Bonus de bienvenue optionnel. |
+| Circuit fermé | Le cashback ne se dépense que chez le commerçant et n'est jamais remboursé en argent. Volontaire : un solde convertible ou utilisable ailleurs s'approche de la monnaie électronique (régulée par la Bank of Mauritius) — **à faire valider par un juriste**. |
+| Registre | Append-only (`clientbloom_transactions`) : achat, utilisation, bonus, ajustement, expiration, annulation. Chaque opération verrouille la fiche client : le solde stocké = la somme du registre, jamais négatif (testé avec 10 utilisations simultanées). |
+| Corrections | Owner/admin : ajustement manuel motivé, annulation d'une opération par écriture inverse (une seule fois ; refusée si le cashback a déjà été dépensé). |
+| Expiration | Solde perdu après N mois sans activité (0 = jamais), via `tools/clientbloom_expire.php` (cron quotidien). |
+| CRM | Fiche, tags, anniversaire, notes datées, historique ; segments (avec cashback, inactifs 60 j+, meilleurs clients, anniversaires du mois, consentement) ; export CSV (owner/admin, protégé contre l'injection de formules). |
+| Carte client | Lien privé sans connexion (solde + dernières opérations), partageable par WhatsApp depuis la fiche. |
+| Données personnelles | Consentement marketing horodaté (Data Protection Act 2017). « Erase personal data » efface l'identité et les notes, garde le registre anonyme (pièce comptable) ; refusé tant qu'un solde reste. |
+| KPI | Ventes via le programme, cashback émis / utilisé (annulations déduites), clients actifs, **cashback en circulation** = engagement envers les clients. |
+
+**Hors périmètre :** envoi de campagnes SMS/WhatsApp (pas de fournisseur intégré ; l'export CSV filtre les consentants), lien automatique avec les factures Facturo, paliers (silver/gold), points convertibles.
+
 ## Ajouter une app
 
 1. Passer son `status` à `available` dans `src/Suite/Catalog.php`.
@@ -90,6 +107,7 @@ mysql -u root -p mips_platform < sql/migrations/001_suite.sql
 mysql -u root -p mips_platform < sql/migrations/002_facturo.sql
 mysql -u root -p mips_platform < sql/migrations/003_facturo_credit_notes_email.sql
 mysql -u root -p mips_platform < sql/migrations/004_mra_einvoicing.sql
+mysql -u root -p mips_platform < sql/migrations/005_clientbloom.sql
 ```
 
 Puis dans `config/config.php` :
@@ -97,11 +115,15 @@ Puis dans `config/config.php` :
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
 - bloc `mra` : URLs (sandbox par défaut) et clé publique MRA téléchargée sur le portail (`config/mra_public_key.pem`).
 
-Cron : `*/5 * * * * php tools/mra_retry.php`.
+Cron :
+```
+*/5 * * * * php tools/mra_retry.php
+15 2 * * *  php tools/clientbloom_expire.php
+```
 
 ## Reste à décider
 
-- Ordre de construction des apps suivantes (recommandation : ClientBloom, puis Bookora).
+- Ordre de construction des apps suivantes (recommandation : Bookora / RendezVous fusionnées).
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
 - Invitation de collègues dans une entreprise (pas encore d'écran).
