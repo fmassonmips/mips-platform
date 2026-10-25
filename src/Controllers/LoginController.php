@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Audit;
 use App\Auth;
 use App\Csrf;
 use App\RateLimiter;
@@ -59,6 +60,7 @@ final class LoginController
         $rl  = $GLOBALS['config']['rate_limit'];
         $ip  = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
+            Audit::log('auth.rate_limited', 'user', null, ['email' => $email]);
             Response::json(['error' => 'Too many attempts. Please try again later.'], 429);
         }
 
@@ -67,6 +69,7 @@ final class LoginController
         RateLimiter::record($ip, $email, $user !== null);
 
         if ($user === null) {
+            Audit::log('auth.login_failed', 'user', null, ['email' => $email]);
             Response::json(['error' => 'Invalid credentials.'], 401);
         }
 
@@ -74,6 +77,7 @@ final class LoginController
         Auth::login_user($user);
         RateLimiter::clear($ip, $email);
         unset($_SESSION['csrf_token']); // force new token on next page load
+        Audit::log('auth.login', 'user', (int) $user['id']);
 
         Response::json([
             'success' => true,

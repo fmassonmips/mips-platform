@@ -41,4 +41,29 @@ return [
         'max_attempts'   => 5,     // failed attempts before blocking
         'window_seconds' => 900,   // sliding window = 15 minutes
     ],
+
+    // Roles allowed on each module. 'admin' always passes.
+    'access' => [
+        'reporting' => ['admin', 'finance'],
+        'billing'   => ['admin', 'finance'],
+        'audit'     => ['admin'],
+    ],
+
+    'reporting' => [
+        // Upload size is also capped by PHP's upload_max_filesize / post_max_size.
+        'max_upload_bytes' => 64 * 1024 * 1024,
+    ],
+
+    'billing' => [
+        // Mauritius standard VAT rate. Check whether commissions are VAT-able
+        // for each merchant before issuing invoices.
+        'vat_rate'       => 15.00,
+        'invoice_prefix' => 'MIPS',
+        'issuer' => [
+            'name'    => 'MIPS',
+            'address' => '',
+            'brn'     => '',   // Business Registration Number
+            'vat_no'  => '',
+        ],
+    ],
 ];

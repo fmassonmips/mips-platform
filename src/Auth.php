@@ -8,6 +8,8 @@
  *  - Auth::logout_user()            : destroys the session
  *  - Auth::current_user()           : returns the logged-in user (fresh from DB) or null
  *  - Auth::require_auth()           : enforces authentication, returns the user or exits
+ *  - Auth::can(user, module)         : true if the user's role may access a module (config 'access')
+ *  - Auth::require_access(module)    : require_auth() + can(), 403 otherwise
  */
 declare(strict_types=1);
 
@@ -135,6 +137,43 @@ final class Auth
         }
 
         header('Location: /login.php');
+        exit;
+    }
+
+    /**
+     * @param array<string,mixed> $user
+     */
+    public static function can(array $user, string $module): bool
+    {
+        $role = (string) ($user['role'] ?? 'user');
+        if ($role === 'admin') {
+            return true;
+        }
+        $allowed = $GLOBALS['config']['access'][$module] ?? [];
+        return in_array($role, $allowed, true);
+    }
+
+    /**
+     * Enforce authentication and module access on the current request.
+     *
+     * @return array<string,mixed>
+     */
+    public static function require_access(string $module): array
+    {
+        $user = self::require_auth();
+        if (self::can($user, $module)) {
+            return $user;
+        }
+
+        Audit::log('access.denied', 'module', $module);
+
+        if (self::isApiRequest()) {
+            Response::json(['error' => 'Forbidden'], 403);
+        }
+
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Forbidden';
         exit;
     }
 

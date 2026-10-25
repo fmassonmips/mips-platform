@@ -199,3 +199,203 @@ code {
     border-radius: 4px;
     font-size: 0.92em;
 }
+
+/* -------- App navigation -------- */
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.app-nav {
+    display: flex;
+    gap: 4px;
+}
+
+.app-nav a {
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.app-nav a:hover { background: #f0f1f3; color: var(--color-text); }
+.app-nav a.active { background: rgba(43, 108, 176, 0.1); color: var(--color-primary); }
+
+.app-wide { max-width: 1280px; }
+.app-main .card + .card { margin-top: 24px; }
+
+.muted { color: var(--color-muted); font-size: 14px; }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* -------- Forms in app pages -------- */
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inline-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0 16px;
+    align-items: end;
+}
+
+.field-submit { align-self: end; }
+
+select,
+input[type="date"],
+input[type="file"] {
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--color-text);
+}
+
+.grid-form select,
+.grid-form input[type="date"] { width: 100%; }
+
+.btn-auto { width: auto; }
+a.btn-secondary { text-decoration: none; color: var(--color-text); display: inline-block; }
+.btn-small { padding: 4px 10px; font-size: 13px; }
+
+.notice {
+    padding: 10px 12px;
+    background: #fff8e1;
+    border: 1px solid #f2d48a;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.success-left { color: #1a7f37; font-size: 14px; }
+
+/* -------- Data tables -------- */
+.table-wrap { overflow-x: auto; margin: 8px 0 16px; }
+
+table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+table.data th,
+table.data td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+table.data th { color: var(--color-muted); font-weight: 600; white-space: nowrap; }
+table.data .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.data tr.row-strong td { font-weight: 600; background: #fafbfc; }
+table.data tr.row-muted td { color: var(--color-muted); }
+table.data tr.warn td { background: #fff8e1; }
+table.data tfoot td { font-weight: 600; }
+table.data tfoot tr.total td { font-size: 15px; border-top: 2px solid var(--color-text); }
+
+.actions { display: flex; gap: 6px; }
+
+code.details { font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f0f1f3;
+}
+.badge-issued { background: rgba(43, 108, 176, 0.12); color: var(--color-primary); }
+.badge-paid { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-void { color: var(--color-muted); }
+
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+}
+
+/* -------- Report -------- */
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.kpi {
+    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+.kpi-label { font-size: 13px; color: var(--color-muted); }
+.kpi-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 12px; color: var(--color-muted); }
+
+.flags { font-size: 14px; padding-left: 20px; }
+.flags li { margin-bottom: 4px; }
+
+/* -------- Printable invoice -------- */
+.invoice-body { background: #fff; }
+
+.invoice {
+    max-width: 860px;
+    margin: 32px auto;
+    padding: 0 24px;
+}
+
+.invoice-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.invoice-head h1 { margin: 0 0 4px; }
+.invoice-head p, .invoice-to p { margin: 0; font-size: 14px; }
+.invoice-to { margin-bottom: 24px; }
+.invoice-to h2 { font-size: 14px; color: var(--color-muted); margin: 0 0 4px; }
+
+.invoice-watermark {
+    padding: 8px 12px;
+    border: 2px dashed var(--color-error);
+    color: var(--color-error);
+    font-weight: 700;
+    text-align: center;
+}
+
+@media print {
+    .no-print { display: none; }
+    .invoice { margin: 0; }
+}

@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Audit;
 use App\Csrf;
 use App\Database;
 use App\RateLimiter;
@@ -79,6 +80,7 @@ final class RegisterController
                 ':name'  => $name,
                 ':role'  => 'user',
             ]);
+            $newId = (int) Database::connection()->lastInsertId();
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 RateLimiter::record($ip, $email, false);
@@ -89,6 +91,7 @@ final class RegisterController
         }
 
         RateLimiter::record($ip, $email, true);
+        Audit::log('auth.register', 'user', $newId, ['email' => $email]);
 
         Response::json([
             'success' => true,

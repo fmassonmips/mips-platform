@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Audit;
 use App\Auth;
 use App\Csrf;
 use App\Response;
@@ -29,6 +30,8 @@ final class LogoutController
             Response::json(['error' => 'Invalid CSRF token.'], 419);
         }
 
+        // Log before the session (and the acting user id) is destroyed.
+        Audit::log('auth.logout', 'user', isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null);
         Auth::logout_user();
 
         Response::json(['success' => true], 200);
