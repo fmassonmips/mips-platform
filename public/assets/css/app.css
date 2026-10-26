@@ -374,6 +374,13 @@ a.btn-secondary { text-decoration: none; display: inline-block; }
 
 .print-body { background: #fff; max-width: 820px; margin: 0 auto; padding: 32px 24px; }
 .print-toolbar { text-align: right; margin-bottom: 24px; }
+/* Long column headers ("Amount excl. VAT") wrap instead of widening the table. */
+.doc .table th.num { white-space: normal; }
+@media (max-width: 600px) {
+    .print-body { padding: 20px 16px; }
+    .doc .table { font-size: 12px; }
+    .doc .table th, .doc .table td { padding: 6px 4px; }
+}
 
 @media print {
     .print-toolbar { display: none; }
