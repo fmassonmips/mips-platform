@@ -8,12 +8,12 @@
 /** @var string $page_title */
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-  <title><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?> &middot; MIPS Dashboard</title>
+  <title><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?> &middot; Tableau de bord MIPS</title>
   <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
     </h1>
     <div class="user-info">
       <span><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></span>
-      <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
+      <button id="logout-btn" type="button" class="btn-secondary">Déconnexion</button>
     </div>
   </header>
 

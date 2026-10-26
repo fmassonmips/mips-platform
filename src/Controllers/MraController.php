@@ -29,18 +29,18 @@ final class MraController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
         $user = Auth::current_user();
         if ($user === null) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
         $org = Tenant::forUser($user);
         if (!Tenant::canManage($org)) {
-            Response::json(['error' => 'Only an owner or admin can change MRA settings.'], 403);
+            Response::json(['error' => 'Seul un propriétaire ou administrateur peut modifier les réglages MRA.'], 403);
         }
 
         $data = Request::json();
@@ -65,10 +65,10 @@ final class MraController
                 } catch (MraException | \RuntimeException $e) {
                     Response::json(['error' => $e->getMessage()], 422);
                 }
-                Response::json(['success' => true, 'message' => 'Connected to MRA: credentials accepted.']);
+                Response::json(['success' => true, 'message' => 'Connexion à la MRA réussie : identifiants acceptés.']);
 
             default:
-                Response::json(['error' => 'Invalid action.'], 422);
+                Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 }

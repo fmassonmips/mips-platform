@@ -42,14 +42,14 @@ final class Settings
     public static function save(int $orgId, bool $enabled, string $username, string $password, string $ebsId): ?string
     {
         if (mb_strlen($username) > 100 || mb_strlen($ebsId) > 50 || strlen($password) > 200) {
-            return 'One of the MRA fields is too long.';
+            return 'Un des champs MRA est trop long.';
         }
         $current = self::get($orgId);
         if ($enabled && ($username === '' || $ebsId === '' || ($password === '' && !$current['has_password']))) {
-            return 'Username, password and EBS MRA ID are required to enable e-invoicing.';
+            return 'Identifiant, mot de passe et EBS MRA ID sont obligatoires pour activer la facturation électronique MRA.';
         }
         if ($password !== '' && !Secrets::isConfigured()) {
-            return 'Server secret key is not configured; MRA passwords cannot be stored.';
+            return 'La clé secrète du serveur n’est pas configurée : impossible d’enregistrer les mots de passe MRA.';
         }
 
         $pdo = Database::connection();
@@ -81,7 +81,7 @@ final class Settings
         $stmt->execute([':id' => $orgId]);
         $row = $stmt->fetch() ?: [];
         if (empty($row['mra_username']) || empty($row['mra_password_enc']) || empty($row['mra_ebs_id'])) {
-            throw new MraException('MRA credentials are incomplete.', false);
+            throw new MraException('Les identifiants MRA sont incomplets.', false);
         }
         return [
             'username' => (string) $row['mra_username'],

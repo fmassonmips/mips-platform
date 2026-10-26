@@ -19,18 +19,18 @@ final class ModuleApi
     public static function context(string $slug): array
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
         $user = Auth::current_user();
         if ($user === null) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
         $org = Tenant::forUser($user);
         if (!Modules::isEnabled($org['id'], $slug)) {
-            Response::json(['error' => (Catalog::get($slug)['name'] ?? 'This app') . ' is not enabled for your organization.'], 403);
+            Response::json(['error' => (Catalog::get($slug)['name'] ?? 'Cette application') . ' n’est pas activée pour votre entreprise.'], 403);
         }
         return [$user, $org];
     }

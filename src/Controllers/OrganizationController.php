@@ -24,33 +24,34 @@ final class OrganizationController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
         $user = Auth::current_user();
         if ($user === null) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
         $org = Tenant::forUser($user);
         if (!Tenant::canManage($org)) {
-            Response::json(['error' => 'Only an owner or admin can edit the company profile.'], 403);
+            Response::json(['error' => 'Seul un propriétaire ou administrateur peut modifier le profil de l’entreprise.'], 403);
         }
 
         $data    = Request::json();
         $profile = ['name' => Request::str($data, 'name', 1000)];
         if ($profile['name'] === '' || mb_strlen($profile['name']) > 160) {
-            Response::json(['error' => 'Organization name is required (max 160 characters).'], 422);
+            Response::json(['error' => 'Le nom de l’entreprise est obligatoire (160 caractères max.).'], 422);
         }
         foreach (Tenant::PROFILE_FIELDS as $field => $max) {
             $profile[$field] = Request::str($data, $field, 1000);
             if (mb_strlen($profile[$field]) > $max) {
-                Response::json(['error' => ucfirst(str_replace('_', ' ', $field)) . ' is too long.'], 422);
+                $labels = ['legal_name' => 'Raison sociale', 'address' => 'Adresse', 'brn' => 'BRN', 'vat_number' => 'N° TVA', 'email' => 'E-mail', 'phone' => 'Téléphone'];
+                Response::json(['error' => ($labels[$field] ?? $field) . ' : trop long.'], 422);
             }
         }
         if ($profile['email'] !== '' && !filter_var($profile['email'], FILTER_VALIDATE_EMAIL)) {
-            Response::json(['error' => 'Email is invalid.'], 422);
+            Response::json(['error' => 'E-mail invalide.'], 422);
         }
 
         Tenant::updateProfile($org['id'], $profile);

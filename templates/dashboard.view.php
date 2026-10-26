@@ -9,40 +9,40 @@
 /** @var string $page_title */
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
-  <title><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?> &middot; MIPS Dashboard</title>
+  <title><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?> &middot; Tableau de bord MIPS</title>
   <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 <body>
   <header class="app-header">
-    <h1>MIPS Dashboard</h1>
+    <h1>Tableau de bord MIPS</h1>
     <div class="user-info">
       <span>
-        Signed in as
+        Connecté en tant que
         <strong><?= htmlspecialchars((string) $user['email'], ENT_QUOTES, 'UTF-8') ?></strong>
       </span>
-      <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
+      <button id="logout-btn" type="button" class="btn-secondary">Déconnexion</button>
     </div>
   </header>
 
   <main class="app-main">
     <section class="card">
       <h2>
-        Welcome,
+        Bienvenue,
         <?= htmlspecialchars((string) ($user['name'] ?? $user['email']), ENT_QUOTES, 'UTF-8') ?>!
       </h2>
       <dl class="meta">
-        <dt>Organization</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>
-        <dt>Your role</dt><dd><?= htmlspecialchars($org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
+        <dt>Entreprise</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>
+        <dt>Votre rôle</dt><dd><?= htmlspecialchars(['owner' => 'propriétaire', 'admin' => 'administrateur', 'member' => 'membre'][$org['role']] ?? $org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
       </dl>
     </section>
 
     <section class="suite" aria-labelledby="suite-title">
-      <h2 id="suite-title">Apps</h2>
+      <h2 id="suite-title">Applications</h2>
       <p id="suite-error" class="error" role="alert" hidden></p>
       <ul class="app-grid">
         <?php foreach ($catalog as $slug => $m): ?>
@@ -56,20 +56,20 @@
 
             <?php if ($isOn): ?>
               <?php if ($enabled[$slug]['status'] === 'trial' && $enabled[$slug]['trial_ends_at'] !== null): ?>
-                <span class="app-badge">Trial until <?= htmlspecialchars(substr($enabled[$slug]['trial_ends_at'], 0, 10), ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="app-badge">Essai jusqu’au <?= htmlspecialchars(substr($enabled[$slug]['trial_ends_at'], 0, 10), ENT_QUOTES, 'UTF-8') ?></span>
               <?php endif; ?>
-              <a class="btn-secondary" href="/app.php?m=<?= rawurlencode($slug) ?>">Open</a>
+              <a class="btn-secondary" href="/app.php?m=<?= rawurlencode($slug) ?>">Ouvrir</a>
               <?php if ($can_manage): ?>
-                <button type="button" class="btn-link" data-action="deactivate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Deactivate</button>
+                <button type="button" class="btn-link" data-action="deactivate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Désactiver</button>
               <?php endif; ?>
             <?php elseif ($m['status'] !== 'available'): ?>
-              <span class="app-badge">Coming soon</span>
+              <span class="app-badge">Bientôt disponible</span>
             <?php elseif (in_array($slug, $trial_ended, true)): ?>
-              <span class="app-badge">Free trial ended</span>
+              <span class="app-badge">Essai gratuit terminé</span>
             <?php elseif ($can_manage): ?>
-              <button type="button" class="btn-secondary" data-action="activate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Start free trial</button>
+              <button type="button" class="btn-secondary" data-action="activate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Démarrer l’essai gratuit</button>
             <?php else: ?>
-              <span class="app-badge">Ask an admin to enable it</span>
+              <span class="app-badge">Demandez à un administrateur de l’activer</span>
             <?php endif; ?>
           </li>
         <?php endforeach; ?>

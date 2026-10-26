@@ -131,7 +131,7 @@ final class Auth
         }
 
         if (self::isApiRequest()) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
 
         header('Location: /login.php');

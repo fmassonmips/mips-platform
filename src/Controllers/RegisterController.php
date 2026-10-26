@@ -28,11 +28,11 @@ final class RegisterController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
 
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
 
         $raw  = (string) file_get_contents('php://input');
@@ -63,7 +63,7 @@ final class RegisterController
         $rl = $GLOBALS['config']['rate_limit'];
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
-            Response::json(['error' => 'Too many attempts. Please try again later.'], 429);
+            Response::json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
         }
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -82,17 +82,17 @@ final class RegisterController
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 RateLimiter::record($ip, $email, false);
-                Response::json(['error' => 'An account with this email already exists.'], 409);
+                Response::json(['error' => 'Un compte existe déjà avec cet e-mail.'], 409);
             }
             error_log('[Register] ' . $e->getMessage());
-            Response::json(['error' => 'Registration failed. Please try again later.'], 500);
+            Response::json(['error' => 'Échec de l’inscription. Veuillez réessayer plus tard.'], 500);
         }
 
         RateLimiter::record($ip, $email, true);
 
         Response::json([
             'success' => true,
-            'message' => 'Account created. An administrator will activate it.',
+            'message' => 'Compte créé. Un administrateur va l’activer.',
         ], 201);
     }
 }

@@ -33,12 +33,12 @@ final class ModulesController
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? '';
         if ($method !== 'GET' && $method !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
 
         $user = Auth::current_user();
         if ($user === null) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
         $org = Tenant::forUser($user);
 
@@ -55,10 +55,10 @@ final class ModulesController
     private function mutate(array $org): void
     {
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
         if (!Tenant::canManage($org)) {
-            Response::json(['error' => 'Only an owner or admin can manage apps.'], 403);
+            Response::json(['error' => 'Seul un propriétaire ou administrateur peut gérer les applications.'], 403);
         }
 
         $data   = json_decode((string) file_get_contents('php://input'), true);
@@ -66,21 +66,21 @@ final class ModulesController
         $slug   = is_array($data) && is_string($data['module'] ?? null) ? $data['module'] : '';
 
         if (Catalog::get($slug) === null) {
-            Response::json(['error' => 'Unknown module.'], 404);
+            Response::json(['error' => 'Application inconnue.'], 404);
         }
 
         if ($action === 'activate') {
             if (!Catalog::isAvailable($slug)) {
-                Response::json(['error' => 'This module is not available yet.'], 409);
+                Response::json(['error' => 'Cette application n’est pas encore disponible.'], 409);
             }
             if (in_array($slug, Modules::trialEndedFor($org['id']), true)) {
-                Response::json(['error' => 'Your free trial of this app has ended.'], 409);
+                Response::json(['error' => 'Votre essai gratuit de cette application est terminé.'], 409);
             }
             Modules::activate($org['id'], $slug);
         } elseif ($action === 'deactivate') {
             Modules::deactivate($org['id'], $slug);
         } else {
-            Response::json(['error' => 'Invalid action.'], 422);
+            Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 

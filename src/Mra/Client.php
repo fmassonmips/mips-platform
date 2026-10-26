@@ -46,7 +46,7 @@ final class Client
 
         $publicKey = $this->publicKey();
         if (!openssl_public_encrypt($payload, $encrypted, $publicKey, OPENSSL_PKCS1_PADDING)) {
-            throw new MraException('Could not encrypt the credentials with the MRA public key (credentials too long for the key?).');
+            throw new MraException('Impossible de chiffrer les identifiants avec la clé publique MRA (identifiants trop longs pour la clé ?).');
         }
 
         $requestId = self::requestId();
@@ -59,17 +59,17 @@ final class Client
         ]);
 
         if (($response['status'] ?? '') !== 'SUCCESS' || !is_string($response['token'] ?? null) || !is_string($response['key'] ?? null)) {
-            throw new MraException('MRA authentication failed: ' . self::errors($response), false);
+            throw new MraException('Échec de l’authentification MRA : ' . self::errors($response), false);
         }
 
         $decrypted = openssl_decrypt((string) base64_decode($response['key'], true), 'aes-256-ecb', $ourKey, OPENSSL_RAW_DATA);
         if ($decrypted === false) {
-            throw new MraException('Could not decrypt the session key returned by MRA.', false);
+            throw new MraException('Impossible de déchiffrer la clé de session renvoyée par la MRA.', false);
         }
         // The session key comes back either raw or as a base64 string.
         $sessionKey = strlen($decrypted) === 32 ? $decrypted : base64_decode($decrypted, true);
         if (!is_string($sessionKey) || strlen($sessionKey) !== 32) {
-            throw new MraException('Unexpected session key format returned by MRA.', false);
+            throw new MraException('Format de clé de session inattendu renvoyé par la MRA.', false);
         }
 
         $expires = \DateTimeImmutable::createFromFormat('Ymd H:i:s', trim((string) ($response['expiryDate'] ?? '')));
@@ -91,7 +91,7 @@ final class Client
         $json = json_encode($invoices, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $encrypted = openssl_encrypt($json, 'aes-256-ecb', $sessionKey, OPENSSL_RAW_DATA);
         if ($encrypted === false) {
-            throw new MraException('Could not encrypt the invoice data.', false);
+            throw new MraException('Impossible de chiffrer les données de la facture.', false);
         }
 
         return $this->post((string) $this->cfg['transmit_url'], [
@@ -115,7 +115,7 @@ final class Client
     {
         foreach ($headers as $h) {
             if (preg_match('/[\r\n]/', $h)) {
-                throw new MraException('Invalid header value.', false);
+                throw new MraException('Valeur d’en-tête invalide.', false);
             }
         }
 
@@ -136,16 +136,16 @@ final class Client
         curl_close($ch);
 
         if ($raw === false) {
-            throw new MraException('Could not reach MRA: ' . $error);
+            throw new MraException('Impossible de joindre la MRA : ' . $error);
         }
         $data = json_decode((string) $raw, true);
         if ($status >= 500 || !is_array($data)) {
-            throw new MraException('MRA returned HTTP ' . $status . '.');
+            throw new MraException('La MRA a répondu HTTP ' . $status . '.');
         }
         if ($status >= 400) {
             // Invalid/expired token is transient: re-authenticating fixes it.
             $tokenProblem = str_contains(self::errors($data), 'ERR0050') || str_contains(strtolower(self::errors($data)), 'token');
-            throw new MraException('MRA rejected the request: ' . self::errors($data), $tokenProblem, $tokenProblem);
+            throw new MraException('La MRA a rejeté la requête : ' . self::errors($data), $tokenProblem, $tokenProblem);
         }
         return $data;
     }
@@ -160,7 +160,7 @@ final class Client
         }
         $key = $pem !== '' ? openssl_pkey_get_public($pem) : false;
         if ($key === false) {
-            throw new MraException('The MRA public key is missing or invalid (config mra.public_key_file).', false);
+            throw new MraException('La clé publique MRA est absente ou invalide (config mra.public_key_file).', false);
         }
         return $key;
     }

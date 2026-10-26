@@ -49,7 +49,7 @@
                     return;
                 }
                 const body = await res.json().catch(function () { return {}; });
-                throw new Error(body.error || 'Request failed.');
+                throw new Error(body.error || 'La requête a échoué.');
             } catch (err) {
                 if (suiteError) {
                     suiteError.textContent = err.message;
