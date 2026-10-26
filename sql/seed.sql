@@ -14,13 +14,14 @@
 
 USE mips_platform;
 
-INSERT INTO users (email, password_hash, name, role, is_active)
+INSERT INTO users (email, password_hash, name, role, is_active, activated_at)
 VALUES (
     'admin@example.com',
     '$2y$12$fkREcf4PDpT4qyHaUrWq1OMM8pPXISgFCQb2nCC/PAlIQ9JqkSlpe',
     'Admin',
     'admin',
-    1
+    1,
+    NOW()
 )
 ON DUPLICATE KEY UPDATE
     password_hash = VALUES(password_hash),

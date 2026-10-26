@@ -47,7 +47,11 @@ return [
         'reporting' => ['admin', 'finance'],
         'billing'   => ['admin', 'finance'],
         'audit'     => ['admin'],
+        'users'     => ['admin'],
     ],
+
+    // Roles an administrator can assign, in display order.
+    'roles' => ['user', 'finance', 'admin'],
 
     'reporting' => [
         // Upload size is also capped by PHP's upload_max_filesize / post_max_size.

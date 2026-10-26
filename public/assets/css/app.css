@@ -399,3 +399,9 @@ code.details { font-size: 12px; white-space: pre-wrap; word-break: break-all; }
     .no-print { display: none; }
     .invoice { margin: 0; }
 }
+
+/* -------- Users -------- */
+.badge-active { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-pending { background: #fff3cd; color: #8a5a00; }
+.badge-deactivated { color: var(--color-muted); }
+.toolbar input[type="text"] { width: 220px; padding: 8px 10px; font-size: 14px; }

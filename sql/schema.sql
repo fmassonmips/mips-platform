@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS users (
     KEY idx_users_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Distinguishes "pending" (never activated) from "deactivated" accounts.
+-- Idempotent for databases created before the column existed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS activated_at DATETIME NULL AFTER is_active;
+UPDATE users SET activated_at = created_at WHERE is_active = 1 AND activated_at IS NULL;
+
 -- ---- login_attempts (rate limiting) ------------------------------------
 CREATE TABLE IF NOT EXISTS login_attempts (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

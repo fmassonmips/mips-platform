@@ -7,6 +7,7 @@ $nav = [
     'dashboard' => ['/dashboard.php', 'Dashboard', null],
     'reports'   => ['/reports.php',   'Reports',   'reporting'],
     'billing'   => ['/billing.php',   'Billing',   'billing'],
+    'users'     => ['/users.php',     'Users',     'users'],
     'audit'     => ['/audit.php',     'Audit log', 'audit'],
 ];
 ?>
