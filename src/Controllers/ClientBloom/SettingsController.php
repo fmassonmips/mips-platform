@@ -3,7 +3,8 @@
  * POST /api/clientbloom/settings — loyalty program rules (owner/admin).
  *
  * Input (JSON body):
- *   { "cashback_rate": "5", "min_redeem": "100.00", "welcome_bonus": "0", "expiry_months": 12 }
+ *   { "cashback_rate": "5", "min_redeem": "100.00", "welcome_bonus": "0", "expiry_months": 12,
+ *     "facturo_rewards": bool }
  *
  * Responses:
  *   200 { "success": true }
@@ -37,7 +38,10 @@ final class SettingsController
         if ($rate === null || $min === null || $bonus === null || !ctype_digit($exp)) {
             Response::json(['error' => 'Check the values: numbers only, at most 2 decimals.'], 422);
         }
-        $settings = ['cashback_bp' => $rate, 'min_redeem_cents' => $min, 'welcome_bonus_cents' => $bonus, 'expiry_months' => (int) $exp];
+        $settings = [
+            'cashback_bp' => $rate, 'min_redeem_cents' => $min, 'welcome_bonus_cents' => $bonus,
+            'expiry_months' => (int) $exp, 'facturo_rewards' => ($data['facturo_rewards'] ?? false) === true ? 1 : 0,
+        ];
         $error = Settings::validate($settings);
         if ($error !== null) {
             Response::json(['error' => $error], 422);

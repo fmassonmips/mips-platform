@@ -205,6 +205,7 @@
                 min_redeem: f.min_redeem.value,
                 welcome_bonus: f.welcome_bonus.value,
                 expiry_months: f.expiry_months.value,
+                facturo_rewards: f.facturo_rewards.checked,
             });
             document.getElementById('program-saved').hidden = false;
         });

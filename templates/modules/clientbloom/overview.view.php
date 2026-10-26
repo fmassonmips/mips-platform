@@ -4,10 +4,14 @@
  *
  * @var callable $e
  * @var array<string,int> $stats
- * @var array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int} $rules
+ * @var array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int} $rules
+ * @var array{id:int,name:string,role:string} $org
  * @var bool $can_manage
  */
 use App\Facturo\Money;
+use App\Suite\Modules;
+
+$facturoOn = Modules::isEnabled($org['id'], 'facturo');
 
 $m = static fn (int $c): string => Money::format($c, 'MUR');
 $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] / $stats['issued_cents']) . '%' : '—';
@@ -42,6 +46,11 @@ $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] 
       <div class="field"><label for="pr-exp">Expires after inactivity (months, 0 = never)</label>
         <input type="text" id="pr-exp" name="expiry_months" inputmode="numeric" value="<?= (int) $rules['expiry_months'] ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
     </div>
+    <label class="checkbox"><input type="checkbox" name="facturo_rewards"<?= $rules['facturo_rewards'] === 1 ? ' checked' : '' ?><?= $can_manage && $facturoOn ? '' : ' disabled' ?>>
+      Reward paid Facturo invoices (cashback on the invoice total when it is marked paid)</label>
+    <?php if (!$facturoOn): ?>
+      <p class="muted small">Enable Facturo from the app launcher to reward paid invoices.</p>
+    <?php endif; ?>
     <p class="muted small">Cashback can only be spent in your business and is never paid out in cash.
        Changing the rate applies to future sales only.</p>
     <?php if ($can_manage): ?>

@@ -117,6 +117,24 @@ final class Customers
     }
 
     /**
+     * @return array<string,mixed>|null
+     */
+    public static function findByEmail(int $orgId, string $email): ?array
+    {
+        $email = trim($email);
+        if ($email === '') {
+            return null;
+        }
+        $stmt = Database::connection()->prepare(
+            'SELECT ' . self::COLUMNS . ' FROM clientbloom_customers
+             WHERE organization_id = :oid AND email = :email AND erased_at IS NULL ORDER BY id LIMIT 1'
+        );
+        $stmt->execute([':oid' => $orgId, ':email' => $email]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
      * Validate raw input. Returns [clean fields, error|null].
      *
      * @param array<string,mixed> $in
@@ -320,7 +338,8 @@ final class Customers
         $c->execute([':oid' => $orgId]);
         $t = $pdo->prepare(
             // Reversals are netted against the type of the transaction they cancel.
-            'SELECT COALESCE(SUM(CASE WHEN COALESCE(o.type, t.type) = \'purchase\' THEN t.amount_cents END), 0) AS sales_cents,
+            'SELECT COALESCE(SUM(CASE WHEN COALESCE(o.type, t.type) = \'purchase\'
+                                       OR (t.type = \'adjust\' AND t.amount_cents < 0) THEN t.amount_cents END), 0) AS sales_cents,
                     COALESCE(SUM(CASE WHEN COALESCE(o.type, t.type) IN (\'purchase\', \'bonus\', \'adjust\')
                                        AND COALESCE(o.cashback_cents, t.cashback_cents) > 0 THEN t.cashback_cents END), 0) AS issued_cents,
                     COALESCE(-SUM(CASE WHEN COALESCE(o.type, t.type) = \'redeem\' THEN t.cashback_cents END), 0) AS redeemed_cents,

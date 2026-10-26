@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Facturo;
 
+use App\ClientBloom\FacturoRewards;
 use App\Facturo\Api;
 use App\Facturo\DocumentMailer;
 use App\Facturo\Documents;
@@ -50,6 +51,7 @@ final class DocumentsController
                 $error = Documents::issue($org['id'], $id);
                 if ($error === null) {
                     Fiscalisation::processPending($org['id']);   // outcome is shown on the document
+                    FacturoRewards::onCreditNoteIssued($org['id'], (int) $user['id'], $id);
                 }
                 $this->done($id, $error);
 
@@ -61,7 +63,11 @@ final class DocumentsController
                 $this->done($id, $error);
 
             case 'status':
-                $this->done($id, Documents::setStatus($org['id'], $id, Request::str($data, 'status', 16)));
+                $error = Documents::setStatus($org['id'], $id, Request::str($data, 'status', 16));
+                if ($error === null) {
+                    FacturoRewards::onInvoiceStatusChanged($org['id'], (int) $user['id'], $id);   // shown on the invoice
+                }
+                $this->done($id, $error);
 
             case 'convert':
                 [$invoiceId, $error] = Documents::convertToInvoice($org['id'], (int) $user['id'], $id);

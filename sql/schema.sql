@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS facturo_clients (
     address         VARCHAR(500) NULL,
     brn             VARCHAR(40)  NULL,
     vat_number      VARCHAR(40)  NULL,
+    clientbloom_customer_id BIGINT UNSIGNED NULL,           -- loyalty customer (FK added after clientbloom tables)
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,
@@ -137,6 +138,8 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     mra_error          VARCHAR(1000) NULL,
     mra_attempts       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     mra_fiscalised_at  DATETIME     NULL,
+    clientbloom_tx_id  BIGINT UNSIGNED NULL,                -- ClientBloom purchase recorded when paid
+    clientbloom_note   VARCHAR(255) NULL,                   -- last loyalty outcome shown on the invoice
     issued_at          DATETIME     NULL,
     paid_at            DATETIME     NULL,
     created_by         BIGINT UNSIGNED NULL,
@@ -218,6 +221,7 @@ CREATE TABLE IF NOT EXISTS clientbloom_settings (
     min_redeem_cents    BIGINT       NOT NULL DEFAULT 10000,   -- smallest amount a customer can use
     welcome_bonus_cents BIGINT       NOT NULL DEFAULT 0,
     expiry_months       SMALLINT UNSIGNED NOT NULL DEFAULT 12, -- balance lost after N months without activity; 0 = never
+    facturo_rewards     TINYINT(1)   NOT NULL DEFAULT 0,       -- paid Facturo invoices earn cashback
     updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (organization_id),
@@ -289,6 +293,11 @@ CREATE TABLE IF NOT EXISTS clientbloom_notes (
     CONSTRAINT fk_cb_notes_org      FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
     CONSTRAINT fk_cb_notes_customer FOREIGN KEY (customer_id)     REFERENCES clientbloom_customers (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- Facturo ↔ ClientBloom link ------------------------------------------
+ALTER TABLE facturo_clients
+    ADD CONSTRAINT fk_facturo_clients_cb FOREIGN KEY (clientbloom_customer_id)
+        REFERENCES clientbloom_customers (id) ON DELETE SET NULL;
 
 -- Optional: a dedicated application user rather than root.
 -- CREATE USER 'mips_user'@'localhost' IDENTIFIED BY 'change_me_in_production';

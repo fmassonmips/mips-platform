@@ -25,7 +25,7 @@ final class Ledger
      * Record a sale at the counter, optionally paid in part with cashback.
      * Cashback is earned on the amount actually paid (amount − redeemed).
      *
-     * @return array{0:?array{earned:int,redeemed:int,balance:int},1:?string}
+     * @return array{0:?array{earned:int,redeemed:int,balance:int,purchase_tx_id:int},1:?string}
      */
     public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference): array
     {
@@ -52,7 +52,7 @@ final class Ledger
             $paid   = $amountCents - $redeemCents;
             $earned = intdiv($paid * $rules['cashback_bp'], 10000);   // rounded down: never over-credit
             $balance += $earned;
-            self::insert($orgId, $userId, (int) $c['id'], 'purchase', $amountCents, $earned, $balance, $reference, null);
+            $txId = self::insert($orgId, $userId, (int) $c['id'], 'purchase', $amountCents, $earned, $balance, $reference, null);
 
             Database::connection()->prepare(
                 'UPDATE clientbloom_customers
@@ -61,7 +61,7 @@ final class Ledger
                  WHERE id = :id'
             )->execute([':b' => $balance, ':amt' => $amountCents, ':id' => (int) $c['id']]);
 
-            return [['earned' => $earned, 'redeemed' => $redeemCents, 'balance' => $balance], null];
+            return [['earned' => $earned, 'redeemed' => $redeemCents, 'balance' => $balance, 'purchase_tx_id' => $txId], null];
         });
     }
 
@@ -133,6 +133,51 @@ final class Ledger
             return [[], null];
         });
         return $error;
+    }
+
+    /**
+     * After a refund: take back up to $cents of cashback (never below zero) and
+     * remove $refundedCents from the customer's spend. The entry is recorded
+     * even when no cashback is left, so sales figures stay net of refunds.
+     * Returns [cashback actually taken back, error|null, ledger entry id|null].
+     *
+     * @return array{0:int,1:?string,2:?int}
+     */
+    public static function clawback(int $orgId, ?int $userId, int $customerId, int $cents, string $reason, int $refundedCents = 0): array
+    {
+        if ($cents <= 0 && $refundedCents <= 0) {
+            return [0, null, null];
+        }
+        [$result, $error] = self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $cents, $reason, $refundedCents): array {
+            $take    = max(0, min($cents, (int) $c['balance_cents']));
+            $balance = (int) $c['balance_cents'] - $take;
+            $txId    = self::insert($orgId, $userId, (int) $c['id'], 'adjust', -$refundedCents, -$take, $balance, $reason, null);
+            Database::connection()->prepare(
+                'UPDATE clientbloom_customers
+                 SET balance_cents = :b, total_spent_cents = GREATEST(total_spent_cents - :r, 0) WHERE id = :id'
+            )->execute([':b' => $balance, ':r' => $refundedCents, ':id' => (int) $c['id']]);
+            return [[$take, $txId], null];
+        });
+        return $error !== null ? [0, $error, null] : [(int) $result[0], null, $result[1]];
+    }
+
+    /**
+     * @return array{type:string,amount_cents:int,cashback_cents:int,customer_id:int,reversed:bool}|null
+     */
+    public static function transaction(int $orgId, int $id): ?array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT t.type, t.amount_cents, t.cashback_cents, t.customer_id,
+                    (SELECT COUNT(*) FROM clientbloom_transactions r WHERE r.reversal_of = t.id) AS reversed
+             FROM clientbloom_transactions t WHERE t.organization_id = :oid AND t.id = :id'
+        );
+        $stmt->execute([':oid' => $orgId, ':id' => $id]);
+        $t = $stmt->fetch();
+        return is_array($t) ? [
+            'type' => (string) $t['type'], 'amount_cents' => (int) $t['amount_cents'],
+            'cashback_cents' => (int) $t['cashback_cents'], 'customer_id' => (int) $t['customer_id'],
+            'reversed' => (int) $t['reversed'] > 0,
+        ] : null;
     }
 
     /**
@@ -220,9 +265,10 @@ final class Ledger
         }
     }
 
-    private static function insert(int $orgId, ?int $userId, int $customerId, string $type, int $amount, int $cashback, int $balanceAfter, string $reference, ?int $reversalOf): void
+    private static function insert(int $orgId, ?int $userId, int $customerId, string $type, int $amount, int $cashback, int $balanceAfter, string $reference, ?int $reversalOf): int
     {
-        Database::connection()->prepare(
+        $pdo = Database::connection();
+        $pdo->prepare(
             'INSERT INTO clientbloom_transactions
                 (organization_id, customer_id, type, amount_cents, cashback_cents, balance_after, reference, reversal_of, created_by)
              VALUES (:oid, :cid, :type, :amt, :cb, :bal, :ref, :rev, :by)'
@@ -231,5 +277,6 @@ final class Ledger
             ':bal' => $balanceAfter, ':ref' => $reference !== '' ? mb_substr($reference, 0, 100) : null,
             ':rev' => $reversalOf, ':by' => $userId,
         ]);
+        return (int) $pdo->lastInsertId();
     }
 }

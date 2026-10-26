@@ -67,6 +67,16 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
     </div>
   <?php endif; ?>
 
+  <?php if ($doc['clientbloom_note'] !== null): ?>
+    <?php $loyaltyTx = $doc['clientbloom_tx_id'] !== null ? \App\ClientBloom\Ledger::transaction($org['id'], (int) $doc['clientbloom_tx_id']) : null; ?>
+    <div class="related">
+      <?= $e($doc['clientbloom_note']) ?>
+      <?php if ($loyaltyTx !== null && \App\Suite\Modules::isEnabled($org['id'], 'clientbloom')): ?>
+        <a href="/app.php?m=clientbloom&amp;p=customer&amp;id=<?= (int) $loyaltyTx['customer_id'] ?>">View in ClientBloom</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if ($isInvoice && $doc['credit_notes'] !== []): ?>
     <div class="related">
       <strong>Credit notes:</strong>
