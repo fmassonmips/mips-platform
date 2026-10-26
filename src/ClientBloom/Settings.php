@@ -11,29 +11,36 @@ use App\Database;
 final class Settings
 {
     /**
-     * @return array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int}
+     * @return array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int,invoice_cashback_bp:int,invoice_cap_cents:int}
      */
     public static function get(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT cashback_bp, min_redeem_cents, welcome_bonus_cents, expiry_months, facturo_rewards
+            'SELECT cashback_bp, min_redeem_cents, welcome_bonus_cents, expiry_months, facturo_rewards,
+                    invoice_cashback_bp, invoice_cap_cents
              FROM clientbloom_settings WHERE organization_id = :oid'
         );
         $stmt->execute([':oid' => $orgId]);
         $row = $stmt->fetch() ?: [
             'cashback_bp' => 500, 'min_redeem_cents' => 10000, 'welcome_bonus_cents' => 0,
-            'expiry_months' => 12, 'facturo_rewards' => 0,
+            'expiry_months' => 12, 'facturo_rewards' => 0, 'invoice_cashback_bp' => 100, 'invoice_cap_cents' => 0,
         ];
         return array_map('intval', $row);
     }
 
     /**
-     * @param array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int} $s
+     * @param array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int,invoice_cashback_bp:int,invoice_cap_cents:int} $s
      */
     public static function validate(array $s): ?string
     {
         if ($s['cashback_bp'] < 0 || $s['cashback_bp'] > 5000) {
             return 'Cashback rate must be between 0 and 50%.';
+        }
+        if ($s['invoice_cashback_bp'] < 0 || $s['invoice_cashback_bp'] > 5000) {
+            return 'Invoice cashback rate must be between 0 and 50%.';
+        }
+        if ($s['invoice_cap_cents'] < 0 || $s['invoice_cap_cents'] > 100_000_000) {
+            return 'Invoice cap must be a positive amount (0 = no cap).';
         }
         if ($s['min_redeem_cents'] < 0 || $s['welcome_bonus_cents'] < 0
             || $s['min_redeem_cents'] > 100_000_000 || $s['welcome_bonus_cents'] > 100_000_000) {
@@ -46,20 +53,23 @@ final class Settings
     }
 
     /**
-     * @param array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int} $s
+     * @param array{cashback_bp:int,min_redeem_cents:int,welcome_bonus_cents:int,expiry_months:int,facturo_rewards:int,invoice_cashback_bp:int,invoice_cap_cents:int} $s
      */
     public static function save(int $orgId, array $s): void
     {
         Database::connection()->prepare(
             'INSERT INTO clientbloom_settings
-                (organization_id, cashback_bp, min_redeem_cents, welcome_bonus_cents, expiry_months, facturo_rewards)
-             VALUES (:oid, :bp, :min, :bonus, :exp, :fr)
+                (organization_id, cashback_bp, min_redeem_cents, welcome_bonus_cents, expiry_months, facturo_rewards,
+                 invoice_cashback_bp, invoice_cap_cents)
+             VALUES (:oid, :bp, :min, :bonus, :exp, :fr, :ibp, :icap)
              ON DUPLICATE KEY UPDATE cashback_bp = VALUES(cashback_bp), min_redeem_cents = VALUES(min_redeem_cents),
                  welcome_bonus_cents = VALUES(welcome_bonus_cents), expiry_months = VALUES(expiry_months),
-                 facturo_rewards = VALUES(facturo_rewards)'
+                 facturo_rewards = VALUES(facturo_rewards), invoice_cashback_bp = VALUES(invoice_cashback_bp),
+                 invoice_cap_cents = VALUES(invoice_cap_cents)'
         )->execute([
             ':oid' => $orgId, ':bp' => $s['cashback_bp'], ':min' => $s['min_redeem_cents'],
             ':bonus' => $s['welcome_bonus_cents'], ':exp' => $s['expiry_months'], ':fr' => $s['facturo_rewards'] ? 1 : 0,
+            ':ibp' => $s['invoice_cashback_bp'], ':icap' => $s['invoice_cap_cents'],
         ]);
     }
 }

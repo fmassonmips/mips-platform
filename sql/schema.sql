@@ -222,6 +222,8 @@ CREATE TABLE IF NOT EXISTS clientbloom_settings (
     welcome_bonus_cents BIGINT       NOT NULL DEFAULT 0,
     expiry_months       SMALLINT UNSIGNED NOT NULL DEFAULT 12, -- balance lost after N months without activity; 0 = never
     facturo_rewards     TINYINT(1)   NOT NULL DEFAULT 0,       -- paid Facturo invoices earn cashback
+    invoice_cashback_bp INT UNSIGNED NOT NULL DEFAULT 100,     -- 1.00 % on paid invoices (counter rate is separate)
+    invoice_cap_cents   BIGINT       NOT NULL DEFAULT 0,       -- max cashback per invoice; 0 = no cap
     updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (organization_id),

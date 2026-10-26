@@ -37,7 +37,7 @@ $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] 
   <h2>Program rules</h2>
   <form id="program-form" novalidate>
     <div class="form-grid">
-      <div class="field"><label for="pr-rate">Cashback (% of amount paid)</label>
+      <div class="field"><label for="pr-rate">Cashback at the counter (% of amount paid)</label>
         <input type="text" id="pr-rate" name="cashback_rate" inputmode="decimal" value="<?= $e(Money::rateToInput($rules['cashback_bp'])) ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
       <div class="field"><label for="pr-min">Minimum to use (MUR)</label>
         <input type="text" id="pr-min" name="min_redeem" inputmode="decimal" value="<?= $e(Money::toInput($rules['min_redeem_cents'])) ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
@@ -48,6 +48,12 @@ $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] 
     </div>
     <label class="checkbox"><input type="checkbox" name="facturo_rewards"<?= $rules['facturo_rewards'] === 1 ? ' checked' : '' ?><?= $can_manage && $facturoOn ? '' : ' disabled' ?>>
       Reward paid Facturo invoices (cashback on the invoice total when it is marked paid)</label>
+    <div class="form-grid">
+      <div class="field"><label for="pr-irate">Cashback on invoices (%)</label>
+        <input type="text" id="pr-irate" name="invoice_cashback_rate" inputmode="decimal" value="<?= $e(Money::rateToInput($rules['invoice_cashback_bp'])) ?>"<?= $can_manage && $facturoOn ? '' : ' disabled' ?>></div>
+      <div class="field"><label for="pr-icap">Max cashback per invoice (MUR, 0 = no cap)</label>
+        <input type="text" id="pr-icap" name="invoice_cap" inputmode="decimal" value="<?= $e(Money::toInput($rules['invoice_cap_cents'])) ?>"<?= $can_manage && $facturoOn ? '' : ' disabled' ?>></div>
+    </div>
     <?php if (!$facturoOn): ?>
       <p class="muted small">Enable Facturo from the app launcher to reward paid invoices.</p>
     <?php endif; ?>

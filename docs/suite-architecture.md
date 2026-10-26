@@ -91,7 +91,7 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 | Données personnelles | Consentement marketing horodaté (Data Protection Act 2017). « Erase personal data » efface l'identité et les notes, garde le registre anonyme (pièce comptable) ; refusé tant qu'un solde reste. |
 | KPI | Ventes via le programme, cashback émis / utilisé (annulations déduites), clients actifs, **cashback en circulation** = engagement envers les clients. |
 
-**Hors périmètre :** envoi de campagnes SMS/WhatsApp (pas de fournisseur intégré ; l'export CSV filtre les consentants), paliers (silver/gold), points convertibles, taux de cashback distinct pour les factures.
+**Hors périmètre :** envoi de campagnes SMS/WhatsApp (pas de fournisseur intégré ; l'export CSV filtre les consentants), paliers (silver/gold), points convertibles.
 
 ## Lien Facturo → ClientBloom
 
@@ -100,9 +100,9 @@ Code : `src/ClientBloom/FacturoRewards.php`, appelé par `DocumentsController` a
 
 | Événement Facturo | Effet ClientBloom |
 |---|---|
-| Facture marquée payée | Achat du montant TTC **net des avoirs émis** (MUR uniquement) → cashback au taux du programme, une fois par paiement. Client retrouvé par lien existant, puis téléphone, puis e-mail ; sinon créé (tag `facturo`, sans consentement marketing). |
+| Facture marquée payée | Achat du montant TTC **net des avoirs émis** (MUR uniquement) → cashback au **taux factures** (distinct du taux comptoir, 1 % par défaut), plafonné par facture si un plafond est fixé (0 = sans plafond), une fois par paiement. Client retrouvé par lien existant, puis téléphone, puis e-mail ; sinon créé (tag `facturo`, sans consentement marketing). |
 | Facture repassée non payée | Achat annulé (écriture inverse). Si le cashback a déjà été dépensé : le changement de statut passe quand même, avertissement sur la facture, correction manuelle dans ClientBloom. |
-| Avoir sur une facture récompensée | Reprise de la même part de cashback que la part remboursée (arrondi à l'inférieur), dans la limite du solde ; la dépense du client est réduite d'autant. |
+| Avoir sur une facture récompensée | Reprise de la même part du cashback **réellement versé** (donc après plafond) que la part remboursée (arrondi à l'inférieur), dans la limite du solde ; la dépense du client est réduite d'autant. |
 | Devise étrangère, client sans téléphone ni e-mail, facture entièrement créditée | Pas de récompense, motif affiché sur la facture. |
 
 Le résultat est affiché sur la facture ou l'avoir (`clientbloom_note`) avec un lien vers la fiche client ; la référence du
@@ -124,6 +124,7 @@ mysql -u root -p mips_platform < sql/migrations/003_facturo_credit_notes_email.s
 mysql -u root -p mips_platform < sql/migrations/004_mra_einvoicing.sql
 mysql -u root -p mips_platform < sql/migrations/005_clientbloom.sql
 mysql -u root -p mips_platform < sql/migrations/006_facturo_clientbloom.sql
+mysql -u root -p mips_platform < sql/migrations/007_clientbloom_invoice_rate.sql
 ```
 
 Puis dans `config/config.php` :

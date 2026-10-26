@@ -5,7 +5,8 @@
  * Active when both apps are enabled and the program's "Reward paid Facturo
  * invoices" option is on. Rules:
  *  - invoice marked paid → a ClientBloom purchase for its total net of issued
- *    credit notes (MUR only), once per payment; the Facturo client is matched to a loyalty customer
+ *    credit notes (MUR only), once per payment, at the program's invoice rate
+ *    (separate from the counter rate) and within its per-invoice cap; the Facturo client is matched to a loyalty customer
  *    by link, phone, then email, or created (without marketing consent);
  *  - invoice no longer paid → that purchase is reversed; if the cashback was
  *    already spent the payment change still goes through and the invoice
@@ -98,13 +99,17 @@ final class FacturoRewards
             self::note((int) $doc['id'], null, 'Loyalty: not rewarded, the client has no valid phone or email.');
             return;
         }
-        [$result, $error] = Ledger::checkout($orgId, $userId, (int) $customer['id'], $net, 0, (string) $doc['number']);
+        $rules = Settings::get($orgId);
+        [$result, $error] = Ledger::checkout($orgId, $userId, (int) $customer['id'], $net, 0, (string) $doc['number'],
+            $rules['invoice_cashback_bp'], $rules['invoice_cap_cents']);
         if ($error !== null) {
             self::note((int) $doc['id'], null, 'Loyalty: not rewarded, ' . lcfirst($error));
             return;
         }
         self::note((int) $doc['id'], $result['purchase_tx_id'],
-            'Loyalty: ' . self::mur($result['earned']) . ' cashback credited to ' . $customer['name'] . '.');
+            'Loyalty: ' . self::mur($result['earned']) . ' cashback credited to ' . $customer['name']
+            . ' (' . Money::rateToInput($rules['invoice_cashback_bp']) . '%'
+            . ($rules['invoice_cap_cents'] > 0 && $result['earned'] === $rules['invoice_cap_cents'] ? ', capped' : '') . ').');
     }
 
     /**

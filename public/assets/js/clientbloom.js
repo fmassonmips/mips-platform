@@ -206,6 +206,8 @@
                 welcome_bonus: f.welcome_bonus.value,
                 expiry_months: f.expiry_months.value,
                 facturo_rewards: f.facturo_rewards.checked,
+                invoice_cashback_rate: f.invoice_cashback_rate.value,
+                invoice_cap: f.invoice_cap.value,
             });
             document.getElementById('program-saved').hidden = false;
         });

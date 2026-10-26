@@ -23,11 +23,12 @@ final class Ledger
 
     /**
      * Record a sale at the counter, optionally paid in part with cashback.
-     * Cashback is earned on the amount actually paid (amount − redeemed).
+     * Cashback is earned on the amount actually paid (amount − redeemed), at the
+     * program's counter rate unless $rateBp is given, and never above $capCents (0 = no cap).
      *
      * @return array{0:?array{earned:int,redeemed:int,balance:int,purchase_tx_id:int},1:?string}
      */
-    public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference): array
+    public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference, ?int $rateBp = null, int $capCents = 0): array
     {
         if ($amountCents <= 0 || $amountCents > 10_000_000_00) {
             return [null, 'Enter the purchase amount.'];
@@ -40,7 +41,9 @@ final class Ledger
             return [null, 'Minimum cashback that can be used: ' . \App\Facturo\Money::format($rules['min_redeem_cents'], 'MUR') . '.'];
         }
 
-        return self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $amountCents, $redeemCents, $reference, $rules): array {
+        $rate = $rateBp ?? $rules['cashback_bp'];
+
+        return self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $amountCents, $redeemCents, $reference, $rate, $capCents): array {
             $balance = (int) $c['balance_cents'];
             if ($redeemCents > $balance) {
                 return [null, 'Not enough cashback (available: ' . \App\Facturo\Money::format($balance, 'MUR') . ').'];
@@ -50,7 +53,10 @@ final class Ledger
                 self::insert($orgId, $userId, (int) $c['id'], 'redeem', 0, -$redeemCents, $balance, $reference, null);
             }
             $paid   = $amountCents - $redeemCents;
-            $earned = intdiv($paid * $rules['cashback_bp'], 10000);   // rounded down: never over-credit
+            $earned = intdiv($paid * $rate, 10000);   // rounded down: never over-credit
+            if ($capCents > 0) {
+                $earned = min($earned, $capCents);
+            }
             $balance += $earned;
             $txId = self::insert($orgId, $userId, (int) $c['id'], 'purchase', $amountCents, $earned, $balance, $reference, null);
 
