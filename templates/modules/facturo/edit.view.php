@@ -13,7 +13,17 @@ use App\Facturo\Money;
 
 $isQuote     = $type === 'quote';
 $isCredit    = $type === 'credit_note';
-$label       = Documents::LABELS[$type];
+$titles      = [
+    'quote'       => ['new' => 'Nouveau devis', 'draft' => 'Devis brouillon'],
+    'invoice'     => ['new' => 'Nouvelle facture', 'draft' => 'Facture brouillon'],
+    'credit_note' => ['new' => 'Nouvel avoir', 'draft' => 'Avoir brouillon'],
+];
+$issueLabels = ['quote' => 'Marquer comme envoyé', 'invoice' => 'Émettre la facture', 'credit_note' => 'Émettre l\'avoir'];
+$issueConfirm = [
+    'quote'       => 'Envoyer ce devis ? Il reçoit un numéro et ne pourra plus être modifié.',
+    'invoice'     => 'Émettre cette facture ? Elle reçoit un numéro et ne pourra plus être modifiée.',
+    'credit_note' => 'Émettre cet avoir ? Il reçoit un numéro et ne pourra plus être modifié.',
+];
 $blankLine   = [
     'description' => '', 'quantity_milli' => 1000, 'unit_price_cents' => 0,
     'tax_code' => $profile['vat_number'] !== '' ? 'TC01' : 'TC03', 'nature' => 'SERVICES',
@@ -33,30 +43,30 @@ $lineRow = static function (array $l) use ($e): string {
     }
     return '<tr class="line">'
         . '<td><input type="text" name="description" maxlength="500" value="' . $e($l['description']) . '" aria-label="Description"></td>'
-        . '<td><select name="nature" aria-label="Goods or service">' . $nature . '</select></td>'
-        . '<td><input type="text" inputmode="decimal" name="quantity" value="' . $e(Money::quantityToInput((int) $l['quantity_milli'])) . '" aria-label="Quantity"></td>'
-        . '<td><input type="text" inputmode="decimal" name="unit_price" value="' . $e(Money::toInput((int) $l['unit_price_cents'])) . '" aria-label="Unit price"></td>'
-        . '<td><select name="tax_code" aria-label="VAT">' . $tax . '</select></td>'
+        . '<td><select name="nature" aria-label="Bien ou service">' . $nature . '</select></td>'
+        . '<td><input type="text" inputmode="decimal" name="quantity" value="' . $e(Money::quantityToInput((int) $l['quantity_milli'])) . '" aria-label="Quantité"></td>'
+        . '<td><input type="text" inputmode="decimal" name="unit_price" value="' . $e(Money::toInput((int) $l['unit_price_cents'])) . '" aria-label="Prix unitaire"></td>'
+        . '<td><select name="tax_code" aria-label="TVA">' . $tax . '</select></td>'
         . '<td class="num line-amount"></td>'
-        . '<td><button type="button" class="btn-link" data-remove-line aria-label="Remove line">✕</button></td>'
+        . '<td><button type="button" class="btn-link" data-remove-line aria-label="Supprimer la ligne">✕</button></td>'
         . '</tr>';
 };
 ?>
 <section class="card">
   <div class="card-head">
-    <h2><?= $e(($doc === null ? 'New ' : 'Draft ') . $label) ?></h2>
+    <h2><?= $e($titles[$type][$doc === null ? 'new' : 'draft']) ?></h2>
     <?php if ($doc !== null): ?>
-      <span class="status status--draft">draft</span>
+      <span class="status status--draft"><?= $e(Documents::STATUS_LABELS['draft']) ?></span>
     <?php endif; ?>
   </div>
 
   <?php if ($isCredit): ?>
-    <p class="muted">Credit note for invoice <strong><?= $e($doc['source']['number'] ?? '') ?></strong>.
-       Keep the lines to cancel the invoice in full, or reduce them for a partial credit.</p>
+    <p class="muted">Avoir sur la facture <strong><?= $e($doc['source']['number'] ?? '') ?></strong>.
+       Gardez les lignes pour annuler toute la facture, ou réduisez-les pour un avoir partiel.</p>
   <?php endif; ?>
 
   <?php if ($clients === []): ?>
-    <p>Add a client first: <a href="/app.php?m=facturo&amp;p=clients">Clients</a>.</p>
+    <p>Ajoutez d'abord un client : <a href="/app.php?m=facturo&amp;p=clients">Clients</a>.</p>
   <?php else: ?>
   <form id="document-form" novalidate
         data-id="<?= (int) ($doc['id'] ?? 0) ?>"
@@ -65,7 +75,7 @@ $lineRow = static function (array $l) use ($e): string {
       <div class="field">
         <label for="client_id">Client</label>
         <select id="client_id" name="client_id" required<?= $isCredit ? ' disabled' : '' ?>>
-          <option value="">Choose…</option>
+          <option value="">Choisir…</option>
           <?php foreach ($clients as $c): ?>
             <option value="<?= (int) $c['id'] ?>"<?= (int) ($doc['client_id'] ?? 0) === (int) $c['id'] ? ' selected' : '' ?>><?= $e($c['name']) ?></option>
           <?php endforeach; ?>
@@ -77,12 +87,12 @@ $lineRow = static function (array $l) use ($e): string {
       </div>
       <?php if (!$isCredit): ?>
       <div class="field">
-        <label for="due_date"><?= $isQuote ? 'Valid until' : 'Due date' ?></label>
+        <label for="due_date"><?= $isQuote ? 'Valable jusqu\'au' : 'Échéance' ?></label>
         <input type="date" id="due_date" name="due_date" value="<?= $e($doc['due_date'] ?? date('Y-m-d', strtotime('+30 days'))) ?>">
       </div>
       <?php endif; ?>
       <div class="field">
-        <label for="currency">Currency</label>
+        <label for="currency">Devise</label>
         <select id="currency" name="currency"<?= $isCredit ? ' disabled' : '' ?>>
           <?php foreach (Money::CURRENCIES as $cur): ?>
             <option<?= ($doc['currency'] ?? 'MUR') === $cur ? ' selected' : '' ?>><?= $e($cur) ?></option>
@@ -94,7 +104,7 @@ $lineRow = static function (array $l) use ($e): string {
     <div class="table-wrap">
       <table class="table lines">
         <thead>
-          <tr><th>Description</th><th>Type</th><th class="num">Qty</th><th class="num">Unit price</th><th>VAT</th><th class="num">Amount</th><th></th></tr>
+          <tr><th>Description</th><th>Type</th><th class="num">Qté</th><th class="num">Prix unitaire</th><th>TVA</th><th class="num">Montant HT</th><th></th></tr>
         </thead>
         <tbody id="lines">
           <?php foreach ($lines as $l): ?>
@@ -103,29 +113,29 @@ $lineRow = static function (array $l) use ($e): string {
         </tbody>
       </table>
     </div>
-    <button type="button" id="add-line" class="btn-secondary">Add line</button>
+    <button type="button" id="add-line" class="btn-secondary">Ajouter une ligne</button>
 
     <dl class="totals">
-      <dt>Subtotal</dt><dd id="total-sub"></dd>
-      <dt>VAT</dt><dd id="total-tax"></dd>
-      <dt>Total</dt><dd id="total-all"></dd>
+      <dt>Total HT</dt><dd id="total-sub"></dd>
+      <dt>TVA</dt><dd id="total-tax"></dd>
+      <dt>Total TTC</dt><dd id="total-all"></dd>
     </dl>
-    <p class="muted small">Totals are recalculated by the server when you save.</p>
+    <p class="muted small">Les totaux sont recalculés par le serveur à l'enregistrement.</p>
 
     <div class="field">
-      <label for="notes"><?= $isCredit ? 'Reason for the credit note (required for MRA e-invoicing)' : 'Notes (payment terms, bank details…)' ?></label>
+      <label for="notes"><?= $isCredit ? 'Motif de l\'avoir (obligatoire pour la facturation électronique MRA)' : 'Notes (conditions de paiement, coordonnées bancaires…)' ?></label>
       <textarea id="notes" name="notes" rows="3" maxlength="5000"><?= $e($doc['notes'] ?? '') ?></textarea>
     </div>
 
     <div class="actions">
-      <button type="submit" class="btn-primary btn-inline">Save draft</button>
+      <button type="submit" class="btn-primary btn-inline">Enregistrer le brouillon</button>
       <?php if ($doc !== null): ?>
         <button type="button" class="btn-secondary" data-doc-action="issue" data-id="<?= (int) $doc['id'] ?>"
-                data-confirm="<?= $e(($isQuote ? 'Send this quote?' : 'Issue this ' . $label . '?') . ' It gets a number and can no longer be edited.') ?>">
-          <?= $isQuote ? 'Mark as sent' : $e('Issue ' . $label) ?>
+                data-confirm="<?= $e($issueConfirm[$type]) ?>">
+          <?= $e($issueLabels[$type]) ?>
         </button>
         <button type="button" class="btn-link" data-doc-action="delete" data-id="<?= (int) $doc['id'] ?>"
-                data-confirm="Delete this draft?" data-redirect="/app.php?m=facturo&amp;p=<?= $isQuote ? 'quotes' : ($isCredit ? 'credit_notes' : 'invoices') ?>">Delete draft</button>
+                data-confirm="Supprimer ce brouillon ?" data-redirect="/app.php?m=facturo&amp;p=<?= $isQuote ? 'quotes' : ($isCredit ? 'credit_notes' : 'invoices') ?>">Supprimer le brouillon</button>
       <?php endif; ?>
     </div>
   </form>

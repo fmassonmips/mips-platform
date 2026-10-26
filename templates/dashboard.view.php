@@ -33,7 +33,7 @@
     <section class="card">
       <h2>
         Bienvenue,
-        <?= htmlspecialchars((string) ($user['name'] ?? $user['email']), ENT_QUOTES, 'UTF-8') ?>!
+        <?= htmlspecialchars((string) ($user['name'] ?? $user['email']), ENT_QUOTES, 'UTF-8') ?>&nbsp;!
       </h2>
       <dl class="meta">
         <dt>Entreprise</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>

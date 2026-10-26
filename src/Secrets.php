@@ -21,7 +21,7 @@ final class Secrets
     {
         $raw = base64_decode($stored, true);
         if ($raw === false || strlen($raw) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
-            throw new RuntimeException('Stored secret is malformed.');
+            throw new RuntimeException('Le secret enregistré est illisible.');
         }
         $plain = sodium_crypto_secretbox_open(
             substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES),
@@ -29,7 +29,7 @@ final class Secrets
             self::key()
         );
         if ($plain === false) {
-            throw new RuntimeException('Stored secret cannot be decrypted (was app.secret_key changed?).');
+            throw new RuntimeException('Le secret enregistré ne peut pas être déchiffré (app.secret_key a-t-il changé ?). Ressaisissez le mot de passe MRA.');
         }
         return $plain;
     }
@@ -43,7 +43,7 @@ final class Secrets
     private static function key(): string
     {
         if (!self::isConfigured()) {
-            throw new RuntimeException('app.secret_key is not configured (32 random bytes, base64).');
+            throw new RuntimeException('app.secret_key n’est pas configurée (32 octets aléatoires, base64).');
         }
         return (string) base64_decode((string) $GLOBALS['config']['app']['secret_key'], true);
     }

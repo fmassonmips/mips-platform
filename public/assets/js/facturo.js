@@ -34,7 +34,7 @@
         });
         const body = await res.json().catch(function () { return {}; });
         if (!res.ok) {
-            throw new Error(body.error || 'Request failed.');
+            throw new Error(body.error || 'La requête a échoué.');
         }
         return body;
     }
@@ -171,7 +171,7 @@
                 const c = JSON.parse(btn.dataset.editClient);
                 clientForm.dataset.id = c.id;
                 fields.forEach(function (f) { clientForm.elements[f].value = c[f] || ''; });
-                title.textContent = 'Edit client';
+                title.textContent = 'Modifier le client';
                 clientForm.scrollIntoView({ block: 'nearest' });
                 clientForm.elements.name.focus();
             });
@@ -179,7 +179,7 @@
 
         clientForm.addEventListener('reset', function () {
             clientForm.dataset.id = '0';
-            title.textContent = 'New client';
+            title.textContent = 'Nouveau client';
         });
 
         clientForm.addEventListener('submit', async function (ev) {
@@ -196,7 +196,7 @@
 
         document.querySelectorAll('[data-delete-client]').forEach(function (btn) {
             btn.addEventListener('click', async function () {
-                if (!window.confirm('Delete this client?')) { return; }
+                if (!window.confirm('Supprimer ce client ?')) { return; }
                 try {
                     await post('/api/facturo/clients', { action: 'delete', id: Number(btn.dataset.deleteClient) });
                     window.location.reload();
@@ -248,7 +248,7 @@
                     ebs_id: mraForm.elements.ebs_id.value,
                 });
                 mraForm.elements.password.value = '';
-                say('Saved.');
+                say('Enregistré.');
             } catch (err) {
                 showError(err.message);
             }

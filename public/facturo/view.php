@@ -17,7 +17,7 @@ $doc   = \App\Facturo\Documents::findByToken($token);
 if ($doc === null) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Document not found.';
+    echo 'Document introuvable.';
     exit;
 }
 

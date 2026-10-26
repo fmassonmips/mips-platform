@@ -41,7 +41,7 @@ final class ClientsController
                 }
                 $savedId = Clients::save($org['id'], $id, $fields);
                 if ($savedId === null) {
-                    Response::json(['error' => 'Client not found.'], 404);
+                    Response::json(['error' => 'Client introuvable.'], 404);
                 }
                 Response::json(['success' => true, 'id' => $savedId]);
 
@@ -53,7 +53,7 @@ final class ClientsController
                 Response::json(['success' => true, 'id' => $id]);
 
             default:
-                Response::json(['error' => 'Invalid action.'], 422);
+                Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 }

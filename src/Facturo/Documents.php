@@ -24,7 +24,22 @@ final class Documents
 {
     public const TYPES = ['quote', 'invoice', 'credit_note'];
 
-    public const LABELS = ['quote' => 'quote', 'invoice' => 'invoice', 'credit_note' => 'credit note'];
+    public const LABELS = ['quote' => 'devis', 'invoice' => 'facture', 'credit_note' => 'avoir'];
+
+    /** French labels for statuses shown in the UI (codes stay in the database and CSS classes). */
+    public const STATUS_LABELS = [
+        'draft' => 'Brouillon', 'issued' => 'Émise', 'paid' => 'Payée', 'sent' => 'Envoyé',
+        'accepted' => 'Accepté', 'declined' => 'Refusé', 'credited' => 'Créditée',
+    ];
+
+    /** French label of a status, agreed with the document's gender (une facture, un avoir). */
+    public static function statusLabel(string $type, string $status): string
+    {
+        if ($type === 'credit_note' && $status === 'issued') {
+            return 'Émis';
+        }
+        return self::STATUS_LABELS[$status] ?? $status;
+    }
 
     private const PREFIX = ['quote' => 'DEV', 'invoice' => 'FAC', 'credit_note' => 'AVO'];
 
@@ -44,12 +59,12 @@ final class Documents
 
     /** VAT treatment per line (MRA tax codes) and the rate each one applies, in basis points. */
     public const TAX_CODES = [
-        'TC01' => ['label' => 'VAT 15%',           'rate_bp' => 1500],
-        'TC02' => ['label' => 'Zero-rated (0%)',   'rate_bp' => 0],
-        'TC03' => ['label' => 'Exempt / no VAT',   'rate_bp' => 0],
+        'TC01' => ['label' => 'TVA 15 %',            'rate_bp' => 1500],
+        'TC02' => ['label' => 'Taux zéro (0 %)',     'rate_bp' => 0],
+        'TC03' => ['label' => 'Exonéré / sans TVA',  'rate_bp' => 0],
     ];
 
-    public const NATURES = ['SERVICES' => 'Service', 'GOODS' => 'Goods'];
+    public const NATURES = ['SERVICES' => 'Service', 'GOODS' => 'Bien'];
 
     /**
      * @return list<array<string,mixed>>
@@ -158,7 +173,7 @@ final class Documents
     {
         $type = is_string($input['type'] ?? null) ? $input['type'] : '';
         if (!in_array($type, self::TYPES, true)) {
-            return [[], 'Invalid document type.'];
+            return [[], 'Type de document invalide.'];
         }
 
         // A credit note is bound to its invoice: same client and currency, never dated before it.
@@ -166,11 +181,11 @@ final class Documents
         if ($type === 'credit_note') {
             $current = $id > 0 ? self::find($orgId, $id) : null;
             if ($current === null || $current['type'] !== 'credit_note' || $current['source_document_id'] === null) {
-                return [[], 'Credit notes are created from an issued invoice.'];
+                return [[], 'Les avoirs se créent à partir d\'une facture émise.'];
             }
             $invoice = self::find($orgId, (int) $current['source_document_id']);
             if ($invoice === null) {
-                return [[], 'The credited invoice no longer exists.'];
+                return [[], 'La facture créditée n\'existe plus.'];
             }
             $input['client_id'] = (int) $invoice['client_id'];
             $input['currency']  = (string) $invoice['currency'];
@@ -180,35 +195,35 @@ final class Documents
         $clientId = is_int($input['client_id'] ?? null) || ctype_digit((string) ($input['client_id'] ?? ''))
             ? (int) $input['client_id'] : 0;
         if ($clientId === 0 || Clients::find($orgId, $clientId) === null) {
-            return [[], 'Choose a client.'];
+            return [[], 'Choisissez un client.'];
         }
 
         $issueDate = self::date($input['issue_date'] ?? null);
         if ($issueDate === null) {
-            return [[], 'Issue date is invalid.'];
+            return [[], 'La date est invalide.'];
         }
         $dueRaw  = is_string($input['due_date'] ?? null) ? trim($input['due_date']) : '';
         $dueDate = $dueRaw === '' ? null : self::date($dueRaw);
         if ($dueRaw !== '' && ($dueDate === null || $dueDate < $issueDate)) {
-            return [[], $type === 'quote' ? 'Valid-until date is invalid.' : 'Due date is invalid.'];
+            return [[], $type === 'quote' ? 'La date de validité est invalide.' : 'La date d\'échéance est invalide.'];
         }
 
         $currency = is_string($input['currency'] ?? null) ? $input['currency'] : '';
         if (!in_array($currency, Money::CURRENCIES, true)) {
-            return [[], 'Invalid currency.'];
+            return [[], 'Devise invalide.'];
         }
 
         $notes = is_string($input['notes'] ?? null) ? trim($input['notes']) : '';
         if (mb_strlen($notes) > 5000) {
-            return [[], 'Notes are too long.'];
+            return [[], 'Les notes sont trop longues.'];
         }
 
         $rawLines = is_array($input['lines'] ?? null) ? array_values($input['lines']) : [];
         if ($rawLines === []) {
-            return [[], 'Add at least one line.'];
+            return [[], 'Ajoutez au moins une ligne.'];
         }
         if (count($rawLines) > self::MAX_LINES) {
-            return [[], 'Too many lines (max ' . self::MAX_LINES . ').'];
+            return [[], 'Trop de lignes (max. ' . self::MAX_LINES . ').'];
         }
 
         $lines = [];
@@ -224,19 +239,19 @@ final class Documents
             $nature      = is_string($raw['nature'] ?? null) ? $raw['nature'] : 'SERVICES';
 
             if ($description === '' || mb_strlen($description) > 500) {
-                return [[], "Line $n: description is required (max 500 characters)."];
+                return [[], "Ligne $n : la description est obligatoire (500 caractères max.)."];
             }
             if ($quantity === null || $quantity === 0 || $quantity > Money::MAX_QUANTITY_MILLI) {
-                return [[], "Line $n: quantity must be a positive number (max 3 decimals)."];
+                return [[], "Ligne $n : la quantité doit être un nombre positif (3 décimales max.)."];
             }
             if ($unit === null || abs($unit) > Money::MAX_UNIT_CENTS) {
-                return [[], "Line $n: unit price is invalid (max 2 decimals)."];
+                return [[], "Ligne $n : le prix unitaire est invalide (2 décimales max.)."];
             }
             if (!isset(self::TAX_CODES[$taxCode])) {
-                return [[], "Line $n: choose the VAT treatment."];
+                return [[], "Ligne $n : choisissez le traitement TVA."];
             }
             if (!isset(self::NATURES[$nature])) {
-                return [[], "Line $n: choose goods or service."];
+                return [[], "Ligne $n : choisissez bien ou service."];
             }
             $rate = self::TAX_CODES[$taxCode]['rate_bp'];
 
@@ -256,19 +271,19 @@ final class Documents
         }
 
         if ($subtotal + $tax < 0) {
-            return [[], 'The total cannot be negative.'];
+            return [[], 'Le total ne peut pas être négatif.'];
         }
 
         if ($invoice !== null) {
             if ($issueDate < (string) $invoice['issue_date']) {
-                return [[], 'A credit note cannot be dated before its invoice.'];
+                return [[], 'Un avoir ne peut pas être daté avant sa facture.'];
             }
             if ($subtotal + $tax <= 0) {
-                return [[], 'A credit note must have a positive total.'];
+                return [[], 'Un avoir doit avoir un total positif.'];
             }
             $creditable = self::creditableCents($orgId, (int) $invoice['id']);
             if ($subtotal + $tax > $creditable) {
-                return [[], 'A credit note cannot exceed what remains to be credited on the invoice ('
+                return [[], 'Un avoir ne peut pas dépasser le reste à créditer sur la facture ('
                     . Money::format($creditable, (string) $invoice['currency']) . ').'];
             }
         }
@@ -326,11 +341,11 @@ final class Documents
                 $current = self::lockDraft($orgId, $id);
                 if ($current === null) {
                     $pdo->rollBack();
-                    return [0, 'Only drafts can be edited.'];
+                    return [0, 'Seuls les brouillons peuvent être modifiés.'];
                 }
                 if ($current['type'] !== $draft['type']) {
                     $pdo->rollBack();
-                    return [0, 'Document type cannot change.'];
+                    return [0, 'Le type de document ne peut pas changer.'];
                 }
                 $params[':id'] = $id;
                 $pdo->prepare(
@@ -383,13 +398,13 @@ final class Documents
             $doc = self::lockDraft($orgId, $id);
             if ($doc === null) {
                 $pdo->rollBack();
-                return 'Only drafts can be issued.';
+                return 'Seuls les brouillons peuvent être émis.';
             }
 
             $seller = Tenant::profile($orgId);
             if ($doc['type'] !== 'quote' && ($seller['legal_name'] === '' || $seller['brn'] === '')) {
                 $pdo->rollBack();
-                return 'Fill in your company details (legal name, BRN) before issuing an invoice or credit note.';
+                return 'Renseignez les coordonnées de l\'entreprise (raison sociale, BRN) avant d\'émettre une facture ou un avoir.';
             }
             $client = Clients::find($orgId, (int) $doc['client_id']);
 
@@ -401,7 +416,7 @@ final class Documents
                     $src = $pdo->prepare('SELECT mra_status FROM facturo_documents WHERE organization_id = :oid AND id = :id');
                     $src->execute([':oid' => $orgId, ':id' => (int) $doc['source_document_id']]);
                     if (in_array($src->fetchColumn(), ['pending', 'rejected'], true)) {
-                        $error = 'The invoice must be fiscalised by MRA before it can be credited.';
+                        $error = 'La facture doit être fiscalisée par la MRA avant de pouvoir être créditée.';
                     }
                 }
                 if ($error !== null) {
@@ -477,11 +492,11 @@ final class Documents
     {
         $doc = self::find($orgId, $id);
         if ($doc === null) {
-            return 'Document not found.';
+            return 'Document introuvable.';
         }
         $allowed = self::TRANSITIONS[$doc['type']][$doc['status']] ?? [];
         if (!in_array($status, $allowed, true)) {
-            return 'This status change is not allowed.';
+            return 'Ce changement de statut n\'est pas autorisé.';
         }
         // Un-paying a fully credited invoice closes it rather than reopening it.
         if ($doc['type'] === 'invoice' && $status === 'issued' && self::creditableCents($orgId, $id) <= 0) {
@@ -512,7 +527,7 @@ final class Documents
     {
         $quote = self::find($orgId, $quoteId);
         if ($quote === null || $quote['type'] !== 'quote' || !in_array($quote['status'], ['sent', 'accepted'], true)) {
-            return [0, 'Only a sent or accepted quote can be converted.'];
+            return [0, 'Seul un devis envoyé ou accepté peut être converti en facture.'];
         }
 
         $existing = Database::connection()->prepare(
@@ -558,10 +573,10 @@ final class Documents
         $invoice = self::find($orgId, $invoiceId);
         if ($invoice === null || $invoice['type'] !== 'invoice'
             || !in_array($invoice['status'], self::CREDITABLE_STATUSES, true)) {
-            return [0, 'Only an issued or paid invoice can be credited.'];
+            return [0, 'Seule une facture émise ou payée peut faire l\'objet d\'un avoir.'];
         }
         if (self::creditableCents($orgId, $invoiceId) <= 0) {
-            return [0, 'This invoice is already fully credited.'];
+            return [0, 'Cette facture est déjà entièrement créditée.'];
         }
         foreach ($invoice['credit_notes'] as $cn) {
             if ($cn['status'] === 'draft') {
@@ -629,7 +644,7 @@ final class Documents
             'DELETE FROM facturo_documents WHERE organization_id = :oid AND id = :id AND status = \'draft\''
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
-        return $stmt->rowCount() === 1 ? null : 'Only drafts can be deleted.';
+        return $stmt->rowCount() === 1 ? null : 'Seuls les brouillons peuvent être supprimés.';
     }
 
     /**
@@ -652,7 +667,7 @@ final class Documents
         $inv->execute([':oid' => $orgId, ':id' => $invoiceId]);
         $invoice = $inv->fetch();
         if (!is_array($invoice) || !in_array($invoice['status'], self::CREDITABLE_STATUSES, true)) {
-            return [null, 'The credited invoice is no longer open to credit.'];
+            return [null, 'La facture ne peut plus faire l\'objet d\'un avoir.'];
         }
 
         $issued = $pdo->prepare(
@@ -668,7 +683,7 @@ final class Documents
 
         $remaining = (int) $invoice['total_cents'] - $credited - (int) $own->fetchColumn();
         if ($remaining < 0) {
-            return [null, 'This credit note exceeds what remains to be credited on the invoice.'];
+            return [null, 'Cet avoir dépasse le reste à créditer sur la facture.'];
         }
         return [$remaining, null];
     }

@@ -91,7 +91,7 @@ final class DocumentsController
                 $this->done($id, Documents::delete($org['id'], $id));
 
             default:
-                Response::json(['error' => 'Invalid action.'], 422);
+                Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 

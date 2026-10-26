@@ -41,13 +41,13 @@ final class Fiscalisation
     public static function issueBlocker(array $doc, array $seller): ?string
     {
         if ($seller['vat_number'] === '' || $seller['address'] === '') {
-            return 'MRA e-invoicing requires your VAT number and business address (Company page).';
+            return 'La facturation électronique MRA exige votre n° TVA et votre adresse (page Entreprise).';
         }
         if ($doc['currency'] !== 'MUR') {
-            return 'MRA e-invoicing: only MUR documents are supported for now.';
+            return 'Facturation électronique MRA : seuls les documents en MUR sont pris en charge pour l\'instant.';
         }
         if ($doc['type'] === 'credit_note' && trim((string) ($doc['notes'] ?? '')) === '') {
-            return 'MRA requires the reason for a credit note: write it in the Notes field.';
+            return 'La MRA exige le motif de l\'avoir : indiquez-le dans le champ Notes.';
         }
         return null;
     }
@@ -243,7 +243,7 @@ final class Fiscalisation
         }
 
         $errors = is_array($result) ? Client::errors(['errorMessages' => $result['errorMessages'] ?? []]) : '';
-        self::record($id, 'rejected', null, null, 'MRA rejected the document: ' . ($errors !== '' && !str_starts_with($errors, 'status') ? $errors : Client::errors($response)));
+        self::record($id, 'rejected', null, null, 'Document rejeté par la MRA : ' . ($errors !== '' && !str_starts_with($errors, 'status') ? $errors : Client::errors($response)));
         return 'rejected';
     }
 
@@ -315,7 +315,7 @@ final class Fiscalisation
              WHERE organization_id = :oid AND id = :id AND mra_status IN (\'pending\', \'rejected\')'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
-        return $stmt->rowCount() === 1 ? null : 'This document is not waiting for MRA.';
+        return $stmt->rowCount() === 1 ? null : 'Ce document n\'est pas en attente de la MRA.';
     }
 
     private static function mraDateTime(string $mysqlDateTime): string

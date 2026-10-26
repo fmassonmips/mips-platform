@@ -16,6 +16,12 @@ final class Clients
         'address' => 500, 'brn' => 40, 'vat_number' => 40,
     ];
 
+    /** French field names for validation messages. */
+    private const FIELD_LABELS = [
+        'name' => 'Nom', 'email' => 'E-mail', 'phone' => 'Téléphone',
+        'address' => 'Adresse', 'brn' => 'BRN', 'vat_number' => 'N° TVA',
+    ];
+
     /**
      * @return list<array<string,mixed>>
      */
@@ -55,15 +61,15 @@ final class Clients
         foreach (self::FIELDS as $field => $max) {
             $value = trim($input[$field] ?? '');
             if (mb_strlen($value) > $max) {
-                return [[], ucfirst(str_replace('_', ' ', $field)) . ' is too long.'];
+                return [[], self::FIELD_LABELS[$field] . ' : trop long.'];
             }
             $clean[$field] = $value !== '' ? $value : null;
         }
         if ($clean['name'] === null) {
-            return [[], 'Client name is required.'];
+            return [[], 'Le nom du client est obligatoire.'];
         }
         if ($clean['email'] !== null && !filter_var($clean['email'], FILTER_VALIDATE_EMAIL)) {
-            return [[], 'Client email is invalid.'];
+            return [[], 'L\'e-mail du client est invalide.'];
         }
         return [$clean, null];
     }
@@ -109,13 +115,13 @@ final class Clients
     public static function delete(int $orgId, int $id): ?string
     {
         if (self::find($orgId, $id) === null) {
-            return 'Client not found.';
+            return 'Client introuvable.';
         }
         $pdo  = Database::connection();
         $used = $pdo->prepare('SELECT 1 FROM facturo_documents WHERE organization_id = :oid AND client_id = :id LIMIT 1');
         $used->execute([':oid' => $orgId, ':id' => $id]);
         if ($used->fetch()) {
-            return 'This client has quotes or invoices and cannot be deleted.';
+            return 'Ce client a des devis ou des factures et ne peut pas être supprimé.';
         }
         $pdo->prepare('DELETE FROM facturo_clients WHERE organization_id = :oid AND id = :id')
             ->execute([':oid' => $orgId, ':id' => $id]);
