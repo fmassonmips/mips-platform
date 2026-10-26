@@ -297,6 +297,84 @@ final class MonthlyReport
         return $flags;
     }
 
+    /**
+     * Monthly series over the $months months ending at $to (gaps = null).
+     * MUR volumes only, like the rest of the report.
+     *
+     * @return array<string,mixed>
+     */
+    public function trend(string $to, int $months = 12): array
+    {
+        $periods = [];
+        $d = new \DateTimeImmutable($to . '-01');
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $periods[] = $d->modify("-$i month")->format('Y-m');
+        }
+        $from = $periods[0];
+
+        $imported = $this->db->prepare('SELECT period FROM import_periods WHERE period BETWEEN :f AND :t');
+        $imported->execute([':f' => $from, ':t' => $to]);
+        $have = array_flip($imported->fetchAll(PDO::FETCH_COLUMN));
+
+        $stmt = $this->db->prepare(
+            "SELECT period, channel, rail_type, (currency = 'MUR') AS mur, COUNT(*) AS n, SUM(amount) AS vol
+             FROM transactions WHERE period BETWEEN :f AND :t
+             GROUP BY period, channel, rail_type, (currency = 'MUR')"
+        );
+        $stmt->execute([':f' => $from, ':t' => $to]);
+
+        $blank = static fn () => array_fill_keys($periods, 0.0);
+        $s = ['total' => $blank(), 'tpe' => $blank(), 'online' => $blank(), 'txn' => $blank()];
+        foreach (Rails::TYPES as $t) {
+            $s['rail_' . $t] = $blank();
+        }
+        foreach ($stmt->fetchAll() as $r) {
+            $p = (string) $r['period'];
+            $s['txn'][$p] += (int) $r['n'];
+            if ((int) $r['mur'] !== 1) {
+                continue;
+            }
+            $v = (float) $r['vol'];
+            $s['total'][$p] += $v;
+            $s[$r['channel'] === 'TPE' ? 'tpe' : 'online'][$p] += $v;
+            $s['rail_' . $r['rail_type']][$p] += $v;
+        }
+
+        $act = $this->db->prepare('SELECT period, COUNT(DISTINCT merchant_id) FROM transactions WHERE period BETWEEN :f AND :t GROUP BY period');
+        $act->execute([':f' => $from, ':t' => $to]);
+        $s['merchants'] = $blank();
+        foreach ($act->fetchAll(PDO::FETCH_KEY_PAIR) as $p => $n) {
+            $s['merchants'][$p] = (int) $n;
+        }
+
+        // Months never imported are gaps, not zeros.
+        foreach ($s as $k => $series) {
+            $s[$k] = array_values(array_map(
+                static fn (string $p) => isset($have[$p]) ? round($series[$p], 2) : null,
+                $periods
+            ));
+        }
+
+        $last  = $s['total'][$months - 1];
+        $yoyP  = $d->modify('-12 month')->format('Y-m');
+        $yoy   = $this->db->prepare("SELECT SUM(amount) FROM transactions WHERE period = :p AND currency = 'MUR'");
+        $yoy->execute([':p' => $yoyP]);
+        $yoyV  = $yoy->fetchColumn();
+
+        return [
+            'periods'  => $periods,
+            'series'   => $s,
+            'imported' => count($have),
+            'headline' => [
+                'period' => $to,
+                'total'  => $last,
+                'mom'    => self::mom((float) $last, $s['total'][$months - 2] ?? null),
+                'yoy'    => self::mom((float) $last, $yoyV === null ? null : (float) $yoyV),
+                'yoy_period' => $yoyP,
+            ],
+        ];
+    }
+
     public static function previousPeriod(string $period): string
     {
         return (new \DateTimeImmutable($period . '-01'))->modify('-1 month')->format('Y-m');

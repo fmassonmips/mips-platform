@@ -483,3 +483,60 @@ input[readonly] { background: #f0f1f3; color: var(--color-muted); }
 .field-check .label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .error-pre { white-space: pre-line; text-align: left; }
 #decision textarea { width: 100%; }
+
+/* -------- Charts (dataviz method: thin marks, recessive axes, text in text colours) -------- */
+.viz { margin: 0 0 24px; }
+.viz-title { font-weight: 600; font-size: 15px; }
+.viz-subtitle { margin: 2px 0 8px; font-size: 13px; color: var(--color-muted); }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; padding: 0; margin: 6px 0 4px; font-size: 13px; color: var(--color-text); }
+.viz-legend li { display: flex; align-items: center; gap: 6px; }
+.viz-swatch { display: inline-block; width: 12px; height: 3px; border-radius: 2px; background: var(--c); }
+.viz-plot { position: relative; }
+.viz-plot { min-height: 240px; }
+.viz-plot svg { display: block; overflow: visible; }
+.viz-grid { stroke: #eceef1; stroke-width: 1; }
+.viz-baseline { stroke: #c9ced6; stroke-width: 1; }
+.viz-tick { fill: var(--color-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.viz-area { opacity: 0.1; }
+.viz-dot { stroke: var(--color-surface); stroke-width: 2; }
+.viz-point { stroke: var(--color-surface); stroke-width: 1; }
+.viz-end { fill: var(--color-text); font-size: 12px; font-weight: 600; }
+.viz-cross { stroke: #9aa1ab; stroke-width: 1; }
+.viz-hit { fill: transparent; cursor: crosshair; }
+.viz-hit:focus { outline: none; }
+.viz-hit:focus-visible { stroke: var(--color-primary); stroke-width: 1; }
+.viz-tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 8px 10px;
+    font-size: 12px;
+    min-width: 170px;
+    transform: translateY(-100%);
+}
+.viz-tip-title { font-weight: 600; margin-bottom: 4px; }
+.viz-tip-row { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 6px; }
+.viz-tip-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+.viz-table summary { cursor: pointer; font-size: 13px; color: var(--color-muted); }
+.viz-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 8px 32px; }
+.viz-grid-2 > * { min-width: 0; }
+.hero { margin: 4px 0 20px; }
+.hero-label { font-size: 13px; color: var(--color-muted); }
+.hero-value { font-size: 48px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hero-delta { font-size: 14px; color: var(--color-muted); }
+.delta-up { color: #1a7f37; font-weight: 600; }
+.delta-down { color: var(--color-error); font-weight: 600; }
+
+/* -------- Small screens: the header wraps, the nav scrolls sideways -------- */
+@media (max-width: 860px) {
+    .app-header { flex-wrap: wrap; gap: 12px; padding: 12px 16px; }
+    .app-brand { flex-wrap: wrap; gap: 8px 16px; min-width: 0; max-width: 100%; }
+    .app-nav { overflow-x: auto; max-width: 100%; }
+    .app-nav a { white-space: nowrap; }
+    .user-info { flex-wrap: wrap; gap: 8px; }
+    .app-main { padding: 0 16px; }
+}

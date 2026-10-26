@@ -6,6 +6,7 @@
  *   GET  /api/reports/periods   { "periods": ["2026-09", ...] }
  *   GET  /api/reports/monthly?period=YYYY-MM
  *   GET  /api/reports/export?period=YYYY-MM   CSV of the report lines
+ *   GET  /api/reports/trend?to=YYYY-MM        12-month series ending at that month
  */
 declare(strict_types=1);
 
@@ -89,6 +90,18 @@ final class ReportsController
             Response::json(['error' => 'No data imported for ' . $period . '.'], 404);
         }
         Response::json(['report' => $report]);
+    }
+
+    public function trend(): void
+    {
+        Request::require_method('GET');
+        Auth::require_access('reporting');
+
+        $to = Request::period($_GET['to'] ?? null);
+        if ($to === null) {
+            Response::json(['error' => 'Month must be in YYYY-MM format.'], 422);
+        }
+        Response::json(['trend' => (new MonthlyReport())->trend($to)]);
     }
 
     public function export(): void

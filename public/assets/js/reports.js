@@ -17,6 +17,9 @@
     const reportBox  = document.getElementById('report');
     const reportErr  = document.getElementById('report-error');
     const emptyMsg   = document.getElementById('report-empty');
+    const $trendCard = document.getElementById('trend-card');
+    const $trendRange = document.getElementById('trend-range');
+    const $trend     = document.getElementById('trend');
 
     async function loadPeriods(selected) {
         const data = await api('/api/reports/periods');
@@ -31,8 +34,49 @@
         }
     }
 
+    // Categorical slots in fixed order (validated palette, light surface).
+    const SLOT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'];
+
+    function delta(v, label) {
+        if (v === null || v === undefined) { return el('span', { text: 'no ' + label + ' to compare' }); }
+        // Arrow + sign carry the direction; colour only reinforces it.
+        return el('span', { class: v >= 0 ? 'delta-up' : 'delta-down', text: (v >= 0 ? '▲ ' : '▼ ') + pct(v) + ' ' + label });
+    }
+
+    async function loadTrend(period) {
+        const { trend } = await api('/api/reports/trend?to=' + encodeURIComponent(period));
+        const t = trend.series;
+        const P = trend.periods;
+        const hl = trend.headline;
+        const chart = MIPS.lineChart;
+        $trendCard.hidden = false;
+        $trendRange.textContent = P[0] + ' → ' + P[P.length - 1] + ' · ' + trend.imported + ' of ' + P.length + ' months imported';
+
+        $trend.replaceChildren(
+            el('div', { class: 'hero' }, [
+                el('div', { class: 'hero-label', text: 'MUR volume, ' + hl.period }),
+                el('div', { class: 'hero-value', text: hl.total === null ? '—' : money(hl.total) }),
+                el('div', { class: 'hero-delta' }, [delta(hl.mom, 'vs previous month'), ' · ', delta(hl.yoy, 'vs ' + hl.yoy_period)]),
+            ]),
+            chart({ title: 'MUR volume, all channels', periods: P, format: money,
+                series: [{ label: 'MUR volume', color: SLOT[0], values: t.total }] }),
+            el('div', { class: 'viz-grid-2' }, [
+                chart({ title: 'MUR volume by channel', periods: P, format: money,
+                    series: [{ label: 'TPE', color: SLOT[0], values: t.tpe }, { label: 'Online', color: SLOT[1], values: t.online }] }),
+                chart({ title: 'MUR volume by rail type', subtitle: 'Push-to-phone shown on its own, never inside QR', periods: P, format: money,
+                    series: [{ label: 'Card', color: SLOT[0], values: t.rail_CARD }, { label: 'QR', color: SLOT[1], values: t.rail_QR },
+                        { label: 'Push', color: SLOT[2], values: t.rail_PUSH }, { label: 'Other', color: SLOT[3], values: t.rail_OTHER }] }),
+                chart({ title: 'Transactions (all currencies)', periods: P, format: int, integer: true,
+                    series: [{ label: 'Transactions', color: SLOT[0], values: t.txn }] }),
+                chart({ title: 'Active merchants', periods: P, format: int, integer: true,
+                    series: [{ label: 'Active merchants', color: SLOT[0], values: t.merchants }] }),
+            ])
+        );
+    }
+
     async function loadReport() {
         const period = select.value;
+        loadTrend(period).catch((err) => show(reportErr, err.message));
         exportLink.href = '/api/reports/export?period=' + encodeURIComponent(period);
         show(reportErr, '');
         try {

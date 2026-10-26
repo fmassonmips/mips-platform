@@ -26,6 +26,16 @@ require TEMPLATES_PATH . '/partials/app_header.php';
       <div id="import-result" hidden></div>
     </section>
 
+    <section class="card" id="trend-card" hidden>
+      <div class="card-head">
+        <h2>12-month trend</h2>
+        <span id="trend-range" class="muted"></span>
+      </div>
+      <p class="muted">MUR volumes only (non-MUR rows are never converted). Months that were not imported are shown as gaps, not zeros.
+        Hover a chart (or focus it and use the arrow keys) to read each month; "Table" gives the exact figures.</p>
+      <div id="trend"></div>
+    </section>
+
     <section class="card">
       <div class="card-head">
         <h2>Monthly report</h2>
@@ -42,6 +52,7 @@ require TEMPLATES_PATH . '/partials/app_header.php';
   </main>
 
   <script src="/assets/js/app.js"></script>
+  <script src="/assets/js/charts.js"></script>
   <script src="/assets/js/reports.js"></script>
 </body>
 </html>
