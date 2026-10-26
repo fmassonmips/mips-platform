@@ -45,21 +45,8 @@ final class CommissionImporter
      */
     public function import(string $path, string $filename, ?string $periodOverride, int $userId): array
     {
-        // Generators cannot be rewound: read the header, then keep iterating
-        // the same generator for the data rows.
-        $rows   = $this->open($path, $filename);
-        $header = null;
-        for (; $rows->valid(); $rows->next()) {
-            $r = $rows->current();
-            if (!self::isBlankRow($r)) {
-                $header = array_map(static fn ($v) => trim((string) $v), $r);
-                $rows->next();
-                break;
-            }
-        }
-        if ($header === null) {
-            throw new RuntimeException('The file is empty.');
-        }
+        $rows   = Spreadsheet::rows($path, $filename);
+        $header = Spreadsheet::header($rows);
 
         $col     = array_flip($header);
         $missing = array_values(array_diff(self::REQUIRED, $header));
@@ -89,7 +76,7 @@ final class CommissionImporter
 
             for (; $rows->valid(); $rows->next()) {
                 $r = $rows->current();
-                if (self::isBlankRow($r)) {
+                if (Spreadsheet::isBlankRow($r)) {
                     continue;
                 }
                 $raw++;
@@ -221,38 +208,6 @@ final class CommissionImporter
         ];
     }
 
-    /** @return \Generator<int, list<string>> */
-    private function open(string $path, string $filename): \Generator
-    {
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if ($ext === 'xlsx') {
-            return XlsxReader::rows($path);
-        }
-        if ($ext === 'csv') {
-            return self::csvRows($path);
-        }
-        throw new RuntimeException('Unsupported file type. Upload a .xlsx or .csv export.');
-    }
-
-    /** @return \Generator<int, list<string>> */
-    private static function csvRows(string $path): \Generator
-    {
-        $fh = fopen($path, 'rb');
-        if ($fh === false) {
-            throw new RuntimeException('Cannot read the file.');
-        }
-        $first = (string) fgets($fh);
-        rewind($fh);
-        if (str_starts_with($first, "\xEF\xBB\xBF")) {
-            fread($fh, 3);
-        }
-        $delimiter = substr_count($first, ';') > substr_count($first, ',') ? ';' : ',';
-        while (($r = fgetcsv($fh, 0, $delimiter, '"', '')) !== false) {
-            yield array_map('strval', $r);
-        }
-        fclose($fh);
-    }
-
     /** @param list<string> $header */
     private function findDateColumn(array $header): ?string
     {
@@ -343,17 +298,6 @@ final class CommissionImporter
             return $v === '' ? 0.0 : null;
         }
         return is_numeric($v) ? (float) $v : null;
-    }
-
-    /** @param list<string> $r */
-    private static function isBlankRow(array $r): bool
-    {
-        foreach ($r as $v) {
-            if (trim((string) $v) !== '') {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static function truthy(string $v): bool

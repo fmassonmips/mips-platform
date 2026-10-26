@@ -466,3 +466,4 @@ input[readonly] { background: #f0f1f3; color: var(--color-muted); }
     grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 24px;
 }
+.error-left { color: var(--color-error); font-weight: 600; }

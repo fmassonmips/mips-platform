@@ -76,12 +76,44 @@ return [
         'audit'     => ['admin'],
         'users'     => ['admin'],
         'merchants' => ['admin', 'finance'],
+        'recon'     => ['admin', 'finance'],
     ],
 
     'storage' => [
         // Must be outside the public web root and writable by PHP.
         'path'               => dirname(__DIR__) . '/storage',
         'max_document_bytes' => 20 * 1024 * 1024,
+    ],
+
+    // MCB vs MIPS e-commerce reconciliation. Column names are matched
+    // against these candidates (first match wins, case-insensitive).
+    'recon' => [
+        'mcb_columns' => [
+            'mid'      => ['Outlet_Number'],
+            'currency' => ['currency_code_Alpha'],
+            'amount'   => ['trx_amt'],
+            'date'     => ['trx_date', 'transaction_date', 'Trx_Date', 'date'],
+            'type'     => ['trx_type', 'transaction_type', 'Trx_Type'],   // optional: only PURCHASE is kept
+            'name'     => ['Outlet_Name', 'Merchant_Name', 'merchant_name'], // optional, for MCB-only lines
+        ],
+        'mips_columns' => [
+            'mid'       => ['card_merchant_id'],
+            'currency'  => ['symbole_monnaie'],
+            'amount'    => ['somme_totale'],
+            'date'      => ['date_transaction', 'transaction_date', 'created_at', 'date_creation', 'last_transaction_date', 'date'],
+            'bundled'   => ['order_is_bundled'],
+            'last_mid'  => ['last_merchant_mid'],
+            'merchant'  => ['form_name', 'form_nickname'],
+            'reference' => ['transaction_reference', 'order_reference', 'id_order', 'order_id', 'reference'],
+            'network'   => ['last_card_brand', 'card_brand'],
+            'status'    => ['last_transaction_status'],   // optional: only SUCCESS is kept
+        ],
+        // Card verifications: MCB books them as PURCHASE, MIPS at 0.
+        'verification_amount' => ['MUR' => 10.0, 'default' => 1.0],
+        // Days at the end of the month treated as clearing lag.
+        'month_end_days'      => 2,
+        // Merchants that must appear in a full extraction (scope check).
+        'sentinel_merchants'  => ['CEB'],
     ],
 
     'merchants' => [

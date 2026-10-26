@@ -8,6 +8,7 @@ $nav = [
     'merchants' => ['/merchants.php', 'Merchants', 'merchants'],
     'reports'   => ['/reports.php',   'Reports',   'reporting'],
     'billing'   => ['/billing.php',   'Billing',   'billing'],
+    'recon'     => ['/recon.php',     'Recon',     'recon'],
     'users'     => ['/users.php',     'Users',     'users'],
     'audit'     => ['/audit.php',     'Audit log', 'audit'],
 ];

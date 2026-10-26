@@ -329,3 +329,117 @@ CREATE TABLE IF NOT EXISTS invoice_sequences (
     last_value      INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Module: bank reconciliation (MCB vs MIPS, e-commerce)
+-- =======================================================================
+
+-- ---- recon_mid_remaps: same merchant, two MIDs ---------------------------
+-- Applied to both files before aggregating: from_mid is counted as to_mid.
+CREATE TABLE IF NOT EXISTS recon_mid_remaps (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    from_mid        VARCHAR(32)  NOT NULL,
+    to_mid          VARCHAR(32)  NOT NULL,
+    label           VARCHAR(120) NULL,
+    created_by      BIGINT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_recon_mid_remaps_from (from_mid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Known remaps (MCB recon procedure, 2026).
+INSERT IGNORE INTO recon_mid_remaps (from_mid, to_mid, label) VALUES
+    ('1010033540', '1010030300', 'Summertimes'),
+    ('1010021980', '1010021981', 'Arcadia'),
+    ('1010013888', '1010035580', 'Automatic Systems'),
+    ('11346',      '33273',      'Vallée de Ferney'),
+    ('1010021761', '1010021760', 'Bubble Lodge'),
+    ('1010029891', '1030001080', 'Constance'),
+    ('1010029900', '1030001070', 'Constance');
+
+-- ---- recon_watch_mids: MIDs tracked in their own bucket, cumulatively ----
+-- MIPS rows whose last_merchant_mid is listed here are absent from the MCB
+-- file by construction; their gap is reported separately, not as a claim.
+CREATE TABLE IF NOT EXISTS recon_watch_mids (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    mid             VARCHAR(32)  NOT NULL,
+    label           VARCHAR(120) NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_recon_watch_mids (mid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO recon_watch_mids (mid, label) VALUES
+    ('1030001080', 'Constance new MID'),
+    ('1030001070', 'Constance new MID');
+
+-- ---- recon_runs ---------------------------------------------------------------
+-- Source files are kept (storage.path/recon/) so a run can be recomputed
+-- after a remap or watch-list change.
+CREATE TABLE IF NOT EXISTS recon_runs (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    period          CHAR(7)      NOT NULL,
+    mcb_path        VARCHAR(255) NOT NULL,
+    mcb_name        VARCHAR(255) NOT NULL,
+    mcb_sha256      CHAR(64)     NOT NULL,
+    mips_path       VARCHAR(255) NOT NULL,
+    mips_name       VARCHAR(255) NOT NULL,
+    mips_sha256     CHAR(64)     NOT NULL,
+    summary         JSON         NULL,      -- per-currency totals, categories, % views
+    warnings        JSON         NULL,      -- scope / window / sentinel checks
+    created_by      BIGINT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    computed_at     DATETIME     NULL,
+    PRIMARY KEY (id),
+    KEY idx_recon_runs_period (period, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- recon_lines: one per (MID, currency), gap split into categories -------
+-- Invariant: amt_card_verif + amt_clearing + amt_watch + amt_mips_only
+--            + amt_mcb_only + amt_real = diff  (diff = MCB - MIPS)
+CREATE TABLE IF NOT EXISTS recon_lines (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    run_id          BIGINT UNSIGNED NOT NULL,
+    mid             VARCHAR(32)   NOT NULL,
+    merchant_name   VARCHAR(255)  NULL,
+    merchant_id     BIGINT UNSIGNED NULL,
+    currency        VARCHAR(8)    NOT NULL,
+    mcb_amount      DECIMAL(18,2) NOT NULL DEFAULT 0,
+    mips_amount     DECIMAL(18,2) NOT NULL DEFAULT 0,
+    mips_count      INT UNSIGNED  NOT NULL DEFAULT 0,
+    mips_zero_count INT UNSIGNED  NOT NULL DEFAULT 0,
+    is_bundled      TINYINT(1)    NOT NULL DEFAULT 0,
+    diff            DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_card_verif  DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_clearing    DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_watch       DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_mips_only   DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_mcb_only    DECIMAL(18,2) NOT NULL DEFAULT 0,
+    amt_real        DECIMAL(18,2) NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    KEY idx_recon_lines_run (run_id, currency),
+    CONSTRAINT fk_recon_lines_run FOREIGN KEY (run_id) REFERENCES recon_runs (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS recon_daily (
+    line_id         BIGINT UNSIGNED NOT NULL,
+    day             DATE          NOT NULL,
+    mcb_amount      DECIMAL(18,2) NOT NULL DEFAULT 0,
+    mips_amount     DECIMAL(18,2) NOT NULL DEFAULT 0,
+    PRIMARY KEY (line_id, day),
+    CONSTRAINT fk_recon_daily_line FOREIGN KEY (line_id) REFERENCES recon_lines (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- recon_claim_items: MIPS transactions on days MCB is short -------------
+-- Candidates for the claim to MCB, not a proven subset.
+CREATE TABLE IF NOT EXISTS recon_claim_items (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    line_id         BIGINT UNSIGNED NOT NULL,
+    txn_at          VARCHAR(32)   NULL,
+    reference       VARCHAR(128)  NULL,
+    network         VARCHAR(32)   NULL,
+    amount          DECIMAL(18,2) NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_recon_claim_items_line (line_id),
+    CONSTRAINT fk_recon_claim_items_line FOREIGN KEY (line_id) REFERENCES recon_lines (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
