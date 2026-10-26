@@ -5,6 +5,7 @@
 /** @var string $active */
 $nav = [
     'dashboard' => ['/dashboard.php', 'Dashboard', null],
+    'merchants' => ['/merchants.php', 'Merchants', 'merchants'],
     'reports'   => ['/reports.php',   'Reports',   'reporting'],
     'billing'   => ['/billing.php',   'Billing',   'billing'],
     'users'     => ['/users.php',     'Users',     'users'],

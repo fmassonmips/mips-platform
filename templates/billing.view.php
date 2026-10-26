@@ -18,7 +18,8 @@ require TEMPLATES_PATH . '/partials/app_header.php';
         </div>
       </div>
       <p class="muted">Generating rebuilds the drafts of the month from imported transactions and the active fee rules.
-        Issued and paid invoices are never changed; void one to regenerate it.</p>
+        Issued and paid invoices are never changed; void one to regenerate it.
+        Billing details (legal name, BRN, VAT, address, billing email, billable) are edited on each <a href="/merchants.php">merchant record</a>.</p>
       <p id="billing-msg" class="notice" role="status" hidden></p>
       <p id="billing-error" class="error" role="alert" hidden></p>
       <div id="invoices"></div>
@@ -73,11 +74,6 @@ require TEMPLATES_PATH . '/partials/app_header.php';
       <div id="rules"></div>
     </section>
 
-    <section class="card">
-      <h2>Merchants</h2>
-      <p class="muted">Created automatically from imports. Non-billable merchants get no invoice.</p>
-      <div id="merchants"></div>
-    </section>
   </main>
 
   <script src="/assets/js/app.js"></script>

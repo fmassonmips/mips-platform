@@ -3,7 +3,6 @@
  * Commission billing API.
  *
  *   GET  /api/billing/merchants
- *   POST /api/billing/merchant          { id, billing_email, is_billable }
  *   GET  /api/billing/fee-rules
  *   POST /api/billing/fee-rule          { merchant_id?, sof_proc_nickname?, rail_type?, channel?, rate_pct, fixed_fee, valid_from, valid_to? }
  *   POST /api/billing/fee-rule-disable  { id }
@@ -24,7 +23,6 @@ use App\Database;
 use App\Reporting\Rails;
 use App\Request;
 use App\Response;
-use App\Validator;
 
 final class BillingController
 {
@@ -34,44 +32,9 @@ final class BillingController
         Auth::require_access('billing');
 
         $rows = Database::connection()->query(
-            'SELECT m.id, m.name, m.billing_email, m.is_billable,
-                    (SELECT MAX(period) FROM transactions t WHERE t.merchant_id = m.id) AS last_period
-             FROM merchants m ORDER BY m.name'
+            'SELECT m.id, m.name FROM merchants m ORDER BY m.name'
         )->fetchAll();
         Response::json(['merchants' => $rows]);
-    }
-
-    public function updateMerchant(): void
-    {
-        Request::require_method('POST');
-        Auth::require_access('billing');
-        Request::require_csrf();
-
-        $data  = Request::body();
-        $id    = (int) ($data['id'] ?? 0);
-        $email = is_string($data['billing_email'] ?? null) ? trim($data['billing_email']) : '';
-        $bill  = !empty($data['is_billable']) ? 1 : 0;
-
-        if ($email !== '' && ($err = Validator::email($email)) !== null) {
-            Response::json(['error' => $err], 422);
-        }
-
-        $db   = Database::connection();
-        $prev = $db->prepare('SELECT billing_email, is_billable FROM merchants WHERE id = :id');
-        $prev->execute([':id' => $id]);
-        $before = $prev->fetch();
-        if (!is_array($before)) {
-            Response::json(['error' => 'Merchant not found.'], 404);
-        }
-
-        $db->prepare('UPDATE merchants SET billing_email = :e, is_billable = :b WHERE id = :id')
-            ->execute([':e' => $email === '' ? null : $email, ':b' => $bill, ':id' => $id]);
-
-        Audit::log('merchant.update', 'merchant', $id, [
-            'before' => $before,
-            'after'  => ['billing_email' => $email === '' ? null : $email, 'is_billable' => $bill],
-        ]);
-        Response::json(['success' => true]);
     }
 
     public function feeRules(): void

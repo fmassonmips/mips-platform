@@ -3,4 +3,4 @@ declare(strict_types=1);
 
 require __DIR__ . '/../../../src/bootstrap.php';
 
-(new \App\Controllers\Billing\BillingController())->updateMerchant();
+(new \App\Controllers\Merchants\MerchantsController())->contractDelete();

@@ -191,7 +191,11 @@ final class InvoiceService
     public function find(int $invoiceId): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT i.*, m.name AS merchant_name, m.billing_email
+            'SELECT i.*, m.name AS merchant_name, m.legal_name, m.brn, m.vat_number, m.address,
+                    COALESCE(m.billing_email,
+                             (SELECT c.email FROM merchant_contacts c
+                               WHERE c.merchant_id = m.id AND c.is_billing = 1 AND c.email IS NOT NULL
+                               ORDER BY c.is_primary DESC, c.id LIMIT 1)) AS billing_email
              FROM invoices i JOIN merchants m ON m.id = i.merchant_id WHERE i.id = :id'
         );
         $stmt->execute([':id' => $invoiceId]);

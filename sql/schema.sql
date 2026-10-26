@@ -129,6 +129,78 @@ CREATE TABLE IF NOT EXISTS merchants (
     UNIQUE KEY uq_merchants_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Merchant profile (module: merchants). `name` stays the import key
+-- (Commission_Data form_name); the profile adds the legal identity.
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS legal_name         VARCHAR(255) NULL AFTER name;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS status             ENUM('prospect','onboarding','active','suspended','terminated') NOT NULL DEFAULT 'active' AFTER legal_name;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS brn                VARCHAR(32)  NULL AFTER status;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS vat_number         VARCHAR(32)  NULL AFTER brn;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS address            TEXT         NULL AFTER vat_number;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS sector             VARCHAR(100) NULL AFTER address;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS account_manager_id BIGINT UNSIGNED NULL AFTER sector;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS notes              TEXT         NULL AFTER is_billable;
+ALTER TABLE merchants ADD KEY IF NOT EXISTS idx_merchants_status (status);
+
+-- ---- merchant_contacts ----------------------------------------------------
+CREATE TABLE IF NOT EXISTS merchant_contacts (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    merchant_id     BIGINT UNSIGNED NOT NULL,
+    name            VARCHAR(120) NOT NULL,
+    job_title       VARCHAR(120) NULL,
+    email           VARCHAR(254) NULL,
+    phone           VARCHAR(40)  NULL,
+    is_primary      TINYINT(1)   NOT NULL DEFAULT 0,
+    is_billing      TINYINT(1)   NOT NULL DEFAULT 0,
+    notes           VARCHAR(500) NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_merchant_contacts_merchant (merchant_id),
+    CONSTRAINT fk_merchant_contacts_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- merchant_identifiers (MIDs, QR TUIs... used by bank reconciliations) --
+CREATE TABLE IF NOT EXISTS merchant_identifiers (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    merchant_id     BIGINT UNSIGNED NOT NULL,
+    type            ENUM('MID','TUI','OUTLET','OTHER') NOT NULL,
+    value           VARCHAR(64)  NOT NULL,
+    label           VARCHAR(120) NULL,          -- e.g. acquiring bank, "old MID"
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_merchant_identifiers (type, value),
+    KEY idx_merchant_identifiers_merchant (merchant_id),
+    CONSTRAINT fk_merchant_identifiers_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- contracts ----------------------------------------------------------------
+-- Documents are stored outside the web root (config storage.path) and served
+-- only through an authenticated endpoint.
+CREATE TABLE IF NOT EXISTS contracts (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    merchant_id         BIGINT UNSIGNED NOT NULL,
+    reference           VARCHAR(64)  NULL,
+    type                ENUM('MSA','PRICING','ADDENDUM','NDA','OTHER') NOT NULL DEFAULT 'MSA',
+    status              ENUM('draft','signed','terminated') NOT NULL DEFAULT 'draft',
+    signed_at           DATE         NULL,
+    start_date          DATE         NULL,
+    end_date            DATE         NULL,           -- NULL = open-ended
+    auto_renew          TINYINT(1)   NOT NULL DEFAULT 0,
+    notice_days         SMALLINT UNSIGNED NULL,      -- notice needed before end_date to terminate / renegotiate
+    notes               TEXT         NULL,
+    document_path       VARCHAR(255) NULL,           -- relative to storage.path
+    document_name       VARCHAR(255) NULL,           -- original filename, for download
+    document_sha256     CHAR(64)     NULL,
+    document_size       INT UNSIGNED NULL,
+    created_by          BIGINT UNSIGNED NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_contracts_merchant (merchant_id),
+    KEY idx_contracts_end (status, end_date),
+    CONSTRAINT fk_contracts_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---- imports (one row per uploaded file) --------------------------------
 CREATE TABLE IF NOT EXISTS imports (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

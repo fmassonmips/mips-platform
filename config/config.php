@@ -75,6 +75,18 @@ return [
         'billing'   => ['admin', 'finance'],
         'audit'     => ['admin'],
         'users'     => ['admin'],
+        'merchants' => ['admin', 'finance'],
+    ],
+
+    'storage' => [
+        // Must be outside the public web root and writable by PHP.
+        'path'               => dirname(__DIR__) . '/storage',
+        'max_document_bytes' => 20 * 1024 * 1024,
+    ],
+
+    'merchants' => [
+        // Contracts ending (or whose notice deadline falls) within this many days are flagged.
+        'contract_alert_days' => 90,
     ],
 
     // Roles an administrator can assign, in display order.

@@ -1,5 +1,5 @@
 /**
- * Billing page: invoices per month, fee rules, merchant billing settings.
+ * Billing page: invoices per month and fee rules.
  */
 (function () {
     'use strict';
@@ -16,7 +16,6 @@
     const ruleErr     = document.getElementById('rule-error');
     const rulesBox    = document.getElementById('rules');
     const merchantSel = document.getElementById('rule-merchant');
-    const merchantBox = document.getElementById('merchants');
 
     const nextActions = { draft: ['issued', 'void'], issued: ['paid', 'void'], paid: [], void: [] };
     const actionLabel = { issued: 'Issue', paid: 'Mark paid', void: 'Void' };
@@ -143,27 +142,6 @@
         const { merchants } = await api('/api/billing/merchants');
         merchantSel.replaceChildren(el('option', { value: '', text: 'Any merchant' }),
             ...merchants.map((m) => el('option', { value: m.id, text: m.name })));
-
-        merchantBox.replaceChildren(merchants.length
-            ? table(['Merchant', 'Last month', 'Billing email', 'Billable', ''],
-                merchants.map(function (m) {
-                    const email = el('input', { type: 'email', value: m.billing_email || '', 'aria-label': 'Billing email for ' + m.name });
-                    const bill  = el('input', { type: 'checkbox', checked: Number(m.is_billable) === 1, 'aria-label': 'Billable' });
-                    const save  = el('button', { type: 'button', class: 'btn-secondary btn-small', text: 'Save' });
-                    save.addEventListener('click', async function () {
-                        save.disabled = true;
-                        try {
-                            await api('/api/billing/merchant', { method: 'POST', body: { id: m.id, billing_email: email.value.trim(), is_billable: bill.checked } });
-                            save.textContent = 'Saved';
-                        } catch (err) {
-                            window.alert(err.message);
-                        } finally {
-                            save.disabled = false;
-                        }
-                    });
-                    return [m.name, m.last_period || '', email, bill, save];
-                }))
-            : el('p', { class: 'muted', text: 'No merchants yet.' }));
     }
 
     select.addEventListener('change', () => loadInvoices().catch((err) => show(errBox, err.message)));

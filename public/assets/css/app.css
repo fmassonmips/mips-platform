@@ -17,6 +17,9 @@
 
 * { box-sizing: border-box; }
 
+/* Classes that set display (grid, flex) must not override the hidden attribute. */
+[hidden] { display: none !important; }
+
 html, body {
     margin: 0;
     padding: 0;
@@ -419,4 +422,47 @@ pre.codes {
     font-size: 15px;
     line-height: 1.7;
     columns: 2;
+}
+
+/* -------- Merchants -------- */
+.badge-m-prospect { background: #eef2ff; color: #3b4cca; }
+.badge-m-onboarding { background: #fff3cd; color: #8a5a00; }
+.badge-m-active { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-m-suspended { background: rgba(197, 34, 31, 0.1); color: var(--color-error); }
+.badge-m-terminated { color: var(--color-muted); }
+.badge-c-signed { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-c-draft { background: #fff3cd; color: #8a5a00; }
+.badge-c-terminated { color: var(--color-muted); }
+
+.panel {
+    margin: 12px 0;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #fafbfc;
+}
+
+.field-wide { grid-column: 1 / -1; }
+.field-check label { font-weight: 400; display: flex; gap: 6px; align-items: center; }
+
+.grid-form input[type="text"],
+.grid-form input[type="email"],
+.inline-form input[type="text"],
+textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    color: var(--color-text);
+}
+
+input[readonly] { background: #f0f1f3; color: var(--color-muted); }
+
+.two-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 24px;
 }

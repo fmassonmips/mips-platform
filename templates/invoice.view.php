@@ -36,7 +36,11 @@ $periodLabel = (new DateTimeImmutable($invoice['period'] . '-01'))->format('F Y'
 
     <section class="invoice-to">
       <h2>Bill to</h2>
-      <p><strong><?= $e($invoice['merchant_name']) ?></strong></p>
+      <p><strong><?= $e($invoice['legal_name'] ?: $invoice['merchant_name']) ?></strong></p>
+      <?php if (!empty($invoice['legal_name']) && $invoice['legal_name'] !== $invoice['merchant_name']): ?><p><?= $e($invoice['merchant_name']) ?></p><?php endif; ?>
+      <?php if (!empty($invoice['address'])): ?><p><?= nl2br($e($invoice['address'])) ?></p><?php endif; ?>
+      <?php if (!empty($invoice['brn'])): ?><p>BRN: <?= $e($invoice['brn']) ?></p><?php endif; ?>
+      <?php if (!empty($invoice['vat_number'])): ?><p>VAT: <?= $e($invoice['vat_number']) ?></p><?php endif; ?>
       <?php if (!empty($invoice['billing_email'])): ?><p><?= $e($invoice['billing_email']) ?></p><?php endif; ?>
     </section>
 
