@@ -45,7 +45,7 @@ final class CustomersController
 
             case 'card':
                 if (Customers::find($org['id'], $id) === null) {
-                    Response::json(['error' => 'Customer not found.'], 409);
+                    Response::json(['error' => 'Client introuvable.'], 409);
                 }
                 $base = rtrim((string) ($GLOBALS['config']['app']['url'] ?? ''), '/');
                 Response::json(['success' => true, 'id' => $id,
@@ -53,12 +53,12 @@ final class CustomersController
 
             case 'erase':
                 if (!Tenant::canManage($org)) {
-                    Response::json(['error' => 'Only an owner or admin can erase a customer.'], 403);
+                    Response::json(['error' => 'Seul un propriétaire ou un administrateur peut effacer un client.'], 403);
                 }
                 $this->done($id, Customers::erase($org['id'], $id));
 
             default:
-                Response::json(['error' => 'Invalid action.'], 422);
+                Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 

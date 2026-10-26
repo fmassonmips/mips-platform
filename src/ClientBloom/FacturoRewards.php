@@ -68,15 +68,15 @@ final class FacturoRewards
 
             // Same share of cashback as the share of the invoice refunded, rounded down.
             $due = intdiv($tx['cashback_cents'] * (int) $cn['total_cents'], $tx['amount_cents']);
-            [$taken, $error, $clawTx] = Ledger::clawback($orgId, $userId, $tx['customer_id'], $due, 'Credit note ' . $cn['number'],
+            [$taken, $error, $clawTx] = Ledger::clawback($orgId, $userId, $tx['customer_id'], $due, 'Avoir ' . $cn['number'],
                 min((int) $cn['total_cents'], $tx['amount_cents']));
             if ($error !== null) {
-                self::note($creditNoteId, null, 'Loyalty: ' . $error);
+                self::note($creditNoteId, null, 'Fidélité : ' . $error);
                 return;
             }
             self::note($creditNoteId, $clawTx,
-                'Loyalty: ' . self::mur($taken) . ' of cashback taken back'
-                . ($taken < $due ? ' (' . self::mur($due) . ' due, customer balance was lower)' : '') . '.');
+                'Fidélité : ' . self::mur($taken) . ' de cashback repris'
+                . ($taken < $due ? ' (' . self::mur($due) . ' dus, solde du client insuffisant)' : '') . '.');
         });
     }
 
@@ -86,30 +86,30 @@ final class FacturoRewards
     private static function reward(int $orgId, int $userId, array $doc): void
     {
         if ($doc['currency'] !== 'MUR') {
-            self::note((int) $doc['id'], null, 'Loyalty: not rewarded, cashback applies to MUR invoices only.');
+            self::note((int) $doc['id'], null, 'Fidélité : non récompensée, le cashback ne s\'applique qu\'aux factures en MUR.');
             return;
         }
         $net = (int) $doc['total_cents'] - (int) $doc['credited_cents'];
         if ($net <= 0) {
-            self::note((int) $doc['id'], null, 'Loyalty: not rewarded, the invoice is fully credited.');
+            self::note((int) $doc['id'], null, 'Fidélité : non récompensée, la facture est entièrement créditée.');
             return;
         }
         $customer = self::customerFor($orgId, $userId, (int) $doc['client_id']);
         if ($customer === null) {
-            self::note((int) $doc['id'], null, 'Loyalty: not rewarded, the client has no valid phone or email.');
+            self::note((int) $doc['id'], null, 'Fidélité : non récompensée, le client n\'a ni téléphone ni e-mail valide.');
             return;
         }
         $rules = Settings::get($orgId);
         [$result, $error] = Ledger::checkout($orgId, $userId, (int) $customer['id'], $net, 0, (string) $doc['number'],
             $rules['invoice_cashback_bp'], $rules['invoice_cap_cents']);
         if ($error !== null) {
-            self::note((int) $doc['id'], null, 'Loyalty: not rewarded, ' . lcfirst($error));
+            self::note((int) $doc['id'], null, 'Fidélité : non récompensée, ' . lcfirst($error));
             return;
         }
         self::note((int) $doc['id'], $result['purchase_tx_id'],
-            'Loyalty: ' . self::mur($result['earned']) . ' cashback credited to ' . $customer['name']
-            . ' (' . Money::rateToInput($rules['invoice_cashback_bp']) . '%'
-            . ($rules['invoice_cap_cents'] > 0 && $result['earned'] === $rules['invoice_cap_cents'] ? ', capped' : '') . ').');
+            'Fidélité : ' . self::mur($result['earned']) . ' de cashback crédités à ' . $customer['name']
+            . ' (' . Money::rateToInput($rules['invoice_cashback_bp']) . ' %'
+            . ($rules['invoice_cap_cents'] > 0 && $result['earned'] === $rules['invoice_cap_cents'] ? ', plafonné' : '') . ').');
     }
 
     /**
@@ -137,20 +137,20 @@ final class FacturoRewards
         if ($alreadyTaken === 0 && $alreadyRefunded === 0) {
             $error = Ledger::reverse($orgId, $userId, $txId);
             if ($error === null) {
-                self::note((int) $doc['id'], null, 'Loyalty: cashback removed, the invoice is no longer paid.');
+                self::note((int) $doc['id'], null, 'Fidélité : cashback retiré, la facture n\'est plus payée.');
             } else {
-                self::note((int) $doc['id'], $txId, 'Loyalty: cashback could not be removed automatically (' . $error
-                    . ') — adjust it in ClientBloom if needed.');
+                self::note((int) $doc['id'], $txId, 'Fidélité : le cashback n\'a pas pu être retiré automatiquement (' . $error
+                    . ') — ajustez-le dans ClientBloom si nécessaire.');
             }
             return;
         }
 
         $remaining = max(0, $tx['cashback_cents'] - $alreadyTaken);
         $unrefunded = max(0, $tx['amount_cents'] - $alreadyRefunded);
-        [$taken] = Ledger::clawback($orgId, $userId, $tx['customer_id'], $remaining, 'Invoice ' . $doc['number'] . ' no longer paid', $unrefunded);
+        [$taken] = Ledger::clawback($orgId, $userId, $tx['customer_id'], $remaining, 'Facture ' . $doc['number'] . ' plus payée', $unrefunded);
         self::note((int) $doc['id'], null, $taken > 0
-            ? 'Loyalty: ' . self::mur($taken) . ' of remaining cashback removed, the invoice is no longer paid.'
-            : 'Loyalty: no cashback left to remove, the invoice is no longer paid.');
+            ? 'Fidélité : ' . self::mur($taken) . ' de cashback restant retirés, la facture n\'est plus payée.'
+            : 'Fidélité : aucun cashback restant à retirer, la facture n\'est plus payée.');
     }
 
     /**

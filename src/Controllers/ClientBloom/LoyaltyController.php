@@ -50,7 +50,7 @@ final class LoyaltyController
                 $redeemRaw = Request::str($data, 'redeem', 20);
                 $redeem = $redeemRaw === '' ? 0 : Money::parseCents($redeemRaw);
                 if ($amount === null || $redeem === null) {
-                    Response::json(['error' => 'Amounts must be numbers with at most 2 decimals.'], 422);
+                    Response::json(['error' => 'Les montants doivent être des nombres avec 2 décimales au plus.'], 422);
                 }
                 [$result, $error] = Ledger::checkout($org['id'], (int) $user['id'], $id, $amount, $redeem, Request::str($data, 'reference', 100));
                 if ($error !== null) {
@@ -65,7 +65,7 @@ final class LoyaltyController
                 $this->requireManager($org);
                 $amount = Money::parseCents(Request::str($data, 'amount', 20));
                 if ($amount === null) {
-                    Response::json(['error' => 'Amount must be a number with at most 2 decimals.'], 422);
+                    Response::json(['error' => 'Le montant doit être un nombre avec 2 décimales au plus.'], 422);
                 }
                 $this->done($id, Ledger::adjust($org['id'], (int) $user['id'], $id, $amount, Request::str($data, 'reason', 200)));
 
@@ -74,7 +74,7 @@ final class LoyaltyController
                 $this->done($id, Ledger::reverse($org['id'], (int) $user['id'], Request::int($data, 'transaction_id')));
 
             default:
-                Response::json(['error' => 'Invalid action.'], 422);
+                Response::json(['error' => 'Action invalide.'], 422);
         }
     }
 
@@ -84,7 +84,7 @@ final class LoyaltyController
     private function requireManager(array $org): void
     {
         if (!Tenant::canManage($org)) {
-            Response::json(['error' => 'Only an owner or admin can correct cashback.'], 403);
+            Response::json(['error' => 'Seul un propriétaire ou un administrateur peut corriger le cashback.'], 403);
         }
     }
 

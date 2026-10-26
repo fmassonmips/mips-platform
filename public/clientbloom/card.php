@@ -15,7 +15,7 @@ $found = \App\ClientBloom\Customers::findByToken(is_string($_GET['t'] ?? null) ?
 if ($found === null) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Card not found.';
+    echo 'Carte introuvable.';
     exit;
 }
 [$orgId, $customer] = $found;

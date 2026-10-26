@@ -32,7 +32,7 @@
         });
         const body = await res.json().catch(function () { return {}; });
         if (!res.ok) {
-            throw new Error(body.error || 'Request failed.');
+            throw new Error(body.error || 'La requête a échoué.');
         }
         return body;
     }
@@ -68,7 +68,7 @@
             document.getElementById('co-name').textContent = c.name;
             document.getElementById('co-phone').textContent = c.phone;
             document.getElementById('co-balance').textContent = c.balance;
-            document.getElementById('co-visits').textContent = c.visits + ' visit(s)' + (c.last_visit_at ? ' · last ' + c.last_visit_at.slice(0, 10) : '');
+            document.getElementById('co-visits').textContent = c.visits + ' visite(s)' + (c.last_visit_at ? ' · dernière le ' + c.last_visit_at.slice(0, 10) : '');
             document.getElementById('co-profile').href = profileUrl(c.id);
             checkout.hidden = false;
             notFound.hidden = true;
@@ -96,9 +96,9 @@
                 redeem: coForm.elements.redeem.value,
                 reference: coForm.elements.reference.value,
             });
-            result.textContent = 'Sale recorded. Cashback earned ' + body.earned
-                + (body.redeemed !== 'MUR 0.00' ? ', used ' + body.redeemed : '')
-                + '. New balance: ' + body.balance + '.';
+            result.textContent = 'Vente enregistrée. Cashback gagné : ' + body.earned
+                + (body.redeemed !== 'MUR 0.00' ? ', utilisé : ' + body.redeemed : '')
+                + '. Nouveau solde : ' + body.balance + '.';
             result.hidden = false;
             document.getElementById('co-balance').textContent = body.balance;
             coForm.reset();
@@ -136,7 +136,7 @@
                     document.getElementById('card-url').value = body.url;
                     let phone = wa.dataset.phone || '';
                     if (phone && phone.length <= 8) { phone = '230' + phone; }   // Mauritian local number
-                    const text = 'Hello ' + wa.dataset.name + ', here is your loyalty card: ' + body.url;
+                    const text = 'Bonjour ' + wa.dataset.name + ', voici votre carte de fidélité : ' + body.url;
                     wa.href = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
                     share.hidden = false;
                 } catch (err) {
@@ -148,7 +148,7 @@
         const eraseBtn = document.getElementById('erase-btn');
         if (eraseBtn) {
             eraseBtn.addEventListener('click', async function () {
-                if (!window.confirm('Erase this customer\'s personal data? This cannot be undone.')) { return; }
+                if (!window.confirm('Effacer les données personnelles de ce client ? Cette action est irréversible.')) { return; }
                 try {
                     await post('/api/clientbloom/customers', { action: 'erase', id: Number(eraseBtn.dataset.id) });
                     window.location.reload();
@@ -183,7 +183,7 @@
 
     document.querySelectorAll('[data-reverse]').forEach(function (btn) {
         btn.addEventListener('click', async function () {
-            if (!window.confirm('Reverse this transaction?')) { return; }
+            if (!window.confirm('Annuler cette opération ?')) { return; }
             btn.disabled = true;
             try {
                 await post('/api/clientbloom/loyalty', { action: 'reverse', transaction_id: Number(btn.dataset.reverse) });

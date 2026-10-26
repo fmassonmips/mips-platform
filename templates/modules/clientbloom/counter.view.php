@@ -8,19 +8,19 @@
 use App\Facturo\Money;
 ?>
 <section class="card">
-  <h2>Counter</h2>
-  <p class="muted small">Cashback: <?= $e(Money::rateToInput($rules['cashback_bp'])) ?>% of the amount paid ·
-     usable from <?= $e(Money::format($rules['min_redeem_cents'], 'MUR')) ?></p>
+  <h2>Caisse</h2>
+  <p class="muted small">Cashback : <?= $e(Money::rateToInput($rules['cashback_bp'])) ?> % du montant payé ·
+     utilisable dès <?= $e(Money::format($rules['min_redeem_cents'], 'MUR')) ?></p>
   <form id="lookup-form" class="inline-form" novalidate>
     <div class="field grow">
-      <label for="lookup-phone">Customer phone</label>
+      <label for="lookup-phone">Téléphone du client</label>
       <input type="tel" id="lookup-phone" name="phone" inputmode="tel" autocomplete="off" required autofocus>
     </div>
-    <button type="submit" class="btn-primary btn-inline">Find</button>
+    <button type="submit" class="btn-primary btn-inline">Rechercher</button>
   </form>
 
   <div id="not-found" hidden>
-    <p>No customer with this number. <a id="create-link" href="/app.php?m=clientbloom&amp;p=customer">Create the customer</a></p>
+    <p>Aucun client avec ce numéro. <a id="create-link" href="/app.php?m=clientbloom&amp;p=customer">Créer le client</a></p>
   </div>
 
   <div id="checkout" hidden>
@@ -31,16 +31,16 @@ use App\Facturo\Money;
     </div>
     <form id="checkout-form" novalidate>
       <div class="form-grid">
-        <div class="field"><label for="co-amount">Purchase amount (MUR)</label>
+        <div class="field"><label for="co-amount">Montant de l'achat (MUR)</label>
           <input type="text" id="co-amount" name="amount" inputmode="decimal" required></div>
-        <div class="field"><label for="co-redeem">Cashback to use (MUR)</label>
+        <div class="field"><label for="co-redeem">Cashback à utiliser (MUR)</label>
           <input type="text" id="co-redeem" name="redeem" inputmode="decimal" placeholder="0.00"></div>
-        <div class="field"><label for="co-ref">Receipt / reference</label>
+        <div class="field"><label for="co-ref">Ticket / référence</label>
           <input type="text" id="co-ref" name="reference" maxlength="100"></div>
       </div>
       <div class="actions">
-        <button type="submit" class="btn-primary btn-inline">Record sale</button>
-        <a id="co-profile" class="btn-link" href="#">Customer profile</a>
+        <button type="submit" class="btn-primary btn-inline">Enregistrer la vente</button>
+        <a id="co-profile" class="btn-link" href="#">Fiche client</a>
       </div>
     </form>
   </div>

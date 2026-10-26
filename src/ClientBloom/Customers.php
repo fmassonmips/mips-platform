@@ -13,12 +13,12 @@ final class Customers
 {
     /** Segments offered in the customer list. */
     public const SEGMENTS = [
-        'all'       => 'All',
-        'balance'   => 'With cashback',
-        'inactive'  => 'Inactive 60+ days',
-        'top'       => 'Top spenders',
-        'birthdays' => 'Birthdays this month',
-        'consent'   => 'Marketing consent',
+        'all'       => 'Tous',
+        'balance'   => 'Avec cashback',
+        'inactive'  => 'Inactifs depuis 60 jours ou plus',
+        'top'       => 'Meilleurs clients',
+        'birthdays' => 'Anniversaires du mois',
+        'consent'   => 'Consentement marketing',
     ];
 
     private const COLUMNS = 'id, name, phone, email, birthday, tags, marketing_consent, consent_at, balance_cents,
@@ -146,22 +146,22 @@ final class Customers
 
         $name = $str('name');
         if ($name === '' || mb_strlen($name) > 120) {
-            return [[], 'Name is required (max 120 characters).'];
+            return [[], 'Le nom est obligatoire (120 caractères max.).'];
         }
         $phoneRaw = $str('phone');
         $phone    = $phoneRaw === '' ? null : self::normalizePhone($phoneRaw);
         if ($phoneRaw !== '' && $phone === null) {
-            return [[], 'Phone number is invalid.'];
+            return [[], 'Numéro de téléphone invalide.'];
         }
         $email = $str('email');
         if ($email !== '' && (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254)) {
-            return [[], 'Email is invalid.'];
+            return [[], 'Adresse e-mail invalide.'];
         }
         $birthday = $str('birthday');
         if ($birthday !== '') {
             $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $birthday);
             if ($d === false || $d->format('Y-m-d') !== $birthday || $birthday > date('Y-m-d')) {
-                return [[], 'Birthday is invalid.'];
+                return [[], 'Date d\'anniversaire invalide.'];
             }
         }
         $tags = implode(', ', array_unique(array_filter(array_map(
@@ -169,10 +169,10 @@ final class Customers
             explode(',', $str('tags'))
         ))));
         if (mb_strlen($tags) > 255) {
-            return [[], 'Too many tags.'];
+            return [[], 'Trop d\'étiquettes.'];
         }
         if ($phone === null && $email === '') {
-            return [[], 'Enter at least a phone number or an email.'];
+            return [[], 'Indiquez au moins un numéro de téléphone ou une adresse e-mail.'];
         }
 
         return [[
@@ -198,7 +198,7 @@ final class Customers
             $dup = $pdo->prepare('SELECT id FROM clientbloom_customers WHERE organization_id = :oid AND phone = :p AND id <> :id');
             $dup->execute([':oid' => $orgId, ':p' => $f['phone'], ':id' => $id]);
             if ($dup->fetchColumn() !== false) {
-                return [0, 'Another customer already has this phone number.'];
+                return [0, 'Un autre client a déjà ce numéro de téléphone.'];
             }
         }
 
@@ -216,7 +216,7 @@ final class Customers
 
             $bonus = Settings::get($orgId)['welcome_bonus_cents'];
             if ($bonus > 0) {
-                Ledger::bonus($orgId, $userId, $id, $bonus, 'Welcome bonus');
+                Ledger::bonus($orgId, $userId, $id, $bonus, 'Bonus de bienvenue');
             }
             return [$id, null];
         }
@@ -230,7 +230,7 @@ final class Customers
              WHERE organization_id = :oid AND id = :id AND erased_at IS NULL'
         );
         $stmt->execute($params + [':consent2' => $f['marketing_consent']]);
-        return self::find($orgId, $id) === null ? [0, 'Customer not found.'] : [$id, null];
+        return self::find($orgId, $id) === null ? [0, 'Client introuvable.'] : [$id, null];
     }
 
     /**
@@ -240,15 +240,15 @@ final class Customers
     {
         $c = self::find($orgId, $id);
         if ($c === null || $c['erased_at'] !== null) {
-            return 'Customer not found.';
+            return 'Client introuvable.';
         }
         if ((int) $c['balance_cents'] !== 0) {
-            return 'Use or cancel the remaining cashback before erasing this customer.';
+            return 'Utilisez ou annulez le cashback restant avant d\'effacer ce client.';
         }
         $pdo = Database::connection();
         $pdo->prepare(
             'UPDATE clientbloom_customers
-             SET name = \'Erased customer\', phone = NULL, email = NULL, birthday = NULL, tags = NULL,
+             SET name = \'Client effacé\', phone = NULL, email = NULL, birthday = NULL, tags = NULL,
                  marketing_consent = 0, consent_at = NULL, public_token = NULL, erased_at = NOW()
              WHERE organization_id = :oid AND id = :id'
         )->execute([':oid' => $orgId, ':id' => $id]);
@@ -275,11 +275,11 @@ final class Customers
     {
         $body = trim($body);
         if ($body === '' || mb_strlen($body) > 5000) {
-            return 'Note is empty or too long.';
+            return 'La note est vide ou trop longue.';
         }
         $c = self::find($orgId, $customerId);
         if ($c === null || $c['erased_at'] !== null) {
-            return 'Customer not found.';
+            return 'Client introuvable.';
         }
         Database::connection()->prepare(
             'INSERT INTO clientbloom_notes (organization_id, customer_id, body, created_by) VALUES (:oid, :cid, :body, :by)'

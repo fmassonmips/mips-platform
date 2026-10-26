@@ -11,12 +11,12 @@ use App\Facturo\Money;
 ?>
 <section class="card">
   <div class="card-head">
-    <h2>Customers</h2>
+    <h2>Clients</h2>
     <div class="actions">
       <?php if ($can_manage): ?>
-        <a class="btn-secondary" href="/clientbloom/export.php?s=<?= $e(rawurlencode($segment)) ?>">Export CSV</a>
+        <a class="btn-secondary" href="/clientbloom/export.php?s=<?= $e(rawurlencode($segment)) ?>">Exporter (CSV)</a>
       <?php endif; ?>
-      <a class="btn-secondary" href="/app.php?m=clientbloom&amp;p=customer">New customer</a>
+      <a class="btn-secondary" href="/app.php?m=clientbloom&amp;p=customer">Nouveau client</a>
     </div>
   </div>
 
@@ -28,17 +28,17 @@ use App\Facturo\Money;
           <option value="<?= $e($key) ?>"<?= $segment === $key ? ' selected' : '' ?>><?= $e($label) ?></option>
         <?php endforeach; ?>
       </select></div>
-    <div class="field grow"><label for="q">Search</label>
-      <input type="text" id="q" name="q" value="<?= $e($query) ?>" placeholder="Name, phone or email"></div>
-    <button type="submit" class="btn-secondary">Filter</button>
+    <div class="field grow"><label for="q">Rechercher</label>
+      <input type="text" id="q" name="q" value="<?= $e($query) ?>" placeholder="Nom, téléphone ou e-mail"></div>
+    <button type="submit" class="btn-secondary">Filtrer</button>
   </form>
 
   <?php if ($customers === []): ?>
-    <p class="muted">No customers in this view.</p>
+    <p class="muted">Aucun client dans cette vue.</p>
   <?php else: ?>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Name</th><th>Phone</th><th class="num">Visits</th><th class="num">Spent</th><th>Last visit</th><th class="num">Cashback</th></tr></thead>
+        <thead><tr><th>Nom</th><th>Téléphone</th><th class="num">Visites</th><th class="num">Dépensé</th><th>Dernière visite</th><th class="num">Cashback</th></tr></thead>
         <tbody>
           <?php foreach ($customers as $c): ?>
             <tr>
@@ -54,6 +54,6 @@ use App\Facturo\Money;
         </tbody>
       </table>
     </div>
-    <p class="muted small"><?= count($customers) ?> customer(s)<?= count($customers) >= 200 ? ' — first 200 shown, refine the search' : '' ?></p>
+    <p class="muted small"><?= count($customers) ?> client(s)<?= count($customers) >= 200 ? ' — 200 premiers affichés, affinez la recherche' : '' ?></p>
   <?php endif; ?>
 </section>

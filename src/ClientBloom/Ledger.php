@@ -17,8 +17,8 @@ use App\Database;
 final class Ledger
 {
     public const LABELS = [
-        'purchase' => 'Purchase', 'redeem' => 'Cashback used', 'bonus' => 'Bonus',
-        'adjust' => 'Adjustment', 'expire' => 'Expired', 'reversal' => 'Reversal',
+        'purchase' => 'Achat', 'redeem' => 'Cashback utilisé', 'bonus' => 'Bonus',
+        'adjust' => 'Ajustement', 'expire' => 'Expiré', 'reversal' => 'Annulation',
     ];
 
     /**
@@ -31,14 +31,14 @@ final class Ledger
     public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference, ?int $rateBp = null, int $capCents = 0): array
     {
         if ($amountCents <= 0 || $amountCents > 10_000_000_00) {
-            return [null, 'Enter the purchase amount.'];
+            return [null, 'Saisissez le montant de l\'achat.'];
         }
         if ($redeemCents < 0 || $redeemCents > $amountCents) {
-            return [null, 'Cashback used cannot exceed the purchase amount.'];
+            return [null, 'Le cashback utilisé ne peut pas dépasser le montant de l\'achat.'];
         }
         $rules = Settings::get($orgId);
         if ($redeemCents > 0 && $redeemCents < $rules['min_redeem_cents']) {
-            return [null, 'Minimum cashback that can be used: ' . \App\Facturo\Money::format($rules['min_redeem_cents'], 'MUR') . '.'];
+            return [null, 'Cashback minimum utilisable : ' . \App\Facturo\Money::format($rules['min_redeem_cents'], 'MUR') . '.'];
         }
 
         $rate = $rateBp ?? $rules['cashback_bp'];
@@ -46,7 +46,7 @@ final class Ledger
         return self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $amountCents, $redeemCents, $reference, $rate, $capCents): array {
             $balance = (int) $c['balance_cents'];
             if ($redeemCents > $balance) {
-                return [null, 'Not enough cashback (available: ' . \App\Facturo\Money::format($balance, 'MUR') . ').'];
+                return [null, 'Cashback insuffisant (disponible : ' . \App\Facturo\Money::format($balance, 'MUR') . ').'];
             }
             if ($redeemCents > 0) {
                 $balance -= $redeemCents;
@@ -84,12 +84,12 @@ final class Ledger
     {
         $reason = trim($reason);
         if ($cents === 0 || abs($cents) > 100_000_000 || $reason === '' || mb_strlen($reason) > 100) {
-            return 'Enter a non-zero amount and a reason (max 100 characters).';
+            return 'Saisissez un montant non nul et un motif (100 caractères max.).';
         }
         [, $error] = self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $cents, $reason, $type): array {
             $balance = (int) $c['balance_cents'] + $cents;
             if ($balance < 0) {
-                return [null, 'The balance cannot go below zero.'];
+                return [null, 'Le solde ne peut pas devenir négatif.'];
             }
             self::insert($orgId, $userId, (int) $c['id'], $type, 0, $cents, $balance, $reason, null);
             Database::connection()->prepare(
@@ -114,20 +114,20 @@ final class Ledger
         $stmt->execute([':oid' => $orgId, ':id' => $transactionId]);
         $tx = $stmt->fetch();
         if (!is_array($tx)) {
-            return 'Transaction not found.';
+            return 'Opération introuvable.';
         }
         if ($tx['type'] === 'reversal' || $tx['type'] === 'expire' || (int) $tx['reversed'] > 0) {
-            return 'This transaction cannot be reversed.';
+            return 'Cette opération ne peut pas être annulée.';
         }
 
         [, $error] = self::inTransaction($orgId, (int) $tx['customer_id'], static function (array $c) use ($orgId, $userId, $tx): array {
             $delta   = -(int) $tx['cashback_cents'];
             $balance = (int) $c['balance_cents'] + $delta;
             if ($balance < 0) {
-                return [null, 'The customer has already used this cashback; reverse that use first or adjust manually.'];
+                return [null, 'Le client a déjà utilisé ce cashback : annulez d\'abord cette utilisation ou faites un ajustement manuel.'];
             }
             self::insert($orgId, $userId, (int) $c['id'], 'reversal', -(int) $tx['amount_cents'], $delta, $balance,
-                'Reversal of #' . $tx['id'], (int) $tx['id']);
+                'Annulation de #' . $tx['id'], (int) $tx['id']);
             $isPurchase = $tx['type'] === 'purchase';
             Database::connection()->prepare(
                 'UPDATE clientbloom_customers
@@ -227,7 +227,7 @@ final class Ledger
                 if ($balance <= 0) {
                     return [[], null];
                 }
-                self::insert($orgId, null, (int) $c['id'], 'expire', 0, -$balance, 0, "No activity for $months months", null);
+                self::insert($orgId, null, (int) $c['id'], 'expire', 0, -$balance, 0, "Aucune activité depuis $months mois", null);
                 Database::connection()->prepare('UPDATE clientbloom_customers SET balance_cents = 0 WHERE id = :id')
                     ->execute([':id' => (int) $c['id']]);
                 return [[], null];
@@ -256,7 +256,7 @@ final class Ledger
             $c = $stmt->fetch();
             if (!is_array($c)) {
                 $pdo->rollBack();
-                return [null, 'Customer not found.'];
+                return [null, 'Client introuvable.'];
             }
             [$result, $error] = $fn($c);
             if ($error !== null) {

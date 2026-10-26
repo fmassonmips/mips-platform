@@ -12,23 +12,23 @@ use App\Facturo\Money;
 $business = $profile['name'] !== '' ? $profile['name'] : $profile['legal_name'];
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= $e($business) ?> · Loyalty card</title>
+  <title><?= $e($business) ?> · Carte de fidélité</title>
   <link rel="stylesheet" href="/assets/css/app.css">
 </head>
 <body class="auth-body">
   <main class="auth-card loyalty-card">
     <p class="muted small"><?= $e($business) ?></p>
     <h1><?= $e($customer['name']) ?></h1>
-    <div class="balance balance--big"><span class="muted small">Your cashback</span>
+    <div class="balance balance--big"><span class="muted small">Votre cashback</span>
       <strong><?= $e(Money::format((int) $customer['balance_cents'], 'MUR')) ?></strong></div>
-    <p class="small">Earn <?= $e(Money::rateToInput($rules['cashback_bp'])) ?>% on every purchase at <?= $e($business) ?>.
-      Usable from <?= $e(Money::format($rules['min_redeem_cents'], 'MUR')) ?>.
-      <?php if ($rules['expiry_months'] > 0): ?>Expires after <?= (int) $rules['expiry_months'] ?> months without a visit.<?php endif; ?>
-      Show this card or give your phone number at the counter.</p>
+    <p class="small">Gagnez <?= $e(Money::rateToInput($rules['cashback_bp'])) ?> % sur chaque achat chez <?= $e($business) ?>.
+      Utilisable dès <?= $e(Money::format($rules['min_redeem_cents'], 'MUR')) ?>.
+      <?php if ($rules['expiry_months'] > 0): ?>Expire après <?= (int) $rules['expiry_months'] ?> mois sans visite.<?php endif; ?>
+      Présentez cette carte ou donnez votre numéro de téléphone en caisse.</p>
     <?php if ($history !== []): ?>
       <table class="table">
         <tbody>

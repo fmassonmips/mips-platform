@@ -27,7 +27,7 @@ final class SettingsController
     {
         [, $org] = ModuleApi::context('clientbloom');
         if (!Tenant::canManage($org)) {
-            Response::json(['error' => 'Only an owner or admin can change the program.'], 403);
+            Response::json(['error' => 'Seul un propriétaire ou un administrateur peut modifier le programme.'], 403);
         }
         $data = Request::json();
 
@@ -38,7 +38,7 @@ final class SettingsController
         $iRate = Money::parseRate(Request::str($data, 'invoice_cashback_rate', 10));
         $iCap  = Money::parseCents(Request::str($data, 'invoice_cap', 20));
         if ($rate === null || $min === null || $bonus === null || !ctype_digit($exp) || $iRate === null || $iCap === null) {
-            Response::json(['error' => 'Check the values: numbers only, at most 2 decimals.'], 422);
+            Response::json(['error' => 'Vérifiez les valeurs : nombres uniquement, 2 décimales au plus.'], 422);
         }
         $settings = [
             'cashback_bp' => $rate, 'min_redeem_cents' => $min, 'welcome_bonus_cents' => $bonus,

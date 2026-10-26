@@ -34,20 +34,20 @@ final class Settings
     public static function validate(array $s): ?string
     {
         if ($s['cashback_bp'] < 0 || $s['cashback_bp'] > 5000) {
-            return 'Cashback rate must be between 0 and 50%.';
+            return 'Le taux de cashback doit être compris entre 0 et 50 %.';
         }
         if ($s['invoice_cashback_bp'] < 0 || $s['invoice_cashback_bp'] > 5000) {
-            return 'Invoice cashback rate must be between 0 and 50%.';
+            return 'Le taux de cashback sur les factures doit être compris entre 0 et 50 %.';
         }
         if ($s['invoice_cap_cents'] < 0 || $s['invoice_cap_cents'] > 100_000_000) {
-            return 'Invoice cap must be a positive amount (0 = no cap).';
+            return 'Le plafond par facture doit être un montant positif (0 = sans plafond).';
         }
         if ($s['min_redeem_cents'] < 0 || $s['welcome_bonus_cents'] < 0
             || $s['min_redeem_cents'] > 100_000_000 || $s['welcome_bonus_cents'] > 100_000_000) {
-            return 'Amounts must be positive.';
+            return 'Les montants doivent être positifs.';
         }
         if ($s['expiry_months'] < 0 || $s['expiry_months'] > 120) {
-            return 'Expiry must be between 0 (never) and 120 months.';
+            return 'L\'expiration doit être comprise entre 0 (jamais) et 120 mois.';
         }
         return null;
     }

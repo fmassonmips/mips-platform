@@ -14,7 +14,7 @@ use App\Suite\Tenant;
 
 $e    = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $page = is_string($_GET['p'] ?? null) ? $_GET['p'] : 'counter';
-$nav  = ['counter' => 'Counter', 'customers' => 'Customers', 'overview' => 'Program'];
+$nav  = ['counter' => 'Caisse', 'customers' => 'Clients', 'overview' => 'Programme'];
 
 $can_manage = Tenant::canManage($org);
 $rules      = Settings::get($org['id']);
@@ -57,7 +57,7 @@ switch ($page) {
 <p id="cb-error" class="error" role="alert" hidden></p>
 <?php
 if ($view === null) {
-    echo '<section class="card"><p>Not found.</p></section>';
+    echo '<section class="card"><p>Page introuvable.</p></section>';
 } else {
     require TEMPLATES_PATH . '/modules/clientbloom/' . $view . '.view.php';
 }
