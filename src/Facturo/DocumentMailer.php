@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace App\Facturo;
 
 use App\Database;
+use App\Format;
 use App\Mail\SmtpMailer;
 use App\Suite\Tenant;
 
@@ -33,9 +34,9 @@ final class DocumentMailer
 
         $line = match ($doc['type']) {
             'quote'       => "Veuillez trouver notre devis {$doc['number']} d'un montant de {$amount}"
-                             . ($doc['due_date'] !== null ? ", valable jusqu'au {$doc['due_date']}." : '.'),
+                             . ($doc['due_date'] !== null ? ", valable jusqu'au " . Format::date($doc['due_date']) . "." : '.'),
             'invoice'     => "Veuillez trouver la facture {$doc['number']} d'un montant de {$amount}"
-                             . ($doc['due_date'] !== null ? ", à régler avant le {$doc['due_date']}." : '.'),
+                             . ($doc['due_date'] !== null ? ", à régler avant le " . Format::date($doc['due_date']) . "." : '.'),
             'credit_note' => "Veuillez trouver l'avoir {$doc['number']} d'un montant de {$amount}"
                              . (isset($doc['source']['number']) ? ", se rapportant à la facture {$doc['source']['number']}." : '.'),
         };

@@ -59,6 +59,7 @@ final class LoyaltyController
                 Response::json(['success' => true, 'id' => $id,
                     'earned'   => Money::format($result['earned'], 'MUR'),
                     'redeemed' => Money::format($result['redeemed'], 'MUR'),
+                    'redeemed_cents' => $result['redeemed'],
                     'balance'  => Money::format($result['balance'], 'MUR')]);
 
             case 'adjust':

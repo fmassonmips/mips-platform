@@ -56,7 +56,7 @@
 
             <?php if ($isOn): ?>
               <?php if ($enabled[$slug]['status'] === 'trial' && $enabled[$slug]['trial_ends_at'] !== null): ?>
-                <span class="app-badge">Essai jusqu’au <?= htmlspecialchars(substr($enabled[$slug]['trial_ends_at'], 0, 10), ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="app-badge">Essai jusqu’au <?= htmlspecialchars(\App\Format::date($enabled[$slug]['trial_ends_at']), ENT_QUOTES, 'UTF-8') ?></span>
               <?php endif; ?>
               <a class="btn-secondary" href="/app.php?m=<?= rawurlencode($slug) ?>">Ouvrir</a>
               <?php if ($can_manage): ?>

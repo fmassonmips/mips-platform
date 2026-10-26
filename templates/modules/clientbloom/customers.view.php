@@ -47,7 +47,7 @@ use App\Facturo\Money;
               <td><?= $e($c['phone'] ?? '') ?></td>
               <td class="num"><?= (int) $c['visits'] ?></td>
               <td class="num"><?= $e(Money::format((int) $c['total_spent_cents'], 'MUR')) ?></td>
-              <td><?= $e($c['last_visit_at'] !== null ? substr((string) $c['last_visit_at'], 0, 10) : '—') ?></td>
+              <td><?= $e(\App\Format::date($c['last_visit_at'])) ?></td>
               <td class="num"><?= $e(Money::format((int) $c['balance_cents'], 'MUR')) ?></td>
             </tr>
           <?php endforeach; ?>

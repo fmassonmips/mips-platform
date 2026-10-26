@@ -29,14 +29,14 @@ $prefill = $c === null && is_string($_GET['phone'] ?? null) ? mb_substr($_GET['p
     <dl class="meta">
       <dt>Visites</dt><dd><?= (int) $c['visits'] ?></dd>
       <dt>Total dépensé</dt><dd><?= $e(Money::format((int) $c['total_spent_cents'], 'MUR')) ?></dd>
-      <dt>Dernière visite</dt><dd><?= $e($c['last_visit_at'] ?? '—') ?></dd>
-      <dt>Client depuis</dt><dd><?= $e(substr((string) $c['created_at'], 0, 10)) ?></dd>
-      <dt>Marketing</dt><dd><?= (int) $c['marketing_consent'] === 1 ? 'Consentement donné le ' . $e(substr((string) $c['consent_at'], 0, 10)) : 'Pas de consentement' ?></dd>
+      <dt>Dernière visite</dt><dd><?= $e(\App\Format::date($c['last_visit_at'])) ?></dd>
+      <dt>Client depuis</dt><dd><?= $e(\App\Format::date($c['created_at'])) ?></dd>
+      <dt>Marketing</dt><dd><?= (int) $c['marketing_consent'] === 1 ? 'Consentement donné le ' . $e(\App\Format::date($c['consent_at'])) : 'Pas de consentement' ?></dd>
     </dl>
   <?php endif; ?>
 
   <?php if ($erased): ?>
-    <p class="muted">Données personnelles effacées le <?= $e(substr((string) $c['erased_at'], 0, 10)) ?>. L'historique anonyme des opérations est conservé comme pièce comptable.</p>
+    <p class="muted">Données personnelles effacées le <?= $e(\App\Format::date($c['erased_at'])) ?>. L'historique anonyme des opérations est conservé comme pièce comptable.</p>
   <?php else: ?>
   <form id="customer-form" novalidate data-id="<?= $id ?>">
     <div class="form-grid">
@@ -77,7 +77,7 @@ $prefill = $c === null && is_string($_GET['phone'] ?? null) ? mb_substr($_GET['p
         <tbody>
           <?php foreach ($history as $t): ?>
             <tr>
-              <td><?= $e(substr((string) $t['created_at'], 0, 16)) ?></td>
+              <td><?= $e(\App\Format::dateTime($t['created_at'])) ?></td>
               <td><?= $e(Ledger::LABELS[$t['type']] ?? $t['type']) ?></td>
               <td><?= $e($t['reference'] ?? '') ?></td>
               <td class="num"><?= (int) $t['amount_cents'] !== 0 ? $e(Money::format((int) $t['amount_cents'], 'MUR')) : '' ?></td>
@@ -101,7 +101,7 @@ $prefill = $c === null && is_string($_GET['phone'] ?? null) ? mb_substr($_GET['p
     <details class="send">
       <summary><strong>Correction manuelle</strong></summary>
       <form id="adjust-form" class="inline-form" novalidate data-id="<?= $id ?>">
-        <div class="field"><label for="adj-amount">Montant (MUR, négatif pour retirer)</label><input type="text" id="adj-amount" name="amount" inputmode="decimal" required></div>
+        <div class="field"><label for="adj-amount">Montant (Rs, négatif pour retirer)</label><input type="text" id="adj-amount" name="amount" inputmode="decimal" required></div>
         <div class="field grow"><label for="adj-reason">Motif</label><input type="text" id="adj-reason" name="reason" maxlength="100" required></div>
         <button type="submit" class="btn-secondary">Appliquer</button>
       </form>
@@ -119,7 +119,7 @@ $prefill = $c === null && is_string($_GET['phone'] ?? null) ? mb_substr($_GET['p
   </form>
   <ul class="timeline">
     <?php foreach ($notes as $n): ?>
-      <li><span class="muted small"><?= $e(substr((string) $n['created_at'], 0, 16)) ?> · <?= $e($n['author'] ?? '') ?></span>
+      <li><span class="muted small"><?= $e(\App\Format::dateTime($n['created_at'])) ?> · <?= $e($n['author'] ?? '') ?></span>
         <div class="pre"><?= $e($n['body']) ?></div></li>
     <?php endforeach; ?>
   </ul>

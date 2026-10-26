@@ -29,12 +29,12 @@ $title    = $isQuote ? 'Devis' : ($isCredit ? 'Avoir' : (($seller['vat_number'] 
     <div class="doc-meta">
       <h2><?= $e($title) ?></h2>
       <div><strong><?= $e($doc['number']) ?></strong></div>
-      <div>Date : <?= $e($doc['issue_date']) ?></div>
+      <div>Date : <?= $e(\App\Format::date($doc['issue_date'])) ?></div>
       <?php if ($isCredit && isset($doc['source']['number'])): ?>
         <div>Se rapporte à la facture <?= $e($doc['source']['number']) ?></div>
       <?php endif; ?>
       <?php if ($doc['due_date'] !== null): ?>
-        <div><?= $isQuote ? 'Valable jusqu\'au' : 'Échéance' ?> : <?= $e($doc['due_date']) ?></div>
+        <div><?= $isQuote ? 'Valable jusqu\'au' : 'Échéance' ?> : <?= $e(\App\Format::date($doc['due_date'])) ?></div>
       <?php endif; ?>
     </div>
   </header>

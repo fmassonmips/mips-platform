@@ -39,9 +39,9 @@ $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] 
     <div class="form-grid">
       <div class="field"><label for="pr-rate">Cashback en caisse (% du montant payé)</label>
         <input type="text" id="pr-rate" name="cashback_rate" inputmode="decimal" value="<?= $e(Money::rateToInput($rules['cashback_bp'])) ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
-      <div class="field"><label for="pr-min">Minimum utilisable (MUR)</label>
+      <div class="field"><label for="pr-min">Minimum utilisable (Rs)</label>
         <input type="text" id="pr-min" name="min_redeem" inputmode="decimal" value="<?= $e(Money::toInput($rules['min_redeem_cents'])) ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
-      <div class="field"><label for="pr-bonus">Bonus de bienvenue (MUR)</label>
+      <div class="field"><label for="pr-bonus">Bonus de bienvenue (Rs)</label>
         <input type="text" id="pr-bonus" name="welcome_bonus" inputmode="decimal" value="<?= $e(Money::toInput($rules['welcome_bonus_cents'])) ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
       <div class="field"><label for="pr-exp">Expiration après inactivité (mois, 0 = jamais)</label>
         <input type="text" id="pr-exp" name="expiry_months" inputmode="numeric" value="<?= (int) $rules['expiry_months'] ?>"<?= $can_manage ? '' : ' disabled' ?>></div>
@@ -51,7 +51,7 @@ $redemption = $stats['issued_cents'] > 0 ? round(100 * $stats['redeemed_cents'] 
     <div class="form-grid">
       <div class="field"><label for="pr-irate">Cashback sur les factures (%)</label>
         <input type="text" id="pr-irate" name="invoice_cashback_rate" inputmode="decimal" value="<?= $e(Money::rateToInput($rules['invoice_cashback_bp'])) ?>"<?= $can_manage && $facturoOn ? '' : ' disabled' ?>></div>
-      <div class="field"><label for="pr-icap">Cashback max. par facture (MUR, 0 = sans plafond)</label>
+      <div class="field"><label for="pr-icap">Cashback max. par facture (Rs, 0 = sans plafond)</label>
         <input type="text" id="pr-icap" name="invoice_cap" inputmode="decimal" value="<?= $e(Money::toInput($rules['invoice_cap_cents'])) ?>"<?= $can_manage && $facturoOn ? '' : ' disabled' ?>></div>
     </div>
     <?php if (!$facturoOn): ?>

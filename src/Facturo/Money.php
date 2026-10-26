@@ -62,7 +62,9 @@ final class Money
     {
         $sign = $cents < 0 ? '-' : '';
         $abs  = abs($cents);
-        return $currency . ' ' . $sign . number_format(intdiv($abs, 100)) . '.' . str_pad((string) ($abs % 100), 2, '0', STR_PAD_LEFT);
+        // Rupees use the local "Rs" symbol; other currencies keep their ISO code.
+        $symbol = $currency === 'MUR' ? 'Rs' : $currency;
+        return $sign . $symbol . ' ' . number_format(intdiv($abs, 100)) . '.' . str_pad((string) ($abs % 100), 2, '0', STR_PAD_LEFT);
     }
 
     /** 123450 → "1234.50" (form input value) */

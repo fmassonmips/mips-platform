@@ -33,7 +33,7 @@ $business = $profile['name'] !== '' ? $profile['name'] : $profile['legal_name'];
       <table class="table">
         <tbody>
           <?php foreach ($history as $t): ?>
-            <tr><td><?= $e(substr((string) $t['created_at'], 0, 10)) ?></td>
+            <tr><td><?= $e(\App\Format::date($t['created_at'])) ?></td>
               <td><?= $e(Ledger::LABELS[$t['type']] ?? $t['type']) ?></td>
               <td class="num"><?= $e(((int) $t['cashback_cents'] > 0 ? '+' : '') . Money::format((int) $t['cashback_cents'], 'MUR')) ?></td></tr>
           <?php endforeach; ?>

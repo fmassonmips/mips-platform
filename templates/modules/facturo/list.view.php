@@ -34,7 +34,7 @@ $emptyLabels = ['quote' => 'Aucun devis pour l\'instant.', 'invoice' => 'Aucune 
             <tr>
               <td><a href="/app.php?m=facturo&amp;p=edit&amp;id=<?= (int) $d['id'] ?>"><?= $e($d['number'] ?? 'Brouillon') ?></a></td>
               <td><?= $e($d['client_name']) ?></td>
-              <td><?= $e($d['issue_date']) ?></td>
+              <td><?= $e(\App\Format::date($d['issue_date'])) ?></td>
               <td><span class="status status--<?= $e($d['status']) ?>"><?= $e(Documents::statusLabel($type, (string) $d['status'])) ?></span></td>
               <td class="num"><?= $e(Money::format((int) $d['total_cents'], (string) $d['currency'])) ?></td>
             </tr>

@@ -81,7 +81,8 @@
         const fmt = function (cents) {
             const sign = cents < 0 ? '-' : '';
             const abs = Math.abs(cents);
-            return form.currency.value + ' ' + sign
+            const cur = form.currency.value;
+            return sign + (cur === 'MUR' ? 'Rs' : cur) + ' '
                 + Math.floor(abs / 100).toLocaleString('en-US') + '.'
                 + String(abs % 100).padStart(2, '0');
         };

@@ -68,7 +68,7 @@
             document.getElementById('co-name').textContent = c.name;
             document.getElementById('co-phone').textContent = c.phone;
             document.getElementById('co-balance').textContent = c.balance;
-            document.getElementById('co-visits').textContent = c.visits + ' visite(s)' + (c.last_visit_at ? ' · dernière le ' + c.last_visit_at.slice(0, 10) : '');
+            document.getElementById('co-visits').textContent = c.visits + ' visite(s)' + (c.last_visit_at ? ' · dernière le ' + c.last_visit_at.slice(0, 10).split('-').reverse().join('/') : '');
             document.getElementById('co-profile').href = profileUrl(c.id);
             checkout.hidden = false;
             notFound.hidden = true;
@@ -97,7 +97,7 @@
                 reference: coForm.elements.reference.value,
             });
             result.textContent = 'Vente enregistrée. Cashback gagné : ' + body.earned
-                + (body.redeemed !== 'MUR 0.00' ? ', utilisé : ' + body.redeemed : '')
+                + (body.redeemed_cents > 0 ? ', utilisé : ' + body.redeemed : '')
                 + '. Nouveau solde : ' + body.balance + '.';
             result.hidden = false;
             document.getElementById('co-balance').textContent = body.balance;

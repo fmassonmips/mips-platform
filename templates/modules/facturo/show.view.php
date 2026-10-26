@@ -55,7 +55,7 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
   <?php if ($doc['mra_status'] !== null): ?>
     <div class="mra-box mra-box--<?= $e($doc['mra_status']) ?>">
       <?php if ($doc['mra_status'] === 'fiscalised'): ?>
-        <span><strong>MRA :</strong> fiscalisé le <?= $e($doc['mra_fiscalised_at']) ?> · IRN <?= $e($doc['mra_irn']) ?></span>
+        <span><strong>MRA :</strong> fiscalisé le <?= $e(\App\Format::dateTime($doc['mra_fiscalised_at'])) ?> · IRN <?= $e($doc['mra_irn']) ?></span>
       <?php else: ?>
         <span>
           <strong>MRA :</strong>
@@ -112,7 +112,7 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
       <?php foreach ($sent as $s): ?>
         <li class="<?= $s['status'] === 'sent' ? '' : 'error-text' ?>">
           <?= $s['status'] === 'sent' ? 'Envoyé à' : 'Échec de l\'envoi à' ?> <?= $e($s['recipient']) ?>
-          · <?= $e($s['created_at']) ?>
+          · <?= $e(\App\Format::dateTime($s['created_at'])) ?>
         </li>
       <?php endforeach; ?>
     </ul>

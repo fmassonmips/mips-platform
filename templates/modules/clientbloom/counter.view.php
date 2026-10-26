@@ -31,9 +31,9 @@ use App\Facturo\Money;
     </div>
     <form id="checkout-form" novalidate>
       <div class="form-grid">
-        <div class="field"><label for="co-amount">Montant de l'achat (MUR)</label>
+        <div class="field"><label for="co-amount">Montant de l'achat (Rs)</label>
           <input type="text" id="co-amount" name="amount" inputmode="decimal" required></div>
-        <div class="field"><label for="co-redeem">Cashback à utiliser (MUR)</label>
+        <div class="field"><label for="co-redeem">Cashback à utiliser (Rs)</label>
           <input type="text" id="co-redeem" name="redeem" inputmode="decimal" placeholder="0.00"></div>
         <div class="field"><label for="co-ref">Ticket / référence</label>
           <input type="text" id="co-ref" name="reference" maxlength="100"></div>
