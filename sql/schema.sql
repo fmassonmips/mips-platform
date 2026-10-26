@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS organizations (
     vat_number      VARCHAR(40)  NULL,
     email           VARCHAR(254) NULL,
     phone           VARCHAR(40)  NULL,
+    -- Language of documents sent to clients (quotes, invoices, credit notes, e-mails)
+    document_language CHAR(2)    NOT NULL DEFAULT 'fr',
     -- MRA e-invoicing credentials (password encrypted with app.secret_key)
     mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
     mra_username     VARCHAR(100) NULL,
@@ -129,6 +131,7 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     source_document_id BIGINT UNSIGNED NULL,               -- quote of an invoice; invoice of a credit note
     seller_snapshot    TEXT         NULL,
     client_snapshot    TEXT         NULL,
+    language           CHAR(2)      NULL,          -- fr | en, frozen at issue
     public_token       VARCHAR(64)  NULL,                   -- unguessable link sent to the client
     -- MRA fiscalisation (invoices and credit notes of organizations with e-invoicing on)
     mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected

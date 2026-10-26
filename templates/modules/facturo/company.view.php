@@ -25,6 +25,13 @@ $ro = $can_manage ? '' : ' disabled';
       <div class="field"><label for="o-email">E-mail</label><input type="email" id="o-email" name="email" maxlength="254" value="<?= $e($profile['email']) ?>"<?= $ro ?>></div>
       <div class="field"><label for="o-phone">Téléphone</label><input type="text" id="o-phone" name="phone" maxlength="40" value="<?= $e($profile['phone']) ?>"<?= $ro ?>></div>
     </div>
+    <div class="field"><label for="o-lang">Langue des devis, factures, avoirs et e-mails envoyés aux clients</label>
+      <select id="o-lang" name="document_language"<?= $ro ?>>
+        <?php foreach (\App\Facturo\DocText::LANGUAGES as $code => $label): ?>
+          <option value="<?= $e($code) ?>"<?= $profile['document_language'] === $code ? ' selected' : '' ?>><?= $e($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <span class="muted small">S'applique aux documents émis à partir de maintenant ; un document déjà émis garde sa langue.</span></div>
     <div class="field"><label for="o-address">Adresse</label><textarea id="o-address" name="address" rows="2" maxlength="500"<?= $ro ?>><?= $e($profile['address']) ?></textarea></div>
     <?php if ($can_manage): ?>
       <div class="actions"><button type="submit" class="btn-primary btn-inline">Enregistrer</button></div>

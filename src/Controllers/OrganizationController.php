@@ -3,7 +3,8 @@
  * POST /api/suite/organization
  *
  * Updates the company profile (owner/admin). Input (JSON body):
- *   { "name", "legal_name", "address", "brn", "vat_number", "email", "phone" }
+ *   { "name", "legal_name", "address", "brn", "vat_number", "email", "phone",
+ *     "document_language": "fr" | "en" (default "fr") }
  *
  * Responses:
  *   200 { "success": true }
@@ -49,6 +50,10 @@ final class OrganizationController
                 $labels = ['legal_name' => 'Raison sociale', 'address' => 'Adresse', 'brn' => 'BRN', 'vat_number' => 'N° TVA', 'email' => 'E-mail', 'phone' => 'Téléphone'];
                 Response::json(['error' => ($labels[$field] ?? $field) . ' : trop long.'], 422);
             }
+        }
+        $profile['document_language'] = Request::str($data, 'document_language', 10) ?: 'fr';
+        if (!in_array($profile['document_language'], Tenant::DOCUMENT_LANGUAGES, true)) {
+            Response::json(['error' => 'Langue des documents invalide.'], 422);
         }
         if ($profile['email'] !== '' && !filter_var($profile['email'], FILTER_VALIDATE_EMAIL)) {
             Response::json(['error' => 'E-mail invalide.'], 422);

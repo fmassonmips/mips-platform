@@ -272,7 +272,7 @@
         companyForm.addEventListener('submit', async function (ev) {
             ev.preventDefault();
             const payload = {};
-            ['name', 'legal_name', 'address', 'brn', 'vat_number', 'email', 'phone'].forEach(function (f) {
+            ['name', 'legal_name', 'address', 'brn', 'vat_number', 'email', 'phone', 'document_language'].forEach(function (f) {
                 payload[f] = companyForm.elements[f].value;
             });
             try {

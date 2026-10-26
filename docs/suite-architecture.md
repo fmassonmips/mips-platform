@@ -44,6 +44,7 @@ my.mips.mu
 | Avoir | Créé depuis une facture émise ou payée (`AVO-2026-0001`), même client et devise, jamais daté avant elle. Total ou partiel, jamais au-delà du reste à créditer (vérifié à l'enregistrement et, sous verrou, à l'émission). Une facture payée puis entièrement créditée reste `paid` : un remboursement est dû. |
 | Devis | `draft → sent → accepted / declined` ; « Create invoice » crée un brouillon de facture (une seule par devis). |
 | Montants | Entiers en cents, calculés côté serveur, arrondi au plus proche par ligne. TVA par ligne, 15 % par défaut si l'entreprise a un n° TVA, sinon 0 %. |
+| Langue | Réglage par entreprise (page Entreprise) : français par défaut ou anglais. S'applique au document imprimé, à la page du lien client et à l'e-mail par défaut. Figée à l'émission : changer le réglage ne modifie pas les documents déjà émis. L'interface de l'app reste en français. |
 | PDF | Page imprimable `/facturo/print.php?id=…` → « Enregistrer en PDF » du navigateur. |
 | E-mail | Documents émis uniquement. Message modifiable + lien privé `/facturo/view.php?t=…` (jeton aléatoire, sans connexion, non indexé) où le client consulte, imprime ou télécharge. Envoyé via SMTP (`config.php` → `mail`), expéditeur = raison sociale, réponse vers l'e-mail de l'entreprise. Chaque envoi, réussi ou non, est journalisé. |
 
@@ -126,6 +127,7 @@ mysql -u root -p mips_platform < sql/migrations/004_mra_einvoicing.sql
 mysql -u root -p mips_platform < sql/migrations/005_clientbloom.sql
 mysql -u root -p mips_platform < sql/migrations/006_facturo_clientbloom.sql
 mysql -u root -p mips_platform < sql/migrations/007_clientbloom_invoice_rate.sql
+mysql -u root -p mips_platform < sql/migrations/008_document_language.sql
 ```
 
 Puis dans `config/config.php` :

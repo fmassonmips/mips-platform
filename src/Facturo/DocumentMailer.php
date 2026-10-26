@@ -17,8 +17,6 @@ use App\Suite\Tenant;
 
 final class DocumentMailer
 {
-    private const TITLES = ['quote' => 'Devis', 'invoice' => 'Facture', 'credit_note' => 'Avoir'];
-
     /**
      * Pre-filled recipient, subject and message for the send form.
      *
@@ -29,22 +27,21 @@ final class DocumentMailer
     {
         $profile = Tenant::profile($orgId);
         $seller  = $profile['legal_name'] !== '' ? $profile['legal_name'] : $profile['name'];
-        $title   = self::TITLES[$doc['type']];
-        $amount  = Money::format((int) $doc['total_cents'], (string) $doc['currency']);
+        // Written in the document's language, like the document itself.
+        $t      = Documents::text($doc);
+        $amount = Money::format((int) $doc['total_cents'], (string) $doc['currency']);
 
-        $line = match ($doc['type']) {
-            'quote'       => "Veuillez trouver notre devis {$doc['number']} d'un montant de {$amount}"
-                             . ($doc['due_date'] !== null ? ", valable jusqu'au " . Format::date($doc['due_date']) . "." : '.'),
-            'invoice'     => "Veuillez trouver la facture {$doc['number']} d'un montant de {$amount}"
-                             . ($doc['due_date'] !== null ? ", à régler avant le " . Format::date($doc['due_date']) . "." : '.'),
-            'credit_note' => "Veuillez trouver l'avoir {$doc['number']} d'un montant de {$amount}"
-                             . (isset($doc['source']['number']) ? ", se rapportant à la facture {$doc['source']['number']}." : '.'),
+        $line = sprintf($t['mail_' . $doc['type']], $doc['number'], $amount) . match (true) {
+            $doc['type'] === 'quote' && $doc['due_date'] !== null   => sprintf($t['mail_valid_until'], Format::date($doc['due_date'])),
+            $doc['type'] === 'invoice' && $doc['due_date'] !== null => sprintf($t['mail_due'], Format::date($doc['due_date'])),
+            $doc['type'] === 'credit_note' && isset($doc['source']['number']) => sprintf($t['mail_relates_to'], $doc['source']['number']),
+            default => '.',
         };
 
         return [
             'to'      => (string) ($doc['client']['email'] ?? ''),
-            'subject' => "$title {$doc['number']} – $seller",
-            'message' => "Bonjour,\n\n$line\n\nCordialement,\n$seller",
+            'subject' => "{$t[$doc['type']]} {$doc['number']} – $seller",
+            'message' => "{$t['mail_hello']}\n\n$line\n\n{$t['mail_regards']}\n$seller",
         ];
     }
 
@@ -91,15 +88,16 @@ final class DocumentMailer
         $seller  = $profile['legal_name'] !== '' ? $profile['legal_name'] : $profile['name'];
         $link    = rtrim((string) ($GLOBALS['config']['app']['url'] ?? ''), '/')
                  . '/facturo/view.php?t=' . Documents::publicToken($orgId, $documentId);
-        $title   = self::TITLES[$doc['type']] . ' ' . $doc['number'];
+        $t       = Documents::text($doc);
+        $title   = $t[$doc['type']] . ' ' . $doc['number'];
 
-        $text = $message . "\n\nConsulter, imprimer ou télécharger : " . $title . "\n" . $link . "\n";
+        $text = $message . "\n\n" . sprintf($t['mail_link'], $title) . "\n" . $link . "\n";
         $e    = static fn (string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
         $html = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1b1f24">'
               . nl2br($e($message))
               . '<p style="margin:24px 0"><a href="' . $e($link) . '" style="background:#2b6cb0;color:#fff;'
-              . 'padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block">Voir : '
-              . $e($title) . '</a></p></div>';
+              . 'padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block">'
+              . $e(sprintf($t['mail_button'], $title)) . '</a></p></div>';
 
         $error  = null;
         $detail = null;

@@ -46,13 +46,16 @@ final class Tenant
         'vat_number' => 40,  'email'   => 254, 'phone' => 40,
     ];
 
+    /** Languages documents sent to clients can be written in. */
+    public const DOCUMENT_LANGUAGES = ['fr', 'en'];
+
     /**
      * @return array<string,string>
      */
     public static function profile(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT name, legal_name, address, brn, vat_number, email, phone
+            'SELECT name, legal_name, address, brn, vat_number, email, phone, document_language
              FROM organizations WHERE id = :id'
         );
         $stmt->execute([':id' => $orgId]);
@@ -62,16 +65,18 @@ final class Tenant
         foreach (array_keys(self::PROFILE_FIELDS) as $field) {
             $profile[$field] = (string) ($row[$field] ?? '');
         }
+        $profile['document_language'] = in_array($row['document_language'] ?? null, self::DOCUMENT_LANGUAGES, true)
+            ? (string) $row['document_language'] : 'fr';
         return $profile;
     }
 
     /**
-     * @param array<string,string> $profile name + PROFILE_FIELDS, already validated
+     * @param array<string,string> $profile name, document_language + PROFILE_FIELDS, already validated
      */
     public static function updateProfile(int $orgId, array $profile): void
     {
-        $sets   = ['name = :name'];
-        $params = [':id' => $orgId, ':name' => $profile['name']];
+        $sets   = ['name = :name', 'document_language = :document_language'];
+        $params = [':id' => $orgId, ':name' => $profile['name'], ':document_language' => $profile['document_language']];
         foreach (array_keys(self::PROFILE_FIELDS) as $field) {
             $sets[]            = $field . ' = :' . $field;
             $params[':' . $field] = ($profile[$field] ?? '') !== '' ? $profile[$field] : null;

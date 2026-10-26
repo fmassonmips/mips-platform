@@ -88,6 +88,31 @@ final class Documents
      *
      * @return array<string,mixed>|null
      */
+    /**
+     * Language a document is written in: frozen at issue, the company's current
+     * setting for drafts, French for documents issued before the setting existed.
+     *
+     * @param array<string,mixed> $doc
+     */
+    public static function language(array $doc): string
+    {
+        if (($doc['language'] ?? null) !== null) {
+            return DocText::normalize((string) $doc['language']);
+        }
+        return $doc['status'] === 'draft'
+            ? Tenant::profile((int) $doc['organization_id'])['document_language']
+            : 'fr';
+    }
+
+    /**
+     * @param array<string,mixed> $doc
+     * @return array<string,string>
+     */
+    public static function text(array $doc): array
+    {
+        return DocText::for(self::language($doc));
+    }
+
     public static function find(int $orgId, int $id): ?array
     {
         $pdo  = Database::connection();
@@ -455,7 +480,7 @@ final class Documents
             $pdo->prepare(
                 'UPDATE facturo_documents
                  SET number = :number, status = :status, issued_at = NOW(),
-                     seller_snapshot = :seller, client_snapshot = :client,
+                     seller_snapshot = :seller, client_snapshot = :client, language = :lang,
                      mra_status = :mra_status, mra_counter = :mra_counter
                  WHERE organization_id = :oid AND id = :id'
             )->execute([
@@ -465,6 +490,7 @@ final class Documents
                 ':status' => self::ISSUED_STATUS[$type],
                 ':seller' => json_encode($seller, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 ':client' => json_encode($client, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                ':lang'   => $seller['document_language'],
                 ':oid'    => $orgId,
                 ':id'     => $id,
             ]);

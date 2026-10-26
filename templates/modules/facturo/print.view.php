@@ -3,9 +3,10 @@
  * @var callable $e
  * @var array<string,mixed> $doc
  */
+$lang = \App\Facturo\Documents::language($doc);
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="<?= $e($lang) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,7 +15,7 @@
 </head>
 <body class="print-body">
   <div class="print-toolbar">
-    <button type="button" id="print-btn" class="btn-secondary">Imprimer / Enregistrer en PDF</button>
+    <button type="button" id="print-btn" class="btn-secondary"><?= $e(\App\Facturo\DocText::for($lang)['print']) ?></button>
   </div>
   <?php require TEMPLATES_PATH . '/modules/facturo/document.partial.php'; ?>
   <script src="/assets/js/facturo-print.js"></script>
