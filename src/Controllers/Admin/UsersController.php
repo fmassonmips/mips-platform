@@ -4,6 +4,8 @@
  *
  *   GET  /api/admin/users?status=pending|active|deactivated|all&q=
  *   POST /api/admin/user-update   { id, is_active?: bool, role?: string }
+ *   POST /api/admin/user-reset-link { id }  -> { url } single-use password reset link, shown once
+ *   POST /api/admin/user-reset-2fa  { id }  removes 2FA (lost phone and recovery codes)
  *
  * Safeguards:
  *  - an administrator cannot deactivate or demote their own account;
@@ -18,8 +20,11 @@ namespace App\Controllers\Admin;
 use App\Audit;
 use App\Auth;
 use App\Database;
+use App\Mailer;
+use App\PasswordReset;
 use App\Request;
 use App\Response;
+use App\TwoFactor;
 
 final class UsersController
 {
@@ -49,7 +54,7 @@ final class UsersController
 
         $db   = Database::connection();
         $stmt = $db->prepare(
-            'SELECT id, email, name, role, is_active, activated_at, created_at,
+            'SELECT id, email, name, role, is_active, activated_at, created_at, (totp_enabled_at IS NOT NULL) AS two_factor,
                     (SELECT MAX(created_at) FROM audit_log a WHERE a.user_id = u.id AND a.action = \'auth.login\') AS last_login_at
              FROM users u ' . ($where === [] ? '' : 'WHERE ' . implode(' AND ', $where)) . '
              ORDER BY (is_active = 0 AND activated_at IS NULL) DESC, created_at DESC
@@ -132,12 +137,60 @@ final class UsersController
         $wasActive = (int) $user['is_active'] === 1;
         if ($newActive !== $wasActive) {
             $action = $newActive ? ($user['activated_at'] === null ? 'user.activate' : 'user.reactivate') : 'user.deactivate';
-            Audit::log($action, 'user', $id, ['email' => $user['email']]);
+            $mailed = null;
+            if ($action === 'user.activate') {
+                $mailed = Mailer::send(
+                    (string) $user['email'],
+                    'Your MIPS Dashboard account is active',
+                    "Hello,\n\nYour MIPS Dashboard account has been activated. You can sign in here:\n\n"
+                    . rtrim((string) $GLOBALS['config']['app']['url'], '/') . "/login.php\n"
+                );
+            }
+            Audit::log($action, 'user', $id, ['email' => $user['email']] + ($mailed === null ? [] : ['email_sent' => $mailed]));
         }
         if ($newRole !== $user['role']) {
             Audit::log('user.role_change', 'user', $id, ['email' => $user['email'], 'from' => $user['role'], 'to' => $newRole]);
         }
 
         Response::json(['success' => true]);
+    }
+
+    public function resetLink(): void
+    {
+        Request::require_method('POST');
+        $admin = Auth::require_access('users');
+        Request::require_csrf();
+
+        $user = $this->target((int) (Request::body()['id'] ?? 0));
+        $url  = PasswordReset::create((int) $user['id'], (int) $admin['id']);
+        Audit::log('user.reset_link', 'user', (int) $user['id'], ['email' => $user['email']]);
+        Response::json(['success' => true, 'url' => $url, 'minutes' => (int) ($GLOBALS['config']['security']['reset_token_minutes'] ?? 60)]);
+    }
+
+    public function resetTwoFactor(): void
+    {
+        Request::require_method('POST');
+        $admin = Auth::require_access('users');
+        Request::require_csrf();
+
+        $user = $this->target((int) (Request::body()['id'] ?? 0));
+        if ((int) $user['id'] === (int) $admin['id']) {
+            Response::json(['error' => 'Manage your own two-factor settings from your account page.'], 409);
+        }
+        TwoFactor::disable((int) $user['id']);
+        Audit::log('user.reset_2fa', 'user', (int) $user['id'], ['email' => $user['email']]);
+        Response::json(['success' => true]);
+    }
+
+    /** @return array<string,mixed> */
+    private function target(int $id): array
+    {
+        $stmt = Database::connection()->prepare('SELECT id, email FROM users WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        $user = $stmt->fetch();
+        if (!is_array($user)) {
+            Response::json(['error' => 'User not found.'], 404);
+        }
+        return $user;
     }
 }

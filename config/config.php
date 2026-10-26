@@ -10,6 +10,9 @@ return [
         'name'    => 'MIPS Dashboard',
         // 'development' enables error display. Use 'production' on live servers.
         'env'     => 'production',
+        // Public base URL, used to build links in emails (password reset).
+        // Never derived from the request Host header (host header injection).
+        'url'     => 'https://dashboard.example.com',
     ],
 
     'db' => [
@@ -35,6 +38,30 @@ return [
 
     'security' => [
         'password_min_length' => 8,
+        // 32 random bytes, base64. Encrypts 2FA secrets. Generate with
+        // tools/make_app_key.php. Changing it invalidates every enrolled 2FA.
+        'app_key'             => '',
+        // Roles that must enrol in two-factor authentication before using
+        // any module. Users in these roles are sent to their account page.
+        'require_2fa_roles'   => ['admin', 'finance'],
+        'totp_issuer'         => 'MIPS Dashboard',
+        'reset_token_minutes' => 60,
+    ],
+
+    'mail' => [
+        // 'smtp' (recommended), 'mail' (PHP mail()), or 'log' (writes the
+        // message to the PHP error log: development only, never in production).
+        'transport'  => 'log',
+        'from'       => 'no-reply@example.com',
+        'from_name'  => 'MIPS Dashboard',
+        'smtp' => [
+            'host'       => 'localhost',
+            'port'       => 587,
+            'encryption' => 'tls',   // 'tls' (STARTTLS), 'ssl' (implicit TLS) or 'none'
+            'username'   => '',
+            'password'   => '',
+            'timeout'    => 10,
+        ],
     ],
 
     'rate_limit' => [

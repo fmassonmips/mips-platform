@@ -48,12 +48,21 @@ final class RateLimiter
 
     /**
      * Wipe attempts for a given IP/email pair. Called after a successful login.
+     * Namespaced keys ("2fa:...", "reset:...") are left alone: a password
+     * login from the same IP must not reset the second-factor counters.
      */
     public static function clear(string $ip, string $email): void
     {
         $stmt = Database::connection()->prepare(
-            'DELETE FROM login_attempts WHERE ip_address = :ip OR email = :email'
+            "DELETE FROM login_attempts
+             WHERE (ip_address = :ip OR email = :email) AND email NOT LIKE '%:%'"
         );
         $stmt->execute([':ip' => $ip, ':email' => $email]);
+    }
+
+    /** Wipe attempts recorded under one exact key, e.g. "2fa:user@example.com". */
+    public static function clearKey(string $key): void
+    {
+        Database::connection()->prepare('DELETE FROM login_attempts WHERE email = :k')->execute([':k' => $key]);
     }
 }

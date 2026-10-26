@@ -7,6 +7,7 @@
  *
  * Responses:
  *   200 { "success": true, "user": {...} }
+ *   200 { "two_factor_required": true }   password OK, now POST /api/auth/2fa
  *   401 { "error": "Invalid credentials." }
  *   422 { "error": "Invalid credentials." }
  *   429 { "error": "Too many attempts. Please try again later." }
@@ -20,6 +21,7 @@ use App\Audit;
 use App\Auth;
 use App\Csrf;
 use App\RateLimiter;
+use App\Session;
 use App\Response;
 use App\Validator;
 
@@ -71,6 +73,16 @@ final class LoginController
         if ($user === null) {
             Audit::log('auth.login_failed', 'user', null, ['email' => $email]);
             Response::json(['error' => 'Invalid credentials.'], 401);
+        }
+
+        // Password OK but 2FA enabled: park the user id until the second
+        // factor is verified by TwoFactorLoginController. Not logged in yet.
+        if (!empty($user['totp_enabled_at'])) {
+            Session::regenerate();
+            $_SESSION['2fa_pending'] = ['user_id' => (int) $user['id'], 'email' => (string) $user['email'], 'at' => time()];
+            RateLimiter::clear($ip, $email);
+            Audit::log('auth.2fa_challenge', 'user', (int) $user['id'], [], $user);
+            Response::json(['two_factor_required' => true], 200);
         }
 
         // Success: bind session, clear rate-limit counters, rotate CSRF token.

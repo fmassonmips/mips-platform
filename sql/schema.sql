@@ -32,6 +32,43 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS activated_at DATETIME NULL AFTER is_active;
 UPDATE users SET activated_at = created_at WHERE is_active = 1 AND activated_at IS NULL;
 
+-- Password changes invalidate every other session (see Auth::current_user).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME NULL AFTER password_hash;
+
+-- Two-factor authentication (TOTP). The secret is encrypted with the
+-- application key (config security.app_key); totp_last_step blocks code replay.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     VARBINARY(255) NULL AFTER role;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at DATETIME       NULL AFTER totp_secret;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step  BIGINT         NULL AFTER totp_enabled_at;
+
+-- ---- recovery_codes (single-use 2FA fallback) ----------------------------
+CREATE TABLE IF NOT EXISTS recovery_codes (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id         BIGINT UNSIGNED NOT NULL,
+    code_hash       CHAR(64)     NOT NULL,   -- sha256 of the normalised code
+    used_at         DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_recovery_codes_hash (user_id, code_hash),
+    CONSTRAINT fk_recovery_codes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- password_resets ----------------------------------------------------
+-- Only the sha256 of the token is stored; the token itself is in the link.
+CREATE TABLE IF NOT EXISTS password_resets (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id         BIGINT UNSIGNED NOT NULL,
+    token_hash      CHAR(64)     NOT NULL,
+    expires_at      DATETIME     NOT NULL,
+    used_at         DATETIME     NULL,
+    created_by      BIGINT UNSIGNED NULL,     -- admin who generated the link; NULL = self-service
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_password_resets_token (token_hash),
+    KEY idx_password_resets_user (user_id),
+    CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---- login_attempts (rate limiting) ------------------------------------
 CREATE TABLE IF NOT EXISTS login_attempts (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

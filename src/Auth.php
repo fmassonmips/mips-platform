@@ -9,7 +9,8 @@
  *  - Auth::current_user()           : returns the logged-in user (fresh from DB) or null
  *  - Auth::require_auth()           : enforces authentication, returns the user or exits
  *  - Auth::can(user, module)         : true if the user's role may access a module (config 'access')
- *  - Auth::require_access(module)    : require_auth() + can(), 403 otherwise
+ *  - Auth::require_access(module)    : require_auth() + can(), 403 otherwise;
+ *                                      also sends users who must enrol in 2FA to /account.php
  */
 declare(strict_types=1);
 
@@ -30,7 +31,7 @@ final class Auth
     public static function attempt(string $email, string $password): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, password_hash, name, role, is_active
+            'SELECT id, email, password_hash, password_changed_at, name, role, is_active, totp_enabled_at
              FROM users
              WHERE email = :email
              LIMIT 1'
@@ -71,8 +72,11 @@ final class Auth
     {
         Session::regenerate();
 
+        unset($_SESSION['2fa_pending']);
         $_SESSION['user_id']       = (int) $user['id'];
         $_SESSION['user_email']    = (string) $user['email'];
+        // A later password change (here or elsewhere) ends this session.
+        $_SESSION['pwd_at']        = (string) ($user['password_changed_at'] ?? '');
         $_SESSION['logged_in_at']  = time();
         $_SESSION['last_activity'] = time();
         // Bind to a hash of the User-Agent to make stolen-cookie replay harder.
@@ -107,15 +111,25 @@ final class Auth
         }
 
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, name, role, created_at
+            'SELECT id, email, name, role, created_at, password_changed_at, totp_enabled_at
              FROM users
              WHERE id = :id AND is_active = 1
              LIMIT 1'
         );
         $stmt->execute([':id' => (int) $_SESSION['user_id']]);
         $user = $stmt->fetch();
+        if (!is_array($user)) {
+            return null;
+        }
 
-        return is_array($user) ? $user : null;
+        // Password changed since this session logged in: sign it out.
+        if ((string) ($user['password_changed_at'] ?? '') !== (string) ($_SESSION['pwd_at'] ?? '')) {
+            self::logout_user();
+            return null;
+        }
+
+        unset($user['password_changed_at']);
+        return $user;
     }
 
     /**
@@ -161,6 +175,15 @@ final class Auth
     public static function require_access(string $module): array
     {
         $user = self::require_auth();
+
+        if (TwoFactor::isRequired($user) && !TwoFactor::isEnabled($user)) {
+            if (self::isApiRequest()) {
+                Response::json(['error' => 'Two-factor authentication must be set up first.', 'redirect' => '/account.php'], 403);
+            }
+            header('Location: /account.php?enroll=1');
+            exit;
+        }
+
         if (self::can($user, $module)) {
             return $user;
         }

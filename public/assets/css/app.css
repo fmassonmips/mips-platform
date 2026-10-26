@@ -405,3 +405,18 @@ code.details { font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 .badge-pending { background: #fff3cd; color: #8a5a00; }
 .badge-deactivated { color: var(--color-muted); }
 .toolbar input[type="text"] { width: 220px; padding: 8px 10px; font-size: 14px; }
+
+/* -------- Account -------- */
+.user-info a.btn-secondary.active { border-color: var(--color-primary); color: var(--color-primary); }
+.steps { padding-left: 20px; }
+.steps li { margin-bottom: 16px; }
+.qr { margin: 12px 0; }
+.qr img { display: block; image-rendering: pixelated; }
+pre.codes {
+    background: #f0f1f3;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.7;
+    columns: 2;
+}

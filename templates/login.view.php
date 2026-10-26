@@ -19,6 +19,9 @@
     <?php if (isset($_GET['registered']) && $_GET['registered'] === '1'): ?>
       <p class="success" role="status">Account created successfully. An administrator will activate your account.</p>
     <?php endif; ?>
+    <?php if (isset($_GET['reset']) && $_GET['reset'] === '1'): ?>
+      <p class="success" role="status">Password changed. Sign in with your new password.</p>
+    <?php endif; ?>
 
     <form id="login-form" novalidate autocomplete="on">
       <div class="field">
@@ -48,6 +51,18 @@
 
       <p id="error-message" class="error" role="alert" hidden></p>
     </form>
+
+    <form id="twofa-form" novalidate hidden>
+      <p class="auth-subtitle">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+      <div class="field">
+        <label for="code">Verification code</label>
+        <input type="text" id="code" name="code" autocomplete="one-time-code" inputmode="numeric" required spellcheck="false" autocapitalize="off">
+      </div>
+      <button type="submit" id="twofa-btn" class="btn-primary">Verify</button>
+      <p id="twofa-error" class="error" role="alert" hidden></p>
+    </form>
+
+    <p class="auth-link"><a href="/forgot-password.php">Forgot your password?</a></p>
 
     <p class="auth-link">Don&rsquo;t have an account? <a href="/register.php">Create one</a></p>
   </main>

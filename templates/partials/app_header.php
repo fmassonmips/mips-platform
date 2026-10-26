@@ -37,6 +37,7 @@ $nav = [
         Signed in as
         <strong><?= htmlspecialchars((string) $user['email'], ENT_QUOTES, 'UTF-8') ?></strong>
       </span>
+      <a href="/account.php" class="btn-secondary<?= ($active ?? '') === 'account' ? ' active' : '' ?>">Account</a>
       <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
     </div>
   </header>
