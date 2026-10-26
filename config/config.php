@@ -77,6 +77,7 @@ return [
         'users'     => ['admin'],
         'merchants' => ['admin', 'finance'],
         'recon'     => ['admin', 'finance'],
+        'onboarding' => ['admin', 'finance'],
     ],
 
     'storage' => [
@@ -114,6 +115,39 @@ return [
         'month_end_days'      => 2,
         // Merchants that must appear in a full extraction (scope check).
         'sentinel_merchants'  => ['CEB'],
+    ],
+
+    // Merchant onboarding / KYC. The checklist below is a starting point:
+    // have it validated by the compliance officer against the current
+    // AML/CFT obligations before relying on it.
+    'kyc' => [
+        'requirements' => [
+            // scope 'case': one per onboarding case; 'party': one per director / UBO / signatory.
+            ['code' => 'incorporation',   'label' => 'Certificate of incorporation',                        'scope' => 'case',  'required' => true],
+            ['code' => 'brn',             'label' => 'BRN certificate',                                     'scope' => 'case',  'required' => true],
+            ['code' => 'constitution',    'label' => 'Constitution',                                        'scope' => 'case',  'required' => false],
+            ['code' => 'registers',       'label' => 'Registers of directors and shareholders',             'scope' => 'case',  'required' => true],
+            ['code' => 'bank_proof',      'label' => 'Bank account proof (bank letter or statement)',       'scope' => 'case',  'required' => true],
+            ['code' => 'business_address','label' => 'Proof of business address',                           'scope' => 'case',  'required' => true],
+            ['code' => 'vat',             'label' => 'VAT registration certificate (if registered)',        'scope' => 'case',  'required' => false],
+            ['code' => 'website',         'label' => 'Website terms, refund and privacy policies (e-commerce)', 'scope' => 'case', 'required' => false],
+            // Satisfied automatically by a signed contract with a PDF on the merchant record.
+            ['code' => 'contract',        'label' => 'Signed MIPS merchant agreement',                      'scope' => 'case',  'required' => true],
+            ['code' => 'id',              'label' => 'Identity document (passport or national ID)',         'scope' => 'party', 'required' => true, 'expires' => true],
+            ['code' => 'address_proof',   'label' => 'Proof of residential address (less than 3 months)',   'scope' => 'party', 'required' => true],
+        ],
+        // Parties that must provide the 'party' documents and a screening result.
+        'party_roles_requiring_docs' => ['director', 'ubo', 'signatory'],
+        // Shareholders at or above this % must also be recorded as beneficial owners.
+        'ubo_threshold_pct'   => 25,
+        // Periodic review interval by risk rating, in years.
+        'review_years'        => ['low' => 3, 'medium' => 2, 'high' => 1],
+        'default_due_days'    => 30,
+        'reminder_every_days' => 7,
+        'max_reminders'       => 5,
+        // Roles allowed to approve or reject a case (four eyes: never the assigned analyst).
+        'approver_roles'      => ['admin'],
+        'max_document_bytes'  => 20 * 1024 * 1024,
     ],
 
     'merchants' => [

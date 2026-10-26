@@ -26,7 +26,9 @@ final class Audit
         array $details = [],
         ?array $actor = null
     ): void {
-        $userId = $actor !== null ? (int) $actor['id'] : (isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null);
+        $userId = $actor !== null
+            ? ($actor['id'] === null ? null : (int) $actor['id'])   // id null: system actor (e.g. scheduler)
+            : (isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null);
         $email  = $actor !== null ? (string) $actor['email'] : (isset($_SESSION['user_email']) ? (string) $_SESSION['user_email'] : null);
 
         try {

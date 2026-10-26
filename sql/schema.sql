@@ -443,3 +443,93 @@ CREATE TABLE IF NOT EXISTS recon_claim_items (
     KEY idx_recon_claim_items_line (line_id),
     CONSTRAINT fk_recon_claim_items_line FOREIGN KEY (line_id) REFERENCES recon_lines (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Module: merchant onboarding & KYC
+-- Document checklist is defined in config 'kyc.requirements'.
+-- =======================================================================
+
+CREATE TABLE IF NOT EXISTS onboarding_cases (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    merchant_id       BIGINT UNSIGNED NOT NULL,
+    kind              ENUM('initial','periodic_review') NOT NULL DEFAULT 'initial',
+    status            ENUM('collecting','under_review','on_hold','approved','rejected') NOT NULL DEFAULT 'collecting',
+    risk_rating       ENUM('low','medium','high') NULL,
+    assigned_to       BIGINT UNSIGNED NULL,      -- analyst; the approver must be someone else
+    due_date          DATE         NULL,
+    notes             TEXT         NULL,
+    submitted_at      DATETIME     NULL,
+    decided_at        DATETIME     NULL,
+    decided_by        BIGINT UNSIGNED NULL,
+    decision_notes    TEXT         NULL,
+    next_review_date  DATE         NULL,          -- set on approval from the risk rating
+    created_by        BIGINT UNSIGNED NULL,
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_onboarding_cases_merchant (merchant_id),
+    KEY idx_onboarding_cases_status (status),
+    CONSTRAINT fk_onboarding_cases_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- kyc_parties: directors, beneficial owners, signatories ----------------
+-- id_number is encrypted with the application key (personal data).
+CREATE TABLE IF NOT EXISTS kyc_parties (
+    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    case_id               BIGINT UNSIGNED NOT NULL,
+    full_name             VARCHAR(160) NOT NULL,
+    roles                 SET('director','ubo','signatory','shareholder') NOT NULL,
+    ownership_pct         DECIMAL(5,2) NULL,
+    nationality           VARCHAR(60)  NULL,
+    date_of_birth         DATE         NULL,
+    id_number_enc         VARBINARY(255) NULL,
+    is_pep                TINYINT(1)   NOT NULL DEFAULT 0,
+    screening_result      ENUM('pending','clear','match') NOT NULL DEFAULT 'pending',
+    screening_reference   VARCHAR(120) NULL,     -- e.g. screening tool case number
+    screened_at           DATE         NULL,
+    notes                 VARCHAR(500) NULL,
+    created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_kyc_parties_case (case_id),
+    CONSTRAINT fk_kyc_parties_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- kyc_documents --------------------------------------------------------------
+-- Files live outside the web root (storage.path/kyc/). Every upload is kept:
+-- a rejected or replaced document stays on record for audit.
+CREATE TABLE IF NOT EXISTS kyc_documents (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    case_id           BIGINT UNSIGNED NOT NULL,
+    requirement       VARCHAR(40)  NOT NULL,
+    party_id          BIGINT UNSIGNED NULL,
+    path              VARCHAR(255) NOT NULL,
+    original_name     VARCHAR(255) NOT NULL,
+    mime              VARCHAR(64)  NOT NULL,
+    size              INT UNSIGNED NOT NULL,
+    sha256            CHAR(64)     NOT NULL,
+    expires_at        DATE         NULL,
+    status            ENUM('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+    uploaded_by       BIGINT UNSIGNED NULL,
+    uploaded_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by       BIGINT UNSIGNED NULL,      -- must differ from uploaded_by (four eyes)
+    reviewed_at       DATETIME     NULL,
+    rejection_reason  VARCHAR(500) NULL,
+    PRIMARY KEY (id),
+    KEY idx_kyc_documents_case (case_id, requirement),
+    CONSTRAINT fk_kyc_documents_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id),
+    CONSTRAINT fk_kyc_documents_party FOREIGN KEY (party_id) REFERENCES kyc_parties (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kyc_reminders (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    case_id         BIGINT UNSIGNED NOT NULL,
+    sent_to         VARCHAR(254) NOT NULL,
+    items           JSON         NULL,
+    sent_by         BIGINT UNSIGNED NULL,       -- NULL = scheduled job
+    delivered       TINYINT(1)   NOT NULL DEFAULT 0,
+    sent_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_kyc_reminders_case (case_id, sent_at),
+    CONSTRAINT fk_kyc_reminders_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

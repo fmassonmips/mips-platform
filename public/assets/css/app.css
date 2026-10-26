@@ -467,3 +467,19 @@ input[readonly] { background: #f0f1f3; color: var(--color-muted); }
     gap: 24px;
 }
 .error-left { color: var(--color-error); font-weight: 600; }
+
+/* -------- Onboarding / KYC -------- */
+.badge-k-collecting { background: #fff3cd; color: #8a5a00; }
+.badge-k-under_review { background: rgba(43, 108, 176, 0.12); color: var(--color-primary); }
+.badge-k-on_hold { background: #f0f1f3; color: var(--color-muted); }
+.badge-k-approved { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-k-rejected { background: rgba(197, 34, 31, 0.1); color: var(--color-error); }
+.badge-d-accepted { background: rgba(26, 127, 55, 0.12); color: #1a7f37; }
+.badge-d-pending { background: rgba(43, 108, 176, 0.12); color: var(--color-primary); }
+.badge-d-missing, .badge-d-rejected, .badge-d-expired { background: rgba(197, 34, 31, 0.1); color: var(--color-error); }
+.upload-form { gap: 6px; align-items: center; }
+.upload-form input[type="file"] { max-width: 210px; font-size: 12px; padding: 4px; }
+.upload-form label { font-weight: 400; font-size: 12px; margin: 0; display: flex; gap: 4px; align-items: center; }
+.field-check .label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.error-pre { white-space: pre-line; text-align: left; }
+#decision textarea { width: 100%; }

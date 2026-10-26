@@ -68,6 +68,15 @@ require TEMPLATES_PATH . '/partials/app_header.php';
     </section>
 
     <section class="card">
+      <div class="card-head">
+        <h2>Onboarding &amp; KYC</h2>
+        <div id="kyc-actions" class="toolbar"></div>
+      </div>
+      <p id="kyc-status" class="muted"></p>
+      <p id="kyc-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section class="card">
       <h2>Contracts</h2>
       <div id="contracts"></div>
       <button type="button" id="contract-new" class="btn-secondary">Add contract</button>

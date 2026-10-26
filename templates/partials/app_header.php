@@ -6,6 +6,7 @@
 $nav = [
     'dashboard' => ['/dashboard.php', 'Dashboard', null],
     'merchants' => ['/merchants.php', 'Merchants', 'merchants'],
+    'onboarding' => ['/onboarding.php', 'Onboarding', 'onboarding'],
     'reports'   => ['/reports.php',   'Reports',   'reporting'],
     'billing'   => ['/billing.php',   'Billing',   'billing'],
     'recon'     => ['/recon.php',     'Recon',     'recon'],

@@ -60,6 +60,19 @@
         $('p-address').value = m.address || '';
         $('p-notes').value = m.notes || '';
 
+        // Onboarding / KYC
+        const ob = data.onboarding;
+        const open = ob && ['collecting', 'under_review', 'on_hold'].includes(ob.status);
+        $('kyc-status').textContent = !ob ? 'No onboarding case yet.'
+            : (ob.kind === 'periodic_review' ? 'Periodic review' : 'Onboarding') + ' #' + ob.id + ': ' + ob.status.replace('_', ' ')
+              + (ob.risk_rating ? ' · risk ' + ob.risk_rating : '')
+              + (open && ob.due_date ? ' · due ' + ob.due_date : '')
+              + (ob.status === 'approved' && ob.next_review_date ? ' · next review ' + ob.next_review_date : '');
+        $('kyc-actions').replaceChildren(
+            ob ? el('a', { class: 'btn-secondary', href: '/onboarding-case.php?id=' + ob.id, text: 'Open case' }) : '',
+            open ? '' : el('button', { type: 'button', class: 'btn-primary btn-auto', text: ob ? 'Start periodic review' : 'Start onboarding',
+                on: { click: startOnboarding } }));
+
         // Contracts
         options($('c-type'), data.contract_types, 'MSA');
         options($('c-status'), data.contract_status, 'draft');
@@ -116,6 +129,16 @@
             ? table(['When', 'Who', 'Action', 'Details'], data.history.map((h) => [h.created_at, h.user_email || '', h.action,
                 h.details ? el('code', { class: 'details', text: JSON.stringify(h.details) }) : '']))
             : el('p', { class: 'muted', text: 'No change recorded yet.' }));
+    }
+
+    async function startOnboarding() {
+        show($('kyc-error'), '');
+        try {
+            const r = await api('/api/onboarding/open', { method: 'POST', body: { merchant_id: merchantId } });
+            window.location.assign('/onboarding-case.php?id=' + r.id);
+        } catch (err) {
+            show($('kyc-error'), err.message);
+        }
     }
 
     // ---- Profile -------------------------------------------------------------

@@ -140,6 +140,12 @@ final class MerchantsController
         );
         $rules->execute([':id' => $id]);
 
+        $onboarding = $this->db->prepare(
+            'SELECT id, kind, status, risk_rating, due_date, decided_at, next_review_date
+             FROM onboarding_cases WHERE merchant_id = :id ORDER BY id DESC LIMIT 1'
+        );
+        $onboarding->execute([':id' => $id]);
+
         $history = $this->db->prepare(
             "SELECT created_at, user_email, action, details FROM audit_log
              WHERE entity_type = 'merchant' AND entity_id = :id ORDER BY id DESC LIMIT 50"
@@ -164,6 +170,7 @@ final class MerchantsController
             'contract_types'   => self::CONTRACT_TYPES,
             'contract_status'  => self::CONTRACT_STATUS,
             'has_transactions' => $this->hasTransactions($id),
+            'onboarding'       => $onboarding->fetch() ?: null,
         ]);
     }
 
