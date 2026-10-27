@@ -100,20 +100,23 @@ final class BigQuery
 
         // Month bounds in local time: a transaction at 01:00 Mauritius time on
         // the 1st belongs to that month even though it is the 31st in UTC.
+        // A range on the raw column (not DATE(col) BETWEEN) keeps partition
+        // pruning: on a partitioned table only the month's partitions are read.
         $tz   = (string) ($this->cfg['timezone'] ?? 'Indian/Mauritius');
         $type = strtoupper((string) ($this->cfg['date_column_type'] ?? 'TIMESTAMP'));
+        $next = 'DATE_ADD(@end, INTERVAL 1 DAY)';
         $expr = match ($type) {
-            'TIMESTAMP' => "DATE(`$date`, @tz)",
-            'DATETIME'  => "DATE(`$date`)",
-            'DATE'      => "`$date`",
-            'STRING'    => "SAFE.PARSE_DATE('%Y-%m-%d', SUBSTR(`$date`, 1, 10))",
+            'TIMESTAMP' => "`$date` >= TIMESTAMP(@start, @tz) AND `$date` < TIMESTAMP($next, @tz)",
+            'DATETIME'  => "`$date` >= DATETIME(@start) AND `$date` < DATETIME($next)",
+            'DATE'      => "`$date` BETWEEN @start AND @end",
+            'STRING'    => "SAFE.PARSE_DATE('%Y-%m-%d', SUBSTR(`$date`, 1, 10)) BETWEEN @start AND @end",
             default     => throw new RuntimeException('config bigquery.date_column_type must be TIMESTAMP, DATETIME, DATE or STRING.'),
         };
 
         $start = $period . '-01';
         $end   = (new \DateTimeImmutable($start))->modify('last day of this month')->format('Y-m-d');
         $sql   = 'SELECT ' . implode(', ', array_map(static fn ($c) => "`$c`", $cols))
-            . " FROM `$table` WHERE $expr BETWEEN @start AND @end";
+            . " FROM `$table` WHERE $expr";
 
         $params = [
             ['name' => 'start', 'parameterType' => ['type' => 'DATE'], 'parameterValue' => ['value' => $start]],

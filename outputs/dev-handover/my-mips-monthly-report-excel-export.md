@@ -98,11 +98,8 @@ Les colonnes utilisées sont celles de l'export `Commission_Data` :
 `somme_totale`, `symbole_monnaie`, `is_for_till_id`, `fi_name`, `last_transaction_status`, `est_test`,
 `is_test_order`, `refund_total_refunded`.
 
-**Implémentation de référence pour BigQuery** : `src/Reporting/BigQuery.php` (compte de service,
-requête SQL standard paramétrée, plafond de coût `maximumBytesBilled`, pagination) et
-`src/Reporting/BigQueryImport.php`. Point d'attention : **le mois se calcule à l'heure de Maurice**
-(`DATE(date_transaction, 'Indian/Mauritius')` si la colonne est un TIMESTAMP). Calculé en UTC, une transaction
-passée entre 00:00 et 04:00 le 1er du mois serait rattachée au mois précédent.
+**BigQuery** : spécification dédiée dans `my-mips-bigquery-commission-data.md` (accès, contrat de la table,
+fuseau horaire de Maurice, requête qui ne lit que le mois demandé, recette).
 
 **Question bloquante :** la source directe donne-t-elle exactement les mêmes lignes que l'export ?
 Si non (filtres différents, transactions en cours), les chiffres ne seront pas comparables
