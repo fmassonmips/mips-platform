@@ -3,6 +3,7 @@
  * Monthly reporting API.
  *
  *   POST /api/reports/import    multipart: file (.xlsx|.csv), period (YYYY-MM, only if the file has no date column)
+ *   POST /api/reports/import-bigquery   { period }   same import, read straight from BigQuery
  *   GET  /api/reports/periods   { "periods": ["2026-09", ...] }
  *   GET  /api/reports/monthly?period=YYYY-MM
  *   GET  /api/reports/export?period=YYYY-MM   CSV of the report lines
@@ -16,6 +17,8 @@ namespace App\Controllers\Reporting;
 use App\Audit;
 use App\Auth;
 use App\Csv;
+use App\Reporting\BigQuery;
+use App\Reporting\BigQueryImport;
 use App\Reporting\CommissionImporter;
 use App\Reporting\MonthlyReport;
 use App\Reporting\ReportWorkbook;
@@ -68,6 +71,33 @@ final class ReportsController
             'rows_clean'       => $result['rows_clean'],
         ]);
 
+        Response::json(['success' => true, 'result' => $result], 201);
+    }
+
+    public function importBigQuery(): void
+    {
+        Request::require_method('POST');
+        $user = Auth::require_access('reporting');
+        Request::require_csrf();
+
+        if (!BigQuery::enabled()) {
+            Response::json(['error' => 'BigQuery import is not configured.'], 409);
+        }
+        $period = Request::period(Request::body()['period'] ?? null);
+        if ($period === null) {
+            Response::json(['error' => 'Month must be in YYYY-MM format.'], 422);
+        }
+
+        @set_time_limit(600);
+        try {
+            $result = BigQueryImport::run($period, (int) $user['id']);
+        } catch (\RuntimeException $e) {
+            Audit::log('import.rejected', 'import', null, ['source' => 'bigquery', 'period' => $period, 'reason' => $e->getMessage()]);
+            Response::json(['error' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            error_log('[BigQuery import] ' . $e->getMessage());
+            Response::json(['error' => 'Import failed. Please try again later.'], 500);
+        }
         Response::json(['success' => true, 'result' => $result], 201);
     }
 

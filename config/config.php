@@ -163,6 +163,31 @@ return [
         'max_upload_bytes' => 64 * 1024 * 1024,
     ],
 
+    // Direct read of Commission_Data from BigQuery (instead of uploading the
+    // monthly export). Disabled until the service account and table are set.
+    'bigquery' => [
+        'enabled'          => false,
+        'project'          => '',                 // project billed for the query jobs
+        'location'         => '',                 // dataset location, e.g. 'EU', 'US', 'asia-south1' (optional)
+        'table'            => '',                 // 'project.dataset.table' holding Commission_Data rows
+        // Service account key (JSON). Keep it OUTSIDE the web root, readable by PHP only.
+        // Roles: BigQuery Data Viewer on the table, BigQuery Job User on the project.
+        'credentials_path' => '',
+        // Column used to pick the month, its BigQuery type, and the business time zone.
+        'date_column'      => 'date_transaction',
+        'date_column_type' => 'TIMESTAMP',        // TIMESTAMP | DATETIME | DATE | STRING
+        'timezone'         => 'Indian/Mauritius',
+        // Columns read (same names as the Commission_Data export).
+        'columns' => [
+            'date_transaction', 'form_name', 'form_nickname', 'sof_proc_nickname', 'somme_totale', 'symbole_monnaie',
+            'is_for_till_id', 'fi_name', 'last_transaction_status', 'est_test', 'is_test_order', 'refund_total_refunded',
+        ],
+        // Cost guard: the query fails instead of billing more than this.
+        'max_bytes_billed' => 10 * 1024 * 1024 * 1024,
+        'max_wait_seconds' => 300,
+        'api_base'         => 'https://bigquery.googleapis.com',
+    ],
+
     'billing' => [
         // Mauritius standard VAT rate. Check whether commissions are VAT-able
         // for each merchant before issuing invoices.

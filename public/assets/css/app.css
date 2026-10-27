@@ -540,3 +540,5 @@ input[readonly] { background: #f0f1f3; color: var(--color-muted); }
     .user-info { flex-wrap: wrap; gap: 8px; }
     .app-main { padding: 0 16px; }
 }
+.bq-form { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.bq-form > p { flex-basis: 100%; margin: 0; }

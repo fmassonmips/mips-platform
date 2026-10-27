@@ -1,6 +1,8 @@
 <?php
 /**
- * Imports a Commission_Data export (.xlsx or .csv) into `transactions`.
+ * Imports Commission_Data rows into `transactions`, from an uploaded export
+ * (.xlsx / .csv, import()) or from any row source with the same column
+ * names, e.g. BigQuery (importRows()).
  *
  * Frozen cleaning rules, applied per month:
  *  - keep last_transaction_status == SUCCESS only
@@ -43,9 +45,22 @@ final class CommissionImporter
      * @param string|null $periodOverride YYYY-MM, used only when the file has no date column
      * @return array{import_id:int, periods:array<string,array<string,int|float>>, rows_raw:int, rows_clean:int, rows_bad_date:int, rows_bad_amount:int, date_column:?string, replaced_periods:list<string>}
      */
-    public function import(string $path, string $filename, ?string $periodOverride, int $userId): array
+    public function import(string $path, string $filename, ?string $periodOverride, ?int $userId): array
     {
-        $rows   = Spreadsheet::rows($path, $filename);
+        $rows = Spreadsheet::rows($path, $filename);
+        return $this->importRows($rows, $filename, (string) hash_file('sha256', $path), $periodOverride, $userId);
+    }
+
+    /**
+     * Same as import(), from a row generator whose first non-blank row is
+     * the header. $source names the origin (file name, "bigquery:..."),
+     * $fingerprint identifies its content (sha256).
+     *
+     * @param \Generator<int, list<string>> $rows
+     * @return array{import_id:int, periods:array<string,array<string,int|float>>, rows_raw:int, rows_clean:int, rows_bad_date:int, rows_bad_amount:int, date_column:?string, replaced_periods:list<string>}
+     */
+    public function importRows(\Generator $rows, string $source, string $fingerprint, ?string $periodOverride, ?int $userId): array
+    {
         $header = Spreadsheet::header($rows);
 
         $col     = array_flip($header);
@@ -63,7 +78,7 @@ final class CommissionImporter
             $ins = $this->db->prepare(
                 'INSERT INTO imports (filename, file_sha256, imported_by, created_at) VALUES (:f, :h, :u, NOW())'
             );
-            $ins->execute([':f' => mb_substr($filename, 0, 255), ':h' => hash_file('sha256', $path), ':u' => $userId]);
+            $ins->execute([':f' => mb_substr($source, 0, 255), ':h' => $fingerprint, ':u' => $userId]);
             $importId = (int) $this->db->lastInsertId();
 
             $stats   = [];
@@ -206,6 +221,12 @@ final class CommissionImporter
             'date_column'      => $dateCol,
             'replaced_periods' => $replacedPeriods,
         ];
+    }
+
+    /** Record the content hash once known (streamed sources hash while reading). */
+    public function setFingerprint(int $importId, string $sha256): void
+    {
+        $this->db->prepare('UPDATE imports SET file_sha256 = :h WHERE id = :id')->execute([':h' => $sha256, ':id' => $importId]);
     }
 
     /** @param list<string> $header */

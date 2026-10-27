@@ -169,18 +169,8 @@
         importBtn.textContent = 'Importing…';
         try {
             const { result } = await api('/api/reports/import', { method: 'POST', body: fd });
-            const months = Object.keys(result.periods);
-            const notes = [];
-            if (result.replaced_periods.length) { notes.push('Replaced previous data for ' + result.replaced_periods.join(', ') + '.'); }
-            if (result.rows_bad_date) { notes.push(result.rows_bad_date + ' rows dropped: unreadable date in ' + result.date_column + '.'); }
-            if (result.rows_bad_amount) { notes.push(result.rows_bad_amount + ' rows dropped: non-numeric somme_totale.'); }
-            importRes.replaceChildren(
-                el('p', { class: 'success-left', text: 'Imported ' + int(result.rows_clean) + ' clean rows out of ' + int(result.rows_raw) + ' for ' + months.join(', ') + '.' }),
-                ...notes.map((n) => el('p', { class: 'notice', text: n }))
-            );
-            importRes.hidden = false;
+            await showImport(result);
             form.reset();
-            await loadPeriods(months[months.length - 1]);
         } catch (err) {
             show(importErr, err.message);
         } finally {
@@ -188,6 +178,42 @@
             importBtn.textContent = 'Import';
         }
     });
+
+    async function showImport(result) {
+        const months = Object.keys(result.periods);
+        const notes = [];
+        if (result.replaced_periods.length) { notes.push('Replaced previous data for ' + result.replaced_periods.join(', ') + '.'); }
+        if (result.rows_bad_date) { notes.push(result.rows_bad_date + ' rows dropped: unreadable date in ' + result.date_column + '.'); }
+        if (result.rows_bad_amount) { notes.push(result.rows_bad_amount + ' rows dropped: non-numeric somme_totale.'); }
+        importRes.replaceChildren(
+            el('p', { class: 'success-left', text: 'Imported ' + int(result.rows_clean) + ' clean rows out of ' + int(result.rows_raw) + ' for ' + months.join(', ') + '.' }),
+            ...notes.map((n) => el('p', { class: 'notice', text: n })),
+            result.warning ? el('p', { class: 'notice', text: result.warning }) : ''
+        );
+        importRes.hidden = false;
+        await loadPeriods(months[months.length - 1]);
+    }
+
+    const bqForm = document.getElementById('bq-form');
+    if (bqForm) {
+        const bqBtn = document.getElementById('bq-btn');
+        bqForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            show(importErr, '');
+            importRes.hidden = true;
+            bqBtn.disabled = true;
+            bqBtn.textContent = 'Reading BigQuery…';
+            try {
+                const { result } = await api('/api/reports/import-bigquery', { method: 'POST', body: { period: document.getElementById('bq-period').value.trim() } });
+                await showImport(result);
+            } catch (err) {
+                show(importErr, err.message);
+            } finally {
+                bqBtn.disabled = false;
+                bqBtn.textContent = 'Import from BigQuery';
+            }
+        });
+    }
 
     select.addEventListener('change', loadReport);
     loadPeriods().catch((err) => show(reportErr, err.message));

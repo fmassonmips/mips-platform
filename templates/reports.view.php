@@ -22,6 +22,18 @@ require TEMPLATES_PATH . '/partials/app_header.php';
         </div>
         <button type="submit" id="import-btn" class="btn-primary btn-auto">Import</button>
       </form>
+      <?php if (\App\Reporting\BigQuery::enabled()): ?>
+        <form id="bq-form" class="inline-form bq-form" novalidate>
+          <p class="muted">Or read the month straight from BigQuery
+            (<code><?= htmlspecialchars((new \App\Reporting\BigQuery())->tableName(), ENT_QUOTES, 'UTF-8') ?></code>),
+            with the same cleaning rules.</p>
+          <div class="field">
+            <label for="bq-period">Month</label>
+            <input type="text" id="bq-period" name="period" placeholder="YYYY-MM" pattern="\d{4}-\d{2}">
+          </div>
+          <button type="submit" id="bq-btn" class="btn-primary btn-auto">Import from BigQuery</button>
+        </form>
+      <?php endif; ?>
       <p id="import-error" class="error" role="alert" hidden></p>
       <div id="import-result" hidden></div>
     </section>
