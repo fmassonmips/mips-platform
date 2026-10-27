@@ -42,6 +42,7 @@ require TEMPLATES_PATH . '/partials/app_header.php';
         <div class="toolbar">
           <label for="period-select" class="sr-only">Month</label>
           <select id="period-select"></select>
+          <a id="export-xlsx" class="btn-secondary" href="#">Export Excel</a>
           <a id="export-link" class="btn-secondary" href="#">Export CSV</a>
         </div>
       </div>

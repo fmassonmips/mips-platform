@@ -6,6 +6,7 @@
  *   GET  /api/reports/periods   { "periods": ["2026-09", ...] }
  *   GET  /api/reports/monthly?period=YYYY-MM
  *   GET  /api/reports/export?period=YYYY-MM   CSV of the report lines
+ *   GET  /api/reports/export?period=YYYY-MM&format=xlsx   Excel workbook (one tab per view)
  *   GET  /api/reports/trend?to=YYYY-MM        12-month series ending at that month
  */
 declare(strict_types=1);
@@ -17,6 +18,7 @@ use App\Auth;
 use App\Csv;
 use App\Reporting\CommissionImporter;
 use App\Reporting\MonthlyReport;
+use App\Reporting\ReportWorkbook;
 use App\Request;
 use App\Response;
 
@@ -114,7 +116,12 @@ final class ReportsController
         if ($report === null) {
             Response::json(['error' => 'No data for this month.'], 404);
         }
-        Audit::log('report.export', 'period', $period);
+        $format = ($_GET['format'] ?? 'csv') === 'xlsx' ? 'xlsx' : 'csv';
+        Audit::log('report.export', 'period', $period, ['format' => $format]);
+
+        if ($format === 'xlsx') {
+            ReportWorkbook::build($period)?->download("MIPS_report_$period.xlsx");
+        }
 
         $rows = [];
         foreach ($report['lines'] as $l) {

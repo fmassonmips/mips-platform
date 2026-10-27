@@ -14,6 +14,7 @@
     const importRes  = document.getElementById('import-result');
     const select     = document.getElementById('period-select');
     const exportLink = document.getElementById('export-link');
+    const exportXlsx = document.getElementById('export-xlsx');
     const reportBox  = document.getElementById('report');
     const reportErr  = document.getElementById('report-error');
     const emptyMsg   = document.getElementById('report-empty');
@@ -26,6 +27,7 @@
         select.replaceChildren(...data.periods.map((p) => el('option', { value: p, text: p })));
         emptyMsg.hidden = data.periods.length > 0;
         exportLink.hidden = data.periods.length === 0;
+        exportXlsx.hidden = data.periods.length === 0;
         if (data.periods.length) {
             select.value = selected && data.periods.includes(selected) ? selected : data.periods[0];
             await loadReport();
@@ -78,6 +80,7 @@
         const period = select.value;
         loadTrend(period).catch((err) => show(reportErr, err.message));
         exportLink.href = '/api/reports/export?period=' + encodeURIComponent(period);
+        exportXlsx.href = exportLink.href + '&format=xlsx';
         show(reportErr, '');
         try {
             const { report } = await api('/api/reports/monthly?period=' + encodeURIComponent(period));
