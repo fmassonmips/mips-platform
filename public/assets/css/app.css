@@ -436,3 +436,50 @@ input[type="tel"] {
 .timeline li { padding: 10px 0; border-top: 1px solid var(--color-border); }
 #card-share { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
 #card-share div { flex: 1 1 260px; }
+
+/* -------- RendezVous -------- */
+input[type="number"],
+input[type="time"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px;
+    font: inherit; font-size: 15px; background: #fff; color: var(--color-text);
+}
+.nowrap { white-space: nowrap; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: #eef2f7; color: var(--color-muted); font-size: 11px; vertical-align: middle; }
+
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px; }
+.week-strip a {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px;
+    border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); text-decoration: none; font-size: 13px;
+}
+.week-strip a strong { font-size: 16px; }
+.week-strip a.is-today { border-color: var(--color-primary); }
+.week-strip a.is-current { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.agenda tr.is-cancelled td { color: var(--color-muted); text-decoration: line-through; }
+.agenda tr.is-cancelled td:last-child, .agenda tr.is-cancelled td:nth-last-child(2) { text-decoration: none; }
+
+.status--rv-booked  { background: #e6f0fb; color: #1d5fa8; }
+.status--rv-done    { background: #e5f5ea; color: #1a7f37; }
+.status--rv-no_show { background: #fdecea; color: var(--color-error); }
+.status--rv-cancelled { background: #f1f2f4; color: var(--color-muted); }
+
+.hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+.share-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.share-box input { flex: 1 1 260px; }
+
+.booking-card { max-width: 480px; }
+.slots-field { border: 0; padding: 0; margin: 0 0 16px; }
+.slots-field legend { font-size: 14px; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; min-height: 24px; }
+.slot {
+    padding: 8px 4px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff;
+    font: inherit; font-size: 14px; cursor: pointer; color: var(--color-text);
+}
+.slot:hover { border-color: var(--color-primary); }
+.slot.is-selected { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+.appt-details { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 16px 0; }
+.appt-details dt { color: var(--color-muted); }
+.appt-details dd { margin: 0; }
+@media (max-width: 600px) {
+    .week-strip { gap: 3px; }
+    .week-strip a { font-size: 11px; padding: 6px 2px; }
+}

@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo** et **ClientBloom** sont disponibles. Les 8 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom** et **RendezVous** sont disponibles. Les 7 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -95,6 +95,25 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** envoi de campagnes SMS/WhatsApp (pas de fournisseur intégré ; l'export CSV filtre les consentants), paliers (silver/gold), points convertibles.
 
+## RendezVous (prise de rendez-vous)
+
+| Élément | Règle |
+|---|---|
+| Cible | Salons, cliniques, garages, coachs : le client réserve seul une prestation sur un lien partagé (WhatsApp, Facebook, Google Maps). |
+| Prestations | Nom, durée, prix facultatif (affiché), réservable ou masquée. |
+| Équipe | Personnes ou ressources (fauteuil, salle), chacune avec son agenda et ses horaires par jour, plusieurs plages (« 08:30-12:30, 13:30-17:00 »). Toute personne assure toutes les prestations. |
+| Horaires proposés | Créneaux tous les N minutes dans les horaires, sans chevauchement, après le délai minimum, jusqu'à N jours à l'avance. « Peu importe » attribue la personne la moins chargée ce jour-là. |
+| Concurrence | Chaque réservation verrouille les agendas concernés puis revérifie : deux clients n'obtiennent jamais le même créneau (testé avec 4 réservations simultanées). |
+| Anti-abus | Téléphone obligatoire en ligne ; 5 réservations en ligne par heure et par connexion ; 3 rendez-vous à venir par numéro ; jeton CSRF de la page. |
+| Back-office | Agenda du jour + semaine ; statuts confirmé → honoré / absent / annulé (annulé est définitif) ; rendez-vous saisi par l'équipe à n'importe quelle heure (chevauchement refusé). |
+| Client | Page de confirmation et lien privé pour consulter ou annuler (jusqu'à N minutes avant). E-mails de confirmation, d'annulation et de rappel la veille si un e-mail est laissé ; copie des réservations en ligne à l'adresse choisie. Page et e-mails dans la langue des documents de l'entreprise. |
+| ClientBloom | Si l'app est active, l'agenda affiche le solde fidélité du client reconnu par son téléphone, avec un lien vers sa fiche. Aucun client fidélité n'est créé par une réservation (pas de bonus de bienvenue sur une réservation fantôme). |
+| Heure | Heure de Maurice (UTC+4) partout, y compris les horodatages, écrite par l'application : le fuseau du serveur de base n'intervient pas. |
+
+**Hors périmètre :** SMS/WhatsApp automatiques (pas de fournisseur), acompte ou paiement en ligne, prestations réservées à certaines personnes, congés ponctuels (bloquer un créneau par un rendez-vous interne en attendant), facture Facturo depuis un rendez-vous.
+
+**Bookora** (réservations en ligne) recouvre RendezVous : à décider si on le fusionne ou si on le recentre (hébergement, tables, activités).
+
 ## Lien Facturo → ClientBloom
 
 Option « Reward paid Facturo invoices » du programme ClientBloom (désactivée par défaut ; les deux apps doivent être actives).
@@ -129,6 +148,7 @@ mysql -u root -p mips_platform < sql/migrations/006_facturo_clientbloom.sql
 mysql -u root -p mips_platform < sql/migrations/007_clientbloom_invoice_rate.sql
 mysql -u root -p mips_platform < sql/migrations/008_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/009_client_document_language.sql
+mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
 ```
 
 Puis dans `config/config.php` :
@@ -140,11 +160,12 @@ Cron :
 ```
 */5 * * * * php tools/mra_retry.php
 15 2 * * *  php tools/clientbloom_expire.php
+0 * * * *   php tools/rendezvous_reminders.php
 ```
 
 ## Reste à décider
 
-- Ordre de construction des apps suivantes (recommandation : Bookora / RendezVous fusionnées).
+- Ordre de construction des apps suivantes ; sort de Bookora face à RendezVous.
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
 - Invitation de collègues dans une entreprise (pas encore d'écran).
