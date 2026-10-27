@@ -62,6 +62,16 @@ final class PublicController
             Response::json(['error' => $error], $error === $t['already'] || $error === $t['err_limit'] ? 409 : 422);
         }
         Responses::notify($form, $id);
+        if ((int) $form['flowdesk_ticket'] === 1 && Modules::isEnabled($orgId, 'flowdesk')) {
+            try {
+                $error = \App\FlowDesk\Tickets::fromFormResponse($orgId, $form, Responses::answers($id));
+                if ($error !== null) {
+                    error_log('[Formelio→FlowDesk] form ' . (int) $form['id'] . ': ' . $error);
+                }
+            } catch (\Throwable $e) {
+                error_log('[Formelio→FlowDesk] ' . $e->getMessage());
+            }
+        }
         Response::json(['success' => true]);
     }
 }

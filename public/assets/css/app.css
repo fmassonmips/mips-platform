@@ -528,3 +528,37 @@ input[type="time"] {
 .scale--nps .scale-item span { min-width: 30px; }
 .scale-legend { display: flex; justify-content: space-between; margin-top: 4px; }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* -------- FlowDesk -------- */
+/* Multi-word French statuses (« À traiter », « En cours ») keep their case. */
+.status[class*="status--fd-"] { text-transform: none; }
+.status--fd-open     { background: #e6f0fb; color: #1d5fa8; }
+.status--fd-pending  { background: #fff6e0; color: #8a5a00; }
+.status--fd-resolved { background: #e5f5ea; color: #1a7f37; }
+.status--fd-closed   { background: #f1f2f4; color: var(--color-muted); }
+.prio { font-size: 13px; }
+.prio--high   { color: #b35c00; font-weight: 600; }
+.prio--urgent { color: var(--color-error); font-weight: 700; }
+.prio--low    { color: var(--color-muted); }
+.tag--warn { background: #fdecea; color: var(--color-error); }
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-tabs a { padding: 6px 10px; border-radius: 8px; color: var(--color-muted); text-decoration: none; font-size: 14px; }
+.filter-tabs a.is-current { background: #e6f0fb; color: #1d5fa8; font-weight: 600; }
+.filter-tabs .count { font-size: 12px; opacity: 0.8; }
+
+.ticket-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+.ticket-layout > .card + .card { margin-top: 0; }
+.ticket-side h3 { margin: 0 0 8px; font-size: 15px; }
+.ticket-side h3 + p { margin-top: 0; }
+@media (max-width: 860px) { .ticket-layout { grid-template-columns: 1fr; } }
+
+.thread { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.msg { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-border); max-width: 92%; }
+.msg-head { margin-bottom: 4px; }
+.msg--customer { background: #fff; align-self: flex-start; }
+.msg--agent { background: #eef4fb; border-color: #cfe0f3; align-self: flex-end; }
+.msg--note { background: #fff8e1; border-color: #f1e0a8; align-self: flex-end; }
+.seg { display: flex; gap: 16px; margin-bottom: 8px; }
+.seg label { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 0; }
+.seg input { width: auto; }
+#fd-answer textarea { margin-bottom: 0; }

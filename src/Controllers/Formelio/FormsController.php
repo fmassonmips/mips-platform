@@ -5,7 +5,7 @@
  * Input (JSON body):
  *   { "action": "create", "template": "satisfaction" | "contact" | "event" | "" }
  *   { "action": "save", "id", "title", "description", "thank_you", "notify_email",
- *     "fields": [{ "id"?, "type", "label", "required", "options": [] }] }
+ *     "flowdesk_ticket": bool, "fields": [{ "id"?, "type", "label", "required", "options": [] }] }
  *   { "action": "status", "id", "status": "draft" | "open" | "closed" }
  *   { "action": "new_link", "id" }
  *   { "action": "delete", "id" }                 owner/admin; deletes the responses too
@@ -45,6 +45,8 @@ final class FormsController
                 $error = Forms::save($org['id'], $id, [
                     'title' => Request::str($data, 'title', 300), 'description' => Request::str($data, 'description', 1200),
                     'thank_you' => Request::str($data, 'thank_you', 600), 'notify_email' => Request::str($data, 'notify_email', 300),
+                    // Absent when FlowDesk is off: keep the current choice.
+                    'flowdesk_ticket' => array_key_exists('flowdesk_ticket', $data) ? ($data['flowdesk_ticket'] === true) : null,
                     'fields' => is_array($data['fields'] ?? null) ? $data['fields'] : [],
                 ]);
                 break;

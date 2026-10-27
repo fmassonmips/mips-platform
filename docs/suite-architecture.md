@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous** et **Formelio** sont disponibles. Les 6 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio** et **FlowDesk** sont disponibles. Les 5 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -128,6 +128,22 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** logique conditionnelle, téléversement de fichiers, paiement, envoi de campagnes de sondage (l'export ClientBloom filtre les consentants).
 
+## FlowDesk (support client)
+
+| Élément | Règle |
+|---|---|
+| Entrées | Formulaire de contact public (lien à partager), ticket saisi par l'équipe (téléphone, comptoir, WhatsApp), réponse Formelio (option « créer un ticket » d'un formulaire : nom, e-mail et téléphone repris des réponses). |
+| Numérotation | #1, #2… sans trou par entreprise (ligne de réglages verrouillée ; testé avec 5 créations simultanées). |
+| Fil | Message client, réponse (envoyée par e-mail au client avec le lien de sa demande) ou note interne (jamais visible ni envoyée au client). |
+| Statuts | À traiter → En attente du client (après une réponse) → Résolu / Clôturé. Une réponse du client remet le ticket « À traiter », même résolu ; un ticket clôturé n'accepte plus de réponse. |
+| File | Filtres À traiter, Mes tickets, En attente, Résolus, Tous ; recherche par n°, sujet, client, e-mail, téléphone ; tri par priorité puis ancienneté ; repère « sans réponse ». Le premier qui répond se voit assigner le ticket. |
+| Client | Page privée de la demande (fil sans les notes internes, réponse). Pas de lecture des e-mails entrants : le client répond depuis sa page. Pages et e-mails dans la langue des documents de l'entreprise. |
+| Notifications | Nouveau ticket → adresse de l'entreprise ; réponse du client → personne assignée, sinon l'adresse de l'entreprise. |
+| Anti-abus | CSRF, champ piège, 5 tickets par heure et par connexion, 20 réponses par heure sur un ticket. |
+| ClientBloom | Fiche fidélité reconnue par téléphone ou e-mail, affichée à côté du ticket. |
+
+**Hors périmètre :** réception des e-mails (boîte support), réponses types, délais contractuels (SLA) avec alertes, pièces jointes, satisfaction après résolution.
+
 ## Lien Facturo → ClientBloom
 
 Option « Reward paid Facturo invoices » du programme ClientBloom (désactivée par défaut ; les deux apps doivent être actives).
@@ -164,6 +180,7 @@ mysql -u root -p mips_platform < sql/migrations/008_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/009_client_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
 mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
+mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
 ```
 
 Puis dans `config/config.php` :

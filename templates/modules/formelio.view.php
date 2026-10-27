@@ -17,6 +17,7 @@ $id   = ctype_digit((string) ($_GET['id'] ?? '')) ? (int) $_GET['id'] : 0;
 
 $can_manage = Tenant::canManage($org);
 $base_url   = rtrim((string) ($GLOBALS['config']['app']['url'] ?? ''), '/');
+$flowdesk   = \App\Suite\Modules::isEnabled($org['id'], 'flowdesk');
 $view       = null;
 $form       = null;
 

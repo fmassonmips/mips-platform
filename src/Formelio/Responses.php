@@ -57,6 +57,17 @@ final class Responses
         return [(int) $pdo->lastInsertId(), null];
     }
 
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public static function answers(int $responseId): array
+    {
+        $stmt = Database::connection()->prepare('SELECT answers FROM formelio_responses WHERE id = :id');
+        $stmt->execute([':id' => $responseId]);
+        $a = json_decode((string) $stmt->fetchColumn(), true);
+        return is_array($a) ? $a : [];
+    }
+
     public static function hasSource(int $formId, string $source): bool
     {
         $stmt = Database::connection()->prepare('SELECT 1 FROM formelio_responses WHERE form_id = :f AND source = :s LIMIT 1');
@@ -159,9 +170,7 @@ final class Responses
             return;
         }
         try {
-            $stmt = Database::connection()->prepare('SELECT answers FROM formelio_responses WHERE id = :id');
-            $stmt->execute([':id' => $responseId]);
-            $answers = json_decode((string) $stmt->fetchColumn(), true) ?: [];
+            $answers = self::answers($responseId);
             $lines   = ['Nouvelle réponse au formulaire « ' . $form['title'] . ' » :', ''];
             foreach ($answers as $a) {
                 $lines[] = $a['label'] . ' : ' . (self::display($a['value']) !== '' ? self::display($a['value']) : '—');

@@ -29,7 +29,7 @@ final class Catalog
         'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'coming_soon'],
         'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'available'],
         'rendezvous'  => ['name' => 'RendezVous',  'domain' => 'rendezvous.mu',   'tagline' => 'Prise de rendez-vous',    'status' => 'available'],
-        'flowdesk'    => ['name' => 'FlowDesk',    'domain' => 'flowdesk.com',    'tagline' => 'Support client',          'status' => 'coming_soon'],
+        'flowdesk'    => ['name' => 'FlowDesk',    'domain' => 'flowdesk.com',    'tagline' => 'Support client',          'status' => 'available'],
     ];
 
     /** Free trial length granted on activation. */

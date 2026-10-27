@@ -131,7 +131,7 @@ final class Forms
     /**
      * Save title, texts and fields. Returns an error or null.
      *
-     * @param array<string,mixed> $in title, description, thank_you, notify_email, fields (list)
+     * @param array<string,mixed> $in title, description, thank_you, notify_email, flowdesk_ticket, fields (list)
      */
     public static function save(int $orgId, int $id, array $in): ?string
     {
@@ -157,9 +157,11 @@ final class Forms
             return $error;
         }
         Database::connection()->prepare(
-            'UPDATE formelio_forms SET title = :t, description = :d, thank_you = :ty, notify_email = :e, fields = :f
+            'UPDATE formelio_forms SET title = :t, description = :d, thank_you = :ty, notify_email = :e, fields = :f,
+                    flowdesk_ticket = :fd
              WHERE organization_id = :oid AND id = :id'
         )->execute([
+            ':fd' => ($in['flowdesk_ticket'] ?? null) === null ? (int) $form['flowdesk_ticket'] : ($in['flowdesk_ticket'] ? 1 : 0),
             ':t' => $title, ':d' => $desc !== '' ? $desc : null, ':ty' => $thanks !== '' ? $thanks : null,
             ':e' => $email !== '' ? $email : null, ':f' => json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             ':oid' => $orgId, ':id' => $id,

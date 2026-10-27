@@ -182,11 +182,15 @@
         submit.disabled = true;
         document.getElementById('fm-saved').hidden = true;
         try {
-            await post({
+            const payload = {
                 action: 'save', id: Number(form.dataset.id), title: form.elements.title.value,
                 description: form.elements.description.value, thank_you: form.elements.thank_you.value,
                 notify_email: form.elements.notify_email.value, fields: fields,
-            });
+            };
+            if (form.elements.flowdesk_ticket) {
+                payload.flowdesk_ticket = form.elements.flowdesk_ticket.checked;
+            }
+            await post(payload);
             window.location.reload();
         } catch (err) {
             showError(err.message);

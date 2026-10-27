@@ -7,6 +7,7 @@
  * @var list<array<string,mixed>> $responses
  * @var bool $can_manage
  * @var string $base_url
+ * @var bool $flowdesk  FlowDesk enabled for the organization
  */
 use App\Formelio\Forms;
 
@@ -59,6 +60,10 @@ $status = (string) $form['status'];
       <button type="button" class="btn-secondary" id="fm-add">Ajouter</button>
     </div>
 
+    <?php if ($flowdesk): ?>
+      <label class="checkbox"><input type="checkbox" name="flowdesk_ticket"<?= (int) $form['flowdesk_ticket'] === 1 ? ' checked' : '' ?>>
+        Créer un ticket FlowDesk pour chaque réponse (nom, e-mail et téléphone repris des réponses)</label>
+    <?php endif; ?>
     <div class="field"><label for="fm-thanks">Message après l'envoi</label><textarea id="fm-thanks" name="thank_you" rows="2" maxlength="500" placeholder="Merci, votre réponse a bien été envoyée."><?= $e($form['thank_you'] ?? '') ?></textarea></div>
     <div class="actions">
       <button type="submit" class="btn-primary btn-inline">Enregistrer</button>
