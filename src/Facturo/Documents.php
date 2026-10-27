@@ -89,8 +89,9 @@ final class Documents
      * @return array<string,mixed>|null
      */
     /**
-     * Language a document is written in: frozen at issue, the company's current
-     * setting for drafts, French for documents issued before the setting existed.
+     * Language a document is written in: frozen at issue; for drafts, the
+     * client's language, else the company's; French for documents issued
+     * before the setting existed.
      *
      * @param array<string,mixed> $doc
      */
@@ -99,9 +100,21 @@ final class Documents
         if (($doc['language'] ?? null) !== null) {
             return DocText::normalize((string) $doc['language']);
         }
-        return $doc['status'] === 'draft'
-            ? Tenant::profile((int) $doc['organization_id'])['document_language']
-            : 'fr';
+        if ($doc['status'] !== 'draft') {
+            return 'fr';
+        }
+        $orgId  = (int) $doc['organization_id'];
+        $client = Clients::find($orgId, (int) $doc['client_id']);
+        return self::languageFor($client, Tenant::profile($orgId));
+    }
+
+    /**
+     * @param array<string,mixed>|null $client
+     * @param array<string,string>     $seller Tenant::profile()
+     */
+    private static function languageFor(?array $client, array $seller): string
+    {
+        return DocText::normalize($client['document_language'] ?? $seller['document_language']);
     }
 
     /**
@@ -490,7 +503,7 @@ final class Documents
                 ':status' => self::ISSUED_STATUS[$type],
                 ':seller' => json_encode($seller, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 ':client' => json_encode($client, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                ':lang'   => $seller['document_language'],
+                ':lang'   => self::languageFor($client, $seller),
                 ':oid'    => $orgId,
                 ':id'     => $id,
             ]);

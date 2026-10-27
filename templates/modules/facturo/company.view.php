@@ -31,7 +31,7 @@ $ro = $can_manage ? '' : ' disabled';
           <option value="<?= $e($code) ?>"<?= $profile['document_language'] === $code ? ' selected' : '' ?>><?= $e($label) ?></option>
         <?php endforeach; ?>
       </select>
-      <span class="muted small">S'applique aux documents émis à partir de maintenant ; un document déjà émis garde sa langue.</span></div>
+      <span class="muted small">Par défaut pour tous les clients ; une langue choisie sur la fiche d'un client passe avant. S'applique aux documents émis à partir de maintenant ; un document déjà émis garde sa langue.</span></div>
     <div class="field"><label for="o-address">Adresse</label><textarea id="o-address" name="address" rows="2" maxlength="500"<?= $ro ?>><?= $e($profile['address']) ?></textarea></div>
     <?php if ($can_manage): ?>
       <div class="actions"><button type="submit" class="btn-primary btn-inline">Enregistrer</button></div>

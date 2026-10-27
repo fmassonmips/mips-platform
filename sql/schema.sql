@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS facturo_clients (
     address         VARCHAR(500) NULL,
     brn             VARCHAR(40)  NULL,
     vat_number      VARCHAR(40)  NULL,
+    document_language CHAR(2)    NULL,                      -- fr | en; NULL = the company's language
     clientbloom_customer_id BIGINT UNSIGNED NULL,           -- loyalty customer (FK added after clientbloom tables)
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -28,7 +28,7 @@ final class Clients
     public static function all(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, name, email, phone, address, brn, vat_number
+            'SELECT id, name, email, phone, address, brn, vat_number, document_language
              FROM facturo_clients WHERE organization_id = :oid ORDER BY name'
         );
         $stmt->execute([':oid' => $orgId]);
@@ -41,7 +41,7 @@ final class Clients
     public static function find(int $orgId, int $id): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, name, email, phone, address, brn, vat_number
+            'SELECT id, name, email, phone, address, brn, vat_number, document_language
              FROM facturo_clients WHERE organization_id = :oid AND id = :id'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
@@ -53,7 +53,7 @@ final class Clients
      * Validate raw input. Returns [clean fields, error|null].
      *
      * @param array<string,string> $input
-     * @return array{0:array<string,?string>,1:?string}
+     * @return array{0:array<string,?string>,1:?string}  document_language: 'fr' | 'en' | null
      */
     public static function validate(array $input): array
     {
@@ -65,6 +65,12 @@ final class Clients
             }
             $clean[$field] = $value !== '' ? $value : null;
         }
+        // Empty = the company's document language.
+        $lang = trim($input['document_language'] ?? '');
+        if ($lang !== '' && !isset(DocText::LANGUAGES[$lang])) {
+            return [[], 'Langue des documents invalide.'];
+        }
+        $clean['document_language'] = $lang !== '' ? $lang : null;
         if ($clean['name'] === null) {
             return [[], 'Le nom du client est obligatoire.'];
         }
@@ -87,11 +93,12 @@ final class Clients
         foreach (array_keys(self::FIELDS) as $field) {
             $params[':' . $field] = $fields[$field];
         }
+        $params[':lang'] = $fields['document_language'] ?? null;
 
         if ($id === 0) {
             $pdo->prepare(
-                'INSERT INTO facturo_clients (organization_id, name, email, phone, address, brn, vat_number)
-                 VALUES (:oid, :name, :email, :phone, :address, :brn, :vat_number)'
+                'INSERT INTO facturo_clients (organization_id, name, email, phone, address, brn, vat_number, document_language)
+                 VALUES (:oid, :name, :email, :phone, :address, :brn, :vat_number, :lang)'
             )->execute($params);
             return (int) $pdo->lastInsertId();
         }
@@ -103,7 +110,7 @@ final class Clients
         $pdo->prepare(
             'UPDATE facturo_clients
              SET name = :name, email = :email, phone = :phone, address = :address,
-                 brn = :brn, vat_number = :vat_number
+                 brn = :brn, vat_number = :vat_number, document_language = :lang
              WHERE organization_id = :oid AND id = :id'
         )->execute($params);
         return $id;

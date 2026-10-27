@@ -3,7 +3,8 @@
  * POST /api/facturo/clients
  *
  * Input (JSON body):
- *   { "action": "save",   "id": 0|<id>, "name": "...", "email": "...", ... }
+ *   { "action": "save",   "id": 0|<id>, "name": "...", "email": "...", ...,
+ *     "document_language": "" (company default) | "fr" | "en" }
  *   { "action": "delete", "id": <id> }
  *
  * Responses:
@@ -35,6 +36,7 @@ final class ClientsController
                 foreach (array_keys(Clients::FIELDS) as $field) {
                     $input[$field] = Request::str($data, $field, 1000);
                 }
+                $input['document_language'] = Request::str($data, 'document_language', 10);
                 [$fields, $error] = Clients::validate($input);
                 if ($error !== null) {
                     Response::json(['error' => $error], 422);

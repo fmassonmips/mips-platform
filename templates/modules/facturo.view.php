@@ -46,6 +46,7 @@ switch ($page) {
 
     case 'clients':
         $clients = Clients::all($org['id']);
+        $profile = Tenant::profile($org['id']);
         $view    = 'clients';
         break;
 

@@ -164,7 +164,7 @@
     // ---- Clients ---------------------------------------------------------
     const clientForm = document.getElementById('client-form');
     if (clientForm) {
-        const fields = ['name', 'email', 'phone', 'address', 'brn', 'vat_number'];
+        const fields = ['name', 'email', 'phone', 'address', 'brn', 'vat_number', 'document_language'];
         const title  = document.getElementById('client-form-title');
 
         document.querySelectorAll('[data-edit-client]').forEach(function (btn) {
