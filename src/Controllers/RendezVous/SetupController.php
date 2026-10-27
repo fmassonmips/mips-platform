@@ -6,7 +6,7 @@
  *   { "action": "service", "id": 0|<id>, "name", "duration_min", "price", "active" }
  *   { "action": "staff",   "id": 0|<id>, "name", "active", "hours": { "1": "08:00-12:00, 13:00-17:00", … "7": "" } }
  *   { "action": "settings", "booking_enabled", "slot_step_min", "min_notice_min", "max_days_ahead",
- *     "cancel_notice_min", "notify_email", "intro" }
+ *     "cancel_notice_min", "notify_email", "intro", "survey_form_id" (0 = none) }
  *   { "action": "new_link" }   new public booking link; the old one stops working
  *
  * Responses: 200 { "success": true, "id"? } · 403 / 422 { "error": "..." }
@@ -61,6 +61,8 @@ final class SetupController
                     'cancel_notice_min' => Request::int($data, 'cancel_notice_min'),
                     'notify_email'      => Request::str($data, 'notify_email', 300),
                     'intro'             => Request::str($data, 'intro', 600),
+                    // Absent when Formelio is off: keep the current survey.
+                    'survey_form_id'    => array_key_exists('survey_form_id', $data) ? Request::int($data, 'survey_form_id') : -1,
                 ]);
                 $savedId = 0;
                 break;

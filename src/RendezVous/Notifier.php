@@ -44,6 +44,41 @@ final class Notifier
     }
 
     /**
+     * Satisfaction survey (Formelio) after an honoured appointment, once per appointment.
+     *
+     * @param array<string,mixed>|null $appt
+     */
+    public static function survey(int $orgId, ?array $appt): void
+    {
+        $formId = Settings::get($orgId)['survey_form_id'];
+        if ($appt === null || $formId === null || empty($appt['email']) || $appt['survey_sent_at'] !== null
+            || !SmtpMailer::isConfigured() || !\App\Suite\Modules::isEnabled($orgId, 'formelio')) {
+            return;
+        }
+        $form = \App\Formelio\Forms::find($orgId, $formId);
+        if ($form === null || $form['status'] !== 'open') {
+            return;
+        }
+        $profile = Tenant::profile($orgId);
+        $t       = Text::for($profile['document_language']);
+        $company = $profile['name'] !== '' ? $profile['name'] : $profile['legal_name'];
+        $link    = self::baseUrl() . '/formelio/f.php?t=' . $form['public_token'] . '&r=' . $appt['token'];
+        $text    = implode("\n", [sprintf($t['mail_hello'], $appt['customer_name']), '', $t['mail_survey'], '', $link, '',
+                                   $t['mail_survey_thanks'], $company]) . "\n";
+        $e    = static fn (string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $html = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#1b1f24">'
+              . nl2br($e(sprintf($t['mail_hello'], $appt['customer_name']) . "\n\n" . $t['mail_survey']))
+              . '<p style="margin:24px 0"><a href="' . $e($link) . '" style="background:#2b6cb0;color:#fff;padding:10px 18px;'
+              . 'border-radius:6px;text-decoration:none;display:inline-block">' . $e($t['mail_survey_button']) . '</a></p>'
+              . nl2br($e($t['mail_survey_thanks'] . "\n" . $company)) . '</div>';
+        // Marked first: a failed send is not retried, never sent twice.
+        Database::connection()->prepare('UPDATE rendezvous_appointments SET survey_sent_at = :now WHERE id = :id AND survey_sent_at IS NULL')
+            ->execute([':now' => Booking::now()->format('Y-m-d H:i:s'), ':id' => (int) $appt['id']]);
+        SmtpMailer::fromConfig()->send((string) $appt['email'], sprintf($t['mail_survey_subject'], $company), $text, $html, $company,
+            $profile['email'] !== '' ? $profile['email'] : null);
+    }
+
+    /**
      * Send the reminders due: booked appointments starting in the next 24 hours,
      * booked more than 12 hours ahead, with an e-mail, not yet reminded.
      * Returns the number of e-mails sent.

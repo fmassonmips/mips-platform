@@ -272,6 +272,8 @@ final class Booking
                      ':oid' => $orgId, ':id' => $id, ':old' => $appt['status']]);
         if ($status === 'cancelled') {
             Notifier::safely(static fn () => Notifier::cancelled($orgId, self::find($orgId, $id), false));
+        } elseif ($status === 'done') {
+            Notifier::safely(static fn () => Notifier::survey($orgId, self::find($orgId, $id)));
         }
         return null;
     }

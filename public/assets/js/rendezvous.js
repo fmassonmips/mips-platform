@@ -184,11 +184,15 @@
     if (settingsForm && settingsForm.querySelector('[type="submit"]')) {
         guard(settingsForm, async function () {
             const f = settingsForm.elements;
-            await post('/api/rendezvous/setup', {
+            const payload = {
                 action: 'settings', booking_enabled: f.booking_enabled.checked, slot_step_min: Number(f.slot_step_min.value),
                 min_notice_min: Number(f.min_notice_min.value), max_days_ahead: Number(f.max_days_ahead.value),
                 cancel_notice_min: Number(f.cancel_notice_min.value), notify_email: f.notify_email.value, intro: f.intro.value,
-            });
+            };
+            if (f.survey_form_id) {
+                payload.survey_form_id = Number(f.survey_form_id.value);
+            }
+            await post('/api/rendezvous/setup', payload);
             document.getElementById('rv-settings-saved').hidden = false;
         });
     }

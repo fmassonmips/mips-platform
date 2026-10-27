@@ -6,6 +6,7 @@
  * @var array<string,mixed> $settings
  * @var array<string,string> $profile
  * @var bool $can_manage
+ * @var list<array{id:int,title:string}>|null $surveys  open Formelio forms; null when Formelio is off
  */
 use App\RendezVous\Settings;
 
@@ -46,6 +47,16 @@ $ro  = $can_manage ? '' : ' disabled';
       <div class="field"><label for="r-notify">Copie des réservations en ligne à</label>
         <input type="email" id="r-notify" name="notify_email" maxlength="254" value="<?= $e($settings['notify_email']) ?>" placeholder="e-mail de l'entreprise"<?= $ro ?>></div>
     </div>
+    <div class="field"><label for="r-survey">Sondage de satisfaction envoyé quand un rendez-vous est marqué « Honoré »</label>
+      <?php if ($surveys === null): ?>
+        <p class="muted small">Activez Formelio pour envoyer un sondage par e-mail après chaque visite.</p>
+      <?php else: ?>
+        <select id="r-survey" name="survey_form_id"<?= $ro ?>>
+          <option value="0">Aucun</option>
+          <?php foreach ($surveys as $s): ?><option value="<?= $s['id'] ?>"<?= $settings['survey_form_id'] === $s['id'] ? ' selected' : '' ?>><?= $e($s['title']) ?></option><?php endforeach; ?>
+        </select>
+        <?php if ($surveys === []): ?><p class="muted small">Aucun formulaire ouvert : créez-en un dans Formelio (modèle « Satisfaction client ») et ouvrez-le.</p><?php endif; ?>
+      <?php endif; ?></div>
     <div class="field"><label for="r-intro">Message d'accueil sur la page de réservation</label>
       <textarea id="r-intro" name="intro" rows="2" maxlength="500"<?= $ro ?>><?= $e($settings['intro']) ?></textarea></div>
     <?php if ($can_manage): ?>

@@ -16,7 +16,7 @@ final class Settings
 
     /**
      * @return array{public_token:string,booking_enabled:bool,slot_step_min:int,min_notice_min:int,
-     *               max_days_ahead:int,cancel_notice_min:int,notify_email:string,intro:string}
+     *               max_days_ahead:int,cancel_notice_min:int,notify_email:string,intro:string,survey_form_id:?int}
      */
     public static function get(int $orgId): array
     {
@@ -35,6 +35,7 @@ final class Settings
             'cancel_notice_min' => (int) $row['cancel_notice_min'],
             'notify_email'      => (string) ($row['notify_email'] ?? ''),
             'intro'             => (string) ($row['intro'] ?? ''),
+            'survey_form_id'    => $row['survey_form_id'] !== null ? (int) $row['survey_form_id'] : null,
         ];
     }
 
@@ -76,16 +77,23 @@ final class Settings
         if (mb_strlen($intro) > 500) {
             return 'Le message d\'accueil est trop long (500 caractères max.).';
         }
+        $survey = (int) ($in['survey_form_id'] ?? -1);
+        if ($survey === -1) {
+            $survey = (int) self::get($orgId)['survey_form_id'];
+        }
+        if ($survey > 0 && \App\Formelio\Forms::find($orgId, $survey) === null) {
+            return 'Formulaire de satisfaction introuvable.';
+        }
         self::get($orgId);
         Database::connection()->prepare(
             'UPDATE rendezvous_settings
              SET booking_enabled = :en, slot_step_min = :step, min_notice_min = :notice, max_days_ahead = :days,
-                 cancel_notice_min = :cancel, notify_email = :email, intro = :intro
+                 cancel_notice_min = :cancel, notify_email = :email, intro = :intro, survey_form_id = :survey
              WHERE organization_id = :oid'
         )->execute([
             ':en' => !empty($in['booking_enabled']) ? 1 : 0, ':step' => $step, ':notice' => $notice, ':days' => $days,
             ':cancel' => $cancel, ':email' => $email !== '' ? $email : null, ':intro' => $intro !== '' ? $intro : null,
-            ':oid' => $orgId,
+            ':survey' => $survey > 0 ? $survey : null, ':oid' => $orgId,
         ]);
         return null;
     }

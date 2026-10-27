@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom** et **RendezVous** sont disponibles. Les 7 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous** et **Formelio** sont disponibles. Les 6 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -114,6 +114,20 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Bookora** (réservations en ligne) recouvre RendezVous : à décider si on le fusionne ou si on le recentre (hébergement, tables, activités).
 
+## Formelio (formulaires & sondages)
+
+| Élément | Règle |
+|---|---|
+| Formulaires | Modèles « Satisfaction client », « Contact », « Inscription » ou vide. 10 types de questions : texte court/long, e-mail, téléphone, nombre, date, choix unique/multiples, note 1-5, recommandation 0-10 (NPS). 50 questions max. |
+| Cycle | Brouillon (aperçu pour l'équipe, fermé au public) → ouvert → fermé. Lien public à partager (copie, WhatsApp), régénérable. |
+| Modifications | Chaque question garde un identifiant fixe ; chaque réponse garde l'intitulé tel qu'il a été posé. Renommer ou supprimer une question ne fausse jamais les réponses reçues. |
+| Réponses | Synthèse par question (répartition, moyenne, score NPS = % promoteurs − % détracteurs), détail de chaque réponse, suppression (owner/admin), export CSV (owner/admin, protégé contre l'injection de formules), e-mail à chaque réponse si une adresse est indiquée. |
+| Anti-abus | Jeton CSRF de la page, champ piège invisible pour les robots, 20 envois par heure et par connexion pour un formulaire. |
+| Langue | Textes fixes de la page (boutons, erreurs) dans la langue des documents de l'entreprise ; les questions sont rédigées par l'entreprise. |
+| RendezVous | Réglage « Sondage de satisfaction » : quand un rendez-vous est marqué « Honoré », le client reçoit un e-mail avec le lien (une seule fois par rendez-vous, une seule réponse par rendez-vous) ; la réponse est marquée « après un rendez-vous ». |
+
+**Hors périmètre :** logique conditionnelle, téléversement de fichiers, paiement, envoi de campagnes de sondage (l'export ClientBloom filtre les consentants).
+
 ## Lien Facturo → ClientBloom
 
 Option « Reward paid Facturo invoices » du programme ClientBloom (désactivée par défaut ; les deux apps doivent être actives).
@@ -149,6 +163,7 @@ mysql -u root -p mips_platform < sql/migrations/007_clientbloom_invoice_rate.sql
 mysql -u root -p mips_platform < sql/migrations/008_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/009_client_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
+mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 ```
 
 Puis dans `config/config.php` :

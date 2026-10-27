@@ -55,6 +55,7 @@ switch ($page) {
     case 'settings':
         $settings = Settings::get($org['id']);
         $profile  = Tenant::profile($org['id']);
+        $surveys  = Modules::isEnabled($org['id'], 'formelio') ? \App\Formelio\Forms::openForms($org['id']) : null;
         $view     = 'settings';
         break;
 }
