@@ -33,7 +33,7 @@ $label   = static fn (DateTimeImmutable $d): string => $months[(int) $d->format(
 $short   = static fn (string $ym): string => mb_substr($months[(int) substr($ym, 5, 2)], 0, 4) . '.';
 
 $on = [];
-foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest'] as $slug) {
+foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal'] as $slug) {
     $on[$slug] = Modules::isEnabled($org['id'], $slug);
 }
 $rs = static fn (int $c): string => Money::format($c, 'MUR');
@@ -108,6 +108,21 @@ if ($on['flowdesk']) {
     ];
     if ($sq['unanswered'] > 0) {
         $todo[] = [$sq['unanswered'] . ' ticket(s) support sans réponse' . ($sq['urgent'] > 0 ? ' (' . $sq['urgent'] . ' prioritaire(s))' : ''), '/app.php?m=flowdesk', $sq['urgent'] > 0 ? 'danger' : 'warn'];
+    }
+}
+if ($on['shoplokal']) {
+    $sh  = \App\ShopLokal\Orders::sales($org['id'], $from, $to);
+    $shp = \App\ShopLokal\Orders::sales($org['id'], $pFrom, $from);
+    $shc = \App\ShopLokal\Orders::counts($org['id']);
+    $tiles['Boutique en ligne'] = [
+        ['Commandes', (string) $sh['orders'], D::delta($sh['orders'], $shp['orders']), true, 'hors commandes annulées'],
+        ['Ventes TTC', $rs($sh['revenue_cents']), D::delta($sh['revenue_cents'], $shp['revenue_cents']), true, 'dont payées ' . $rs($sh['paid_cents'])],
+    ];
+    if ($shc['new'] > 0) {
+        $todo[] = [$shc['new'] . ' nouvelle(s) commande(s) en ligne à confirmer', '/app.php?m=shoplokal', 'danger'];
+    }
+    if (($low = \App\ShopLokal\Products::lowStock($org['id'])) !== []) {
+        $todo[] = [count($low) . ' produit(s) en stock bas dans la boutique', '/app.php?m=shoplokal&p=products', 'warn'];
     }
 }
 if ($on['teamnest'] && ($late = \App\TeamNest\Tasks::overdueCount($org['id'])) > 0) {

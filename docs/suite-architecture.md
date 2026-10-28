@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot** et **TeamNest** sont disponibles. ShopLokal, StaffZen et Bookora sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest** et **ShopLokal** sont disponibles. StaffZen et Bookora sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -157,6 +157,21 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** glisser-déposer, sous-tâches et commentaires, chronomètre, diagramme de Gantt, budget du projet.
 
+## ShopLokal (boutique en ligne, sans paiement en ligne)
+
+| Élément | Règle |
+|---|---|
+| Catalogue | Owner/admin. Prix saisi TTC, stocké HT avec un code TVA MRA (15 % par défaut si l'entreprise a un n° TVA). Stock facultatif (vide = non suivi), alerte à 3 ou moins. Photo réduite à 800 px en JPEG dans le navigateur, 400 Ko max., vérifiée côté serveur. |
+| Boutique | Lien public `/shoplokal/s.php?o=…` (fermée par défaut, nouveau lien = l'ancien renvoie 404). Panier sur le téléphone du client, livraison (frais HT, offerte dès un montant TTC d'articles) ou retrait. Page et e-mails dans la langue des documents de l'entreprise. |
+| Paiement | À la livraison, virement ou Juice, avec les instructions sur la page de commande. L'entreprise marque la commande payée. Le paiement par carte attend la passerelle MIPS. |
+| Commande | Numérotation sans trou ; produits verrouillés pendant la commande, stock revérifié puis réservé (deux clients pour le dernier article : un seul passe). Annuler remet le stock. Statuts : nouvelle → confirmée → expédiée / prête → terminée, ou annulée (définitif). E-mails au client (réception, confirmation, expédition, annulation) et à l'entreprise. |
+| Montants | TVA arrondie par ligne comme Facturo : la commande et sa facture sont identiques au centime. Conséquence : 2 × Rs 750,00 TTC peut faire Rs 1 499,99. |
+| Facturo | « Créer la facture » (owner/admin) : brouillon, client Facturo retrouvé par e-mail puis téléphone, sinon créé ; une facture par commande. |
+| Anti-abus | CSRF, champ piège, 5 commandes par heure et par connexion. |
+| BizPilot | Commandes et ventes TTC du mois ; nouvelles commandes et stock bas dans « À faire ». |
+
+**Hors périmètre :** paiement par carte, variantes (taille, couleur), codes promo, zones de livraison, plusieurs photos, export.
+
 ## BizPilot (tableau de bord)
 
 Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
@@ -210,6 +225,7 @@ mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
 mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
 mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
+mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 ```
 
 Puis dans `config/config.php` :
