@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk** et **BizPilot** sont disponibles. Les 4 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot** et **TeamNest** sont disponibles. ShopLokal, StaffZen et Bookora sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -144,6 +144,19 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** réception des e-mails (boîte support), réponses types, délais contractuels (SLA) avec alertes, pièces jointes, satisfaction après résolution.
 
+## TeamNest (projets & tâches)
+
+| Élément | Règle |
+|---|---|
+| Projets | Nom, description, client Facturo facultatif et taux horaire HT ; avancement, tâches en retard et temps non facturé sur chaque carte ; archivage. |
+| Tâches | Tableau À faire / En cours / Fait (boutons pour changer de colonne), assignation à un membre (e-mail quand quelqu'un d'autre l'assigne), échéance, priorité, description ; « Mes tâches » par échéance. |
+| Temps passé | Saisie « 45 », « 1h30 », « 1.5 » par jour (jamais dans le futur) ; supprimable tant qu'il n'est pas facturé. |
+| Facturation | « Facturer » (owner/admin, Facturo actif) crée un brouillon de facture : une ligne par tâche en heures au taux du projet, TVA 15 % si l'entreprise a un n° TVA. Le temps est marqué facturé ; deux clics simultanés ne facturent qu'une fois ; supprimer le brouillon libère le temps. Une tâche dont du temps est facturé ne se supprime pas. |
+| FlowDesk | Depuis un ticket : « Créer la tâche » dans un projet (priorité haute si le ticket l'est), lien dans les deux sens. |
+| BizPilot | Tâches en retard dans « À faire ». |
+
+**Hors périmètre :** glisser-déposer, sous-tâches et commentaires, chronomètre, diagramme de Gantt, budget du projet.
+
 ## BizPilot (tableau de bord)
 
 Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
@@ -196,6 +209,7 @@ mysql -u root -p mips_platform < sql/migrations/009_client_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
 mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
+mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
 ```
 
 Puis dans `config/config.php` :

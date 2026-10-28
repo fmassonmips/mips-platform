@@ -87,6 +87,26 @@ final class Tenant
     }
 
     /**
+     * Active members of the organization, id => name (or e-mail), for assignment lists.
+     *
+     * @return array<int,string>
+     */
+    public static function members(int $orgId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT u.id, COALESCE(NULLIF(u.name, \'\'), u.email) AS name
+             FROM organization_users ou JOIN users u ON u.id = ou.user_id
+             WHERE ou.organization_id = :oid AND u.is_active = 1 ORDER BY name'
+        );
+        $stmt->execute([':oid' => $orgId]);
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $out[(int) $r['id']] = (string) $r['name'];
+        }
+        return $out;
+    }
+
+    /**
      * @param array{role:string} $org
      */
     public static function canManage(array $org): bool

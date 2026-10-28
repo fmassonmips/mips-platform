@@ -33,7 +33,7 @@ $label   = static fn (DateTimeImmutable $d): string => $months[(int) $d->format(
 $short   = static fn (string $ym): string => mb_substr($months[(int) substr($ym, 5, 2)], 0, 4) . '.';
 
 $on = [];
-foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk'] as $slug) {
+foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest'] as $slug) {
     $on[$slug] = Modules::isEnabled($org['id'], $slug);
 }
 $rs = static fn (int $c): string => Money::format($c, 'MUR');
@@ -110,6 +110,9 @@ if ($on['flowdesk']) {
         $todo[] = [$sq['unanswered'] . ' ticket(s) support sans réponse' . ($sq['urgent'] > 0 ? ' (' . $sq['urgent'] . ' prioritaire(s))' : ''), '/app.php?m=flowdesk', $sq['urgent'] > 0 ? 'danger' : 'warn'];
     }
 }
+if ($on['teamnest'] && ($late = \App\TeamNest\Tasks::overdueCount($org['id'])) > 0) {
+    $todo[] = [$late . ' tâche(s) en retard dans les projets', '/app.php?m=teamnest', 'warn'];
+}
 ?>
 <section class="card">
   <div class="card-head">
@@ -125,7 +128,7 @@ if ($on['flowdesk']) {
   </div>
 
   <?php if (!in_array(true, $on, true)): ?>
-    <p>BizPilot rassemble les chiffres de vos autres applications. Activez-en au moins une (Facturo, RendezVous, ClientBloom, Formelio, FlowDesk) depuis le <a href="/dashboard.php">lanceur</a>.</p>
+    <p>BizPilot rassemble les chiffres de vos autres applications. Activez-en au moins une (Facturo, RendezVous, ClientBloom, Formelio, FlowDesk, TeamNest) depuis le <a href="/dashboard.php">lanceur</a>.</p>
   <?php else: ?>
     <h3>À faire</h3>
     <?php if ($todo === []): ?>
