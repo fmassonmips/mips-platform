@@ -16,6 +16,7 @@ require TEMPLATES_PATH . '/partials/app_header.php';
         <span id="case-status" class="badge"></span>
       </div>
       <p id="case-meta" class="muted"></p>
+      <p id="case-portal" class="muted" hidden></p>
       <form id="case-form" class="grid-form" novalidate>
         <div class="field">
           <label for="k-risk">Risk rating</label>

@@ -192,9 +192,17 @@ Destinataire : contact principal, à défaut contact facturation, à défaut l'e
 
 ---
 
-## 10. Phase 2 — Portail marchand (non implémenté, à spécifier en détail)
+## 10. Phase 2 — Portail marchand
 
 Requis pour démontrer le parcours côté marchand (dossier BoM, emplacements S01, S03 et S04).
+
+> **Implémentation de référence (prototype, 2026-10-28)** : `public/portal/`, `src/Portal/`,
+> `src/Controllers/Portal/`, tables `portal_users`, `portal_tokens`, `portal_recovery_codes`,
+> `terms_versions`, `terms_acceptances`, `prequalifications` (`sql/schema.sql`), configuration `portal`.
+> Côté MIPS : `/onboarding.php` (candidatures), `/application.php` (acceptation / refus), `/terms.php` (CGU).
+> Écarts avec ce qui suit : la préqualification est **acceptée par un analyste** (pas d'ouverture automatique du
+> dossier) ; le contrat MIPS signé ne bloque pas l'envoi du dossier par le marchand ; le marchand ne télécharge
+> pas ses pièces après dépôt ; un seul compte et une seule candidature par entreprise.
 
 1. **Acceptation des conditions générales**
    - versionnement des conditions ;

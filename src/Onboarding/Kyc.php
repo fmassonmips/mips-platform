@@ -58,6 +58,44 @@ final class Kyc
         throw new RuntimeException('Unknown document type.');
     }
 
+    /**
+     * Check what an upload is for: a known document type, the person it
+     * belongs to (party documents), and an expiry date that is in the future
+     * (mandatory for documents that expire).
+     *
+     * @param array<string,mixed> $case
+     * @return array{requirement:array<string,mixed>, party_id:?int, expires:?string}
+     */
+    public function uploadTarget(array $case, string $requirement, mixed $partyId, mixed $expiresAt): array
+    {
+        $req = $this->requirement($requirement);
+        $pid = null;
+        if ($req['scope'] === 'party') {
+            $pid = (int) $partyId;
+            $chk = $this->db->prepare('SELECT 1 FROM kyc_parties WHERE id = :p AND case_id = :c');
+            $chk->execute([':p' => $pid, ':c' => $case['id']]);
+            if ($chk->fetchColumn() === false) {
+                throw new RuntimeException('Select the person this document belongs to.', 422);
+            }
+        }
+        $raw     = is_scalar($expiresAt) ? trim((string) $expiresAt) : '';
+        $expires = null;
+        if ($raw !== '') {
+            $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+            if ($d === false || $d->format('Y-m-d') !== $raw) {
+                throw new RuntimeException('Invalid expiry date.', 422);
+            }
+            $expires = $raw;
+        }
+        if (!empty($req['expires']) && $expires === null) {
+            throw new RuntimeException('An expiry date is required for this document.', 422);
+        }
+        if ($expires !== null && $expires < date('Y-m-d')) {
+            throw new RuntimeException('This document has already expired.', 422);
+        }
+        return ['requirement' => $req, 'party_id' => $pid, 'expires' => $expires];
+    }
+
     /** @return array<string,mixed> */
     public function getCase(int $id): array
     {
@@ -107,9 +145,10 @@ final class Kyc
     public function checklist(array $case): array
     {
         $docs = $this->db->prepare(
-            'SELECT d.*, uu.email AS uploaded_by_email, ur.email AS reviewed_by_email
+            'SELECT d.*, uu.email AS uploaded_by_email, ur.email AS reviewed_by_email, pu.email AS uploaded_by_portal_email
              FROM kyc_documents d
              LEFT JOIN users uu ON uu.id = d.uploaded_by
+             LEFT JOIN portal_users pu ON pu.id = d.uploaded_by_portal
              LEFT JOIN users ur ON ur.id = d.reviewed_by
              WHERE d.case_id = :c ORDER BY d.uploaded_at DESC, d.id DESC'
         );
@@ -255,6 +294,10 @@ final class Kyc
             if ($to === 'under_review') {
                 $set[] = 'submitted_at = NOW()';
             }
+            if ($to === 'collecting') {
+                // Back to the merchant: it can tell us again when its file is complete.
+                $set[] = 'merchant_submitted_at = NULL';
+            }
             if ($to === 'approved' || $to === 'rejected') {
                 $set[] = 'decided_at = NOW()';
                 $set[] = 'decided_by = :by';
@@ -344,7 +387,11 @@ final class Kyc
             'MIPS onboarding: documents still needed for ' . ($case['legal_name'] ?: $case['merchant_name']),
             "Hello,\n\nTo complete the onboarding of " . ($case['legal_name'] ?: $case['merchant_name'])
             . " with MIPS, we still need the following documents:\n\n- " . implode("\n- ", $items) . "\n" . $due
-            . "\nReply to this email with the documents attached, or send them to your MIPS account manager.\n\nThank you,\nMIPS\n"
+            . ($this->portalApplication($caseId) !== null
+                ? "\nUpload them on the MIPS merchant portal: " . rtrim((string) $GLOBALS['config']['app']['url'], '/') . "/portal/documents.php\n"
+                  . "Never send identity documents by email.\n"
+                : "\nReply to this email with the documents attached, or send them to your MIPS account manager.\n")
+            . "\nThank you,\nMIPS\n"
         );
 
         $this->db->prepare('INSERT INTO kyc_reminders (case_id, sent_to, items, sent_by, delivered) VALUES (:c, :t, :i, :u, :d)')
@@ -354,6 +401,27 @@ final class Kyc
             $userId === null ? ['id' => null, 'email' => 'scheduler'] : null);
 
         return ['sent_to' => $to, 'items' => $items, 'delivered' => $sent];
+    }
+
+    /**
+     * The portal application this case was opened from, with the merchant
+     * account behind it (null for cases opened by staff).
+     *
+     * @return array<string,mixed>|null
+     */
+    public function portalApplication(int $caseId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT p.id, p.portal_user_id, u.email, u.name, u.is_active, u.totp_enabled_at, u.last_login_at,
+                    (SELECT t.version FROM terms_acceptances a JOIN terms_versions t ON t.id = a.terms_version_id
+                     WHERE a.portal_user_id = u.id ORDER BY a.terms_version_id DESC LIMIT 1) AS terms_version,
+                    (SELECT a.accepted_at FROM terms_acceptances a WHERE a.portal_user_id = u.id ORDER BY a.terms_version_id DESC LIMIT 1) AS terms_accepted_at
+             FROM prequalifications p JOIN portal_users u ON u.id = p.portal_user_id
+             WHERE p.case_id = :c'
+        );
+        $stmt->execute([':c' => $caseId]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
     }
 
     /**

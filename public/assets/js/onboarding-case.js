@@ -33,10 +33,22 @@
             el('a', { href: '/merchant.php?id=' + c.merchant_id, text: c.merchant_name + (c.legal_name ? ' (' + c.legal_name + ')' : '') }));
         $('case-status').textContent = c.status.replace('_', ' ');
         $('case-status').className = 'badge badge-k-' + c.status;
-        $('case-meta').textContent = 'Opened ' + c.created_at + (c.submitted_at ? ' · submitted ' + c.submitted_at : '')
+        $('case-meta').textContent = 'Opened ' + c.created_at
+            + (c.merchant_submitted_at ? ' · merchant sent its file ' + c.merchant_submitted_at : '')
+            + (c.submitted_at ? ' · submitted ' + c.submitted_at : '')
             + (c.decided_at ? ' · decided ' + c.decided_at + ' by ' + (c.decided_by_email || '?') : '')
             + (c.next_review_date ? ' · next review ' + c.next_review_date : '')
             + (c.decision_notes ? ' · decision: ' + c.decision_notes : '');
+
+        const p = data.portal;
+        $('case-portal').hidden = !p;
+        if (p) {
+            $('case-portal').replaceChildren('Merchant portal: opened from ',
+                el('a', { href: '/application.php?id=' + p.id, text: 'application #' + p.id }),
+                ' · account ' + p.email + (Number(p.is_active) ? '' : ' (switched off)') + ' · two-factor ' + (p.totp_enabled_at ? 'on' : 'off')
+                + ' · terms ' + (p.terms_version ? 'v' + p.terms_version + ' accepted ' + p.terms_accepted_at : 'not accepted')
+                + (p.last_login_at ? ' · last sign-in ' + p.last_login_at : ''));
+        }
 
         $('k-risk').value = c.risk_rating || '';
         $('k-analyst').replaceChildren(el('option', { value: '', text: 'Unassigned' }),
@@ -159,7 +171,8 @@
                 const d = i.document;
                 const fileCell = i.via ? i.via
                     : d ? el('span', {}, [el('a', { href: '/api/onboarding/document?id=' + d.id, text: d.original_name }),
-                        ' · ' + (d.uploaded_by_email || '') + ' · ' + d.uploaded_at + (d.expires_at ? ' · expires ' + d.expires_at : '')
+                        ' · ' + (d.uploaded_by_email || (d.uploaded_by_portal_email ? 'merchant (portal)' : '')) + ' · ' + d.uploaded_at + (d.expires_at ? ' · expires ' + d.expires_at : '')
+                        + (d.scan_status === 'clean' ? ' · antivirus OK' : d.uploaded_by_portal ? ' · not scanned' : '')
                         + (i.history.length ? ' · ' + i.history.length + ' earlier version(s)' : '')])
                     : '';
                 const reviewCell = !d ? ''
@@ -185,7 +198,7 @@
             ? table(['Name', 'Roles', 'Ownership', 'Nationality', 'PEP', 'Screening', 'ID number', ''],
                 data.parties.map((p) => ({
                     className: p.screening_result === 'match' ? 'warn' : null,
-                    cells: [p.full_name, p.roles.map((r) => ROLE_LABEL[r]).join(', '),
+                    cells: [p.full_name + (p.declared_by_portal ? ' (declared by the merchant)' : ''), p.roles.map((r) => ROLE_LABEL[r]).join(', '),
                         p.ownership_pct === null ? '' : Number(p.ownership_pct) + '%', p.nationality || '',
                         Number(p.is_pep) ? 'YES' : 'no',
                         p.screening_result + (p.screened_at ? ' (' + p.screened_at + ')' : '') + (p.screening_reference ? ' · ' + p.screening_reference : ''),

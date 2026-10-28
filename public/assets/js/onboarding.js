@@ -50,6 +50,26 @@
         }
     }
 
+    async function loadApplications() {
+        show($('app-error'), '');
+        try {
+            const { applications } = await api('/api/applications/list?status=' + encodeURIComponent($('a-status').value));
+            $('applications').replaceChildren(applications.length
+                ? table(['Applicant', 'BRN', 'Sector', 'Monthly volume', 'Points to check', 'Status', 'Sent'],
+                    applications.map((a) => ({
+                        className: a.status === 'submitted' && a.flags.length ? 'warn' : null,
+                        cells: [el('a', { href: '/application.php?id=' + a.id, text: a.legal_name + (a.trading_name !== a.legal_name ? ' (' + a.trading_name + ')' : '') }),
+                            a.brn, a.sector_label, a.volume_label, a.flags.length ? String(a.flags.length) : '—',
+                            el('span', { class: 'badge badge-a-' + a.status, text: a.status }), a.submitted_at.slice(0, 16)],
+                    })))
+                : el('p', { class: 'muted', text: 'No application in this selection.' }));
+        } catch (err) {
+            show($('app-error'), err.message);
+        }
+    }
+    $('a-status').addEventListener('change', loadApplications);
+    loadApplications();
+
     $('filters').addEventListener('submit', (e) => { e.preventDefault(); load(); });
     $('f-status').addEventListener('change', load);
     load();

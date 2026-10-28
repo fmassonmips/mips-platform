@@ -14,6 +14,24 @@ require TEMPLATES_PATH . '/partials/app_header.php';
 
     <section class="card">
       <div class="card-head">
+        <h2>Merchant portal applications</h2>
+        <form id="app-filters" class="toolbar" novalidate>
+          <label for="a-status" class="sr-only">Status</label>
+          <select id="a-status" name="status">
+            <option value="submitted">To review</option>
+            <option value="accepted">Accepted</option>
+            <option value="declined">Declined</option>
+            <option value="all">All</option>
+          </select>
+        </form>
+      </div>
+      <p class="muted">Pre-qualifications sent by prospects on the merchant portal. Accepting one creates the merchant and opens its onboarding case.</p>
+      <p id="app-error" class="error" role="alert" hidden></p>
+      <div id="applications"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
         <h2>Onboarding &amp; KYC cases</h2>
         <form id="filters" class="toolbar" novalidate>
           <label for="f-status" class="sr-only">Status</label>

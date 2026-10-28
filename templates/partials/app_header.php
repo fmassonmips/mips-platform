@@ -10,6 +10,7 @@ $nav = [
     'reports'   => ['/reports.php',   'Reports',   'reporting'],
     'billing'   => ['/billing.php',   'Billing',   'billing'],
     'recon'     => ['/recon.php',     'Recon',     'recon'],
+    'terms'     => ['/terms.php',     'Portal terms', 'terms'],
     'users'     => ['/users.php',     'Users',     'users'],
     'audit'     => ['/audit.php',     'Audit log', 'audit'],
 ];

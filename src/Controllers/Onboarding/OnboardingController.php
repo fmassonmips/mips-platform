@@ -25,6 +25,7 @@ use App\Audit;
 use App\Auth;
 use App\Crypto;
 use App\Database;
+use App\Onboarding\DocumentStore;
 use App\Onboarding\Kyc;
 use App\Request;
 use App\Response;
@@ -33,7 +34,6 @@ use PDO;
 final class OnboardingController
 {
     private const ROLES    = ['director', 'ubo', 'signatory', 'shareholder'];
-    private const MIME_EXT = ['application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png'];
 
     private PDO $db;
     private Kyc $kyc;
@@ -171,6 +171,8 @@ final class OnboardingController
             'me'           => (int) $user['id'],
             'ubo_threshold_pct' => (float) ($GLOBALS['config']['kyc']['ubo_threshold_pct'] ?? 25),
             'crypto_ready' => Crypto::configured(),
+            // Merchant portal account behind the case (null when staff opened it).
+            'portal'       => $this->kyc->portalApplication((int) $case['id']),
         ]);
     }
 
@@ -440,59 +442,22 @@ final class OnboardingController
 
         $case = $this->openCase((int) ($_POST['case_id'] ?? 0));
         try {
-            $req = $this->kyc->requirement((string) ($_POST['requirement'] ?? ''));
+            $t = $this->kyc->uploadTarget($case, (string) ($_POST['requirement'] ?? ''), $_POST['party_id'] ?? null, $_POST['expires_at'] ?? null);
         } catch (\RuntimeException $e) {
             Response::json(['error' => $e->getMessage()], 422);
         }
+        $req     = $t['requirement'];
+        $partyId = $t['party_id'];
+        $expires = $t['expires'];
 
-        $partyId = null;
-        if ($req['scope'] === 'party') {
-            $partyId = (int) ($_POST['party_id'] ?? 0);
-            $chk = $this->db->prepare('SELECT 1 FROM kyc_parties WHERE id = :p AND case_id = :c');
-            $chk->execute([':p' => $partyId, ':c' => $case['id']]);
-            if ($chk->fetchColumn() === false) {
-                Response::json(['error' => 'Select the person this document belongs to.'], 422);
-            }
+        try {
+            $stored = (new DocumentStore())->store($case, $req['code'], $partyId, $expires,
+                is_array($_FILES['file'] ?? null) ? $_FILES['file'] : [], (int) $user['id'], null, false);
+        } catch (\RuntimeException $e) {
+            Response::json(['error' => $e->getMessage()], in_array($e->getCode(), [422, 500, 503], true) ? (int) $e->getCode() : 422);
         }
-        $expires = self::date($_POST['expires_at'] ?? null);
-        if ($expires === false || (!empty($req['expires']) && $expires === null)) {
-            Response::json(['error' => 'An expiry date is required for this document.'], 422);
-        }
-        if (is_string($expires) && $expires < date('Y-m-d')) {
-            Response::json(['error' => 'This document has already expired.'], 422);
-        }
-
-        $f = $_FILES['file'] ?? null;
-        if (!is_array($f) || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file((string) $f['tmp_name'])) {
-            Response::json(['error' => 'No file received (or too large for the server).'], 422);
-        }
-        $max = (int) ($GLOBALS['config']['kyc']['max_document_bytes'] ?? 0);
-        if ($max > 0 && (int) $f['size'] > $max) {
-            Response::json(['error' => 'File too large.'], 422);
-        }
-        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file((string) $f['tmp_name']);
-        if (!isset(self::MIME_EXT[$mime])) {
-            Response::json(['error' => 'Accepted formats: PDF, JPEG, PNG.'], 422);
-        }
-
-        $rel  = 'kyc/' . $case['id'] . '/' . bin2hex(random_bytes(16)) . '.' . self::MIME_EXT[$mime];
-        $dest = rtrim((string) $GLOBALS['config']['storage']['path'], '/') . '/' . $rel;
-        if ((!is_dir(dirname($dest)) && !@mkdir(dirname($dest), 0750, true) && !is_dir(dirname($dest)))
-            || !move_uploaded_file((string) $f['tmp_name'], $dest)) {
-            error_log('[KYC] cannot write ' . $dest);
-            Response::json(['error' => 'Document storage is not writable. Contact an administrator.'], 500);
-        }
-        $sha = (string) hash_file('sha256', $dest);
-
-        $this->db->prepare(
-            'INSERT INTO kyc_documents (case_id, requirement, party_id, path, original_name, mime, size, sha256, expires_at, uploaded_by)
-             VALUES (:c, :r, :p, :path, :n, :mime, :size, :sha, :exp, :u)'
-        )->execute([
-            ':c' => $case['id'], ':r' => $req['code'], ':p' => $partyId, ':path' => $rel,
-            ':n' => mb_substr(basename((string) $f['name']), 0, 255), ':mime' => $mime, ':size' => (int) filesize($dest),
-            ':sha' => $sha, ':exp' => $expires, ':u' => (int) $user['id'],
-        ]);
-        $docId = (int) $this->db->lastInsertId();
+        $docId = $stored['id'];
+        $sha   = $stored['sha256'];
         Audit::log('onboarding.document_upload', 'merchant', (int) $case['merchant_id'], [
             'case_id' => (int) $case['id'], 'document_id' => $docId, 'requirement' => $req['code'], 'party_id' => $partyId, 'sha256' => $sha,
         ]);
@@ -542,13 +507,8 @@ final class OnboardingController
         if ($doc['status'] !== 'pending' || (int) $doc['uploaded_by'] !== (int) $user['id']) {
             Response::json(['error' => 'Only your own documents still pending review can be removed. Reviewed documents stay on record.'], 409);
         }
-        $this->db->prepare('DELETE FROM kyc_documents WHERE id = :id')->execute([':id' => $doc['id']]);
         // Files can be shared with an earlier case (periodic review carry-over).
-        $shared = $this->db->prepare('SELECT 1 FROM kyc_documents WHERE path = :p LIMIT 1');
-        $shared->execute([':p' => $doc['path']]);
-        if ($shared->fetchColumn() === false) {
-            @unlink(rtrim((string) $GLOBALS['config']['storage']['path'], '/') . '/' . $doc['path']);
-        }
+        (new DocumentStore())->delete($doc);
         Audit::log('onboarding.document_delete', 'merchant', (int) $case['merchant_id'], ['case_id' => (int) $case['id'], 'document_id' => (int) $doc['id'], 'sha256' => $doc['sha256']]);
         Response::json(['success' => true]);
     }

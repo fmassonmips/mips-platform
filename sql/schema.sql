@@ -533,3 +533,133 @@ CREATE TABLE IF NOT EXISTS kyc_reminders (
     KEY idx_kyc_reminders_case (case_id, sent_at),
     CONSTRAINT fk_kyc_reminders_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Module: merchant portal (phase 2)
+-- Merchant accounts are kept apart from staff accounts (own table, own
+-- session cookie). A merchant only ever reaches the onboarding case opened
+-- from its own application (prequalifications.case_id).
+-- =======================================================================
+
+CREATE TABLE IF NOT EXISTS portal_users (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    email               VARCHAR(254) NOT NULL,
+    password_hash       VARCHAR(255) NOT NULL,
+    password_changed_at DATETIME     NULL,
+    name                VARCHAR(120) NOT NULL,
+    phone               VARCHAR(40)  NULL,
+    is_active           TINYINT(1)   NOT NULL DEFAULT 1,     -- staff can switch an account off
+    email_verified_at   DATETIME     NULL,                   -- no sign-in before the address is confirmed
+    totp_secret         VARBINARY(255) NULL,                 -- encrypted with security.app_key
+    totp_enabled_at     DATETIME     NULL,
+    totp_last_step      BIGINT       NULL,
+    last_login_at       DATETIME     NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_portal_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS portal_recovery_codes (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    portal_user_id  BIGINT UNSIGNED NOT NULL,
+    code_hash       CHAR(64)     NOT NULL,
+    used_at         DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_portal_recovery_codes (portal_user_id, code_hash),
+    CONSTRAINT fk_portal_recovery_codes_user FOREIGN KEY (portal_user_id) REFERENCES portal_users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Email verification and password reset links. Only sha256(token) is stored.
+CREATE TABLE IF NOT EXISTS portal_tokens (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    portal_user_id  BIGINT UNSIGNED NOT NULL,
+    purpose         ENUM('verify','reset') NOT NULL,
+    token_hash      CHAR(64)     NOT NULL,
+    expires_at      DATETIME     NOT NULL,
+    used_at         DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_portal_tokens_hash (token_hash),
+    KEY idx_portal_tokens_user (portal_user_id, purpose),
+    CONSTRAINT fk_portal_tokens_user FOREIGN KEY (portal_user_id) REFERENCES portal_users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Terms of use shown to merchants. A published version is never edited:
+-- a change is a new version, which every merchant must accept again.
+CREATE TABLE IF NOT EXISTS terms_versions (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    version         VARCHAR(20)  NOT NULL,
+    title           VARCHAR(200) NOT NULL,
+    body            MEDIUMTEXT   NOT NULL,                   -- plain text, shown as is
+    body_sha256     CHAR(64)     NOT NULL,
+    published_by    BIGINT UNSIGNED NULL,
+    published_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_terms_versions_version (version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Consent log: who accepted which text (its hash), when, from where.
+CREATE TABLE IF NOT EXISTS terms_acceptances (
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    portal_user_id    BIGINT UNSIGNED NOT NULL,
+    terms_version_id  BIGINT UNSIGNED NOT NULL,
+    body_sha256       CHAR(64)     NOT NULL,
+    accepted_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ip_address        VARCHAR(45)  NULL,
+    user_agent        VARCHAR(255) NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_terms_acceptances (portal_user_id, terms_version_id),
+    CONSTRAINT fk_terms_acceptances_user FOREIGN KEY (portal_user_id) REFERENCES portal_users (id),
+    CONSTRAINT fk_terms_acceptances_version FOREIGN KEY (terms_version_id) REFERENCES terms_versions (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pre-qualification filled in by the prospect. Staff accept it (which
+-- creates or links the merchant and opens the onboarding case) or decline it.
+-- 'flags' are computed for the analyst only and never shown to the merchant.
+CREATE TABLE IF NOT EXISTS prequalifications (
+    id                       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    portal_user_id           BIGINT UNSIGNED NOT NULL,
+    status                   ENUM('submitted','accepted','declined') NOT NULL DEFAULT 'submitted',
+    legal_name               VARCHAR(255) NOT NULL,
+    trading_name             VARCHAR(255) NOT NULL,
+    brn                      VARCHAR(32)  NOT NULL,
+    vat_number               VARCHAR(32)  NULL,
+    country_of_incorporation VARCHAR(60)  NOT NULL,
+    registered_address       TEXT         NOT NULL,
+    sector                   VARCHAR(40)  NOT NULL,
+    products_services        TEXT         NOT NULL,
+    website                  VARCHAR(255) NULL,
+    countries_of_operation   VARCHAR(255) NOT NULL,
+    monthly_volume_band      VARCHAR(20)  NOT NULL,
+    average_ticket_mur       DECIMAL(12,2) NOT NULL,
+    payment_methods          SET('card','qr','push','ecommerce','pos') NOT NULL,
+    contact_name             VARCHAR(120) NOT NULL,
+    contact_role             VARCHAR(120) NULL,
+    contact_phone            VARCHAR(40)  NOT NULL,
+    is_regulated             TINYINT(1)   NOT NULL DEFAULT 0,
+    regulator                VARCHAR(120) NULL,
+    flags                    JSON         NULL,
+    submitted_at             DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_by               BIGINT UNSIGNED NULL,
+    decided_at               DATETIME     NULL,
+    decision_note            VARCHAR(1000) NULL,          -- internal
+    merchant_id              BIGINT UNSIGNED NULL,
+    case_id                  BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    KEY idx_prequalifications_status (status, submitted_at),
+    KEY idx_prequalifications_user (portal_user_id),
+    CONSTRAINT fk_prequalifications_user FOREIGN KEY (portal_user_id) REFERENCES portal_users (id),
+    CONSTRAINT fk_prequalifications_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id),
+    CONSTRAINT fk_prequalifications_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Documents and people the merchant provided itself through the portal.
+ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS uploaded_by_portal BIGINT UNSIGNED NULL AFTER uploaded_by;
+-- 'clean' = passed the antivirus; 'not_scanned' = no scanner configured.
+ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS scan_status ENUM('clean','not_scanned') NULL AFTER sha256;
+ALTER TABLE kyc_parties ADD COLUMN IF NOT EXISTS declared_by_portal BIGINT UNSIGNED NULL AFTER notes;
+-- Set when the merchant tells MIPS its file is complete; cleared when the
+-- case goes back to collecting.
+ALTER TABLE onboarding_cases ADD COLUMN IF NOT EXISTS merchant_submitted_at DATETIME NULL AFTER submitted_at;

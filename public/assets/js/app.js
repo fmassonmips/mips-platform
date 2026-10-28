@@ -9,6 +9,9 @@
     'use strict';
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    // The merchant portal sets its own sign-in page and logout endpoint on <body>.
+    const loginUrl  = document.body.dataset.login || '/login.php';
+    const logoutUrl = document.body.dataset.logout || '/api/auth/logout';
 
     async function api(url, options) {
         const opts = Object.assign({ method: 'GET' }, options || {});
@@ -20,11 +23,15 @@
         }
         const res = await fetch(url, { method: opts.method, credentials: 'same-origin', headers: headers, body: body });
         if (res.status === 401) {
-            window.location.assign('/login.php');
+            window.location.assign(loginUrl);
             throw new Error('Session expired.');
         }
         let data = {};
         try { data = await res.json(); } catch (_) { /* ignore */ }
+        if (res.status === 403 && data.redirect) {
+            window.location.assign(data.redirect);
+            throw new Error(data.error || 'Redirecting.');
+        }
         if (!res.ok) {
             throw new Error(data.error || 'Request failed (' + res.status + ').');
         }
@@ -84,7 +91,7 @@
         logoutBtn.addEventListener('click', async function () {
             logoutBtn.disabled = true;
             try {
-                await fetch('/api/auth/logout', {
+                await fetch(logoutUrl, {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Accept': 'application/json', 'X-CSRF-Token': csrfToken },
@@ -92,7 +99,7 @@
             } catch (_) {
                 // Fall through — we redirect regardless.
             }
-            window.location.assign('/login.php');
+            window.location.assign(loginUrl);
         });
     }
 })();

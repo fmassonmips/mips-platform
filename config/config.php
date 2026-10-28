@@ -78,6 +78,8 @@ return [
         'merchants' => ['admin', 'finance'],
         'recon'     => ['admin', 'finance'],
         'onboarding' => ['admin', 'finance'],
+        // Publishing the merchant portal terms of use.
+        'terms'     => ['admin'],
     ],
 
     'storage' => [
@@ -132,7 +134,8 @@ return [
             ['code' => 'vat',             'label' => 'VAT registration certificate (if registered)',        'scope' => 'case',  'required' => false],
             ['code' => 'website',         'label' => 'Website terms, refund and privacy policies (e-commerce)', 'scope' => 'case', 'required' => false],
             // Satisfied automatically by a signed contract with a PDF on the merchant record.
-            ['code' => 'contract',        'label' => 'Signed MIPS merchant agreement',                      'scope' => 'case',  'required' => true],
+            // 'portal_optional': the merchant can send its file without it (MIPS issues the agreement).
+            ['code' => 'contract',        'label' => 'Signed MIPS merchant agreement',                      'scope' => 'case',  'required' => true, 'portal_optional' => true],
             ['code' => 'id',              'label' => 'Identity document (passport or national ID)',         'scope' => 'party', 'required' => true, 'expires' => true],
             ['code' => 'address_proof',   'label' => 'Proof of residential address (less than 3 months)',   'scope' => 'party', 'required' => true],
         ],
@@ -148,6 +151,42 @@ return [
         // Roles allowed to approve or reject a case (four eyes: never the assigned analyst).
         'approver_roles'      => ['admin'],
         'max_document_bytes'  => 20 * 1024 * 1024,
+    ],
+
+    // Merchant portal (/portal/): prospects create an account, accept the
+    // terms of use, fill in the pre-qualification and upload their KYC
+    // documents. Lists marked [COMPLIANCE] must be validated by the
+    // compliance officer before go-live.
+    'portal' => [
+        // Separate session cookie: a merchant session never carries staff rights.
+        'session_name'           => 'MIPSPORTAL',
+        'verify_link_hours'      => 48,
+        'registrations_per_hour' => 5,      // per IP address
+        'max_uploads_per_hour'   => 30,     // per merchant account
+        'max_documents_per_case' => 200,
+        // Antivirus for merchant uploads. Command run with the file path as last
+        // argument; exit code 0 = clean, 1 = infected, anything else = error (upload refused).
+        // Example: ['/usr/bin/clamdscan', '--no-summary', '--fdpass']
+        'antivirus_command'      => null,
+        // true in production: merchant uploads are refused while no scanner is configured.
+        'require_antivirus'      => false,
+        'sectors' => [
+            'retail' => 'Retail', 'hospitality' => 'Hotels and restaurants', 'travel' => 'Travel and tourism',
+            'ecommerce' => 'Online shop', 'utilities' => 'Utilities and telecoms', 'education' => 'Education',
+            'health' => 'Health', 'professional' => 'Professional services', 'public' => 'Public sector',
+            'nonprofit' => 'Charity / non-profit', 'gambling' => 'Gaming and betting', 'crypto' => 'Virtual assets',
+            'money_services' => 'Money transfer / exchange', 'other' => 'Other',
+        ],
+        // [COMPLIANCE] Sectors flagged to the analyst for enhanced review.
+        'high_risk_sectors' => ['gambling', 'crypto', 'money_services', 'nonprofit'],
+        'volume_bands' => [
+            'lt_250k' => 'Under MUR 250,000', '250k_1m' => 'MUR 250,000 to 1 million',
+            '1m_5m' => 'MUR 1 to 5 million', 'gt_5m' => 'Over MUR 5 million',
+        ],
+        // [COMPLIANCE] Expected monthly volume bands flagged to the analyst.
+        'flag_volume_bands' => ['gt_5m'],
+        // Incorporation or operation outside this country is flagged.
+        'home_country' => 'Mauritius',
     ],
 
     'merchants' => [

@@ -60,6 +60,28 @@ final class RateLimiter
         $stmt->execute([':ip' => $ip, ':email' => $email]);
     }
 
+    /**
+     * Count every event (success or not) recorded under a key within the
+     * window. Used for quotas such as portal registrations per IP.
+     */
+    public static function countKey(string $key, int $window): int
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM login_attempts WHERE email = :k AND attempted_at >= :since'
+        );
+        $stmt->execute([':k' => $key, ':since' => date('Y-m-d H:i:s', time() - $window)]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Record a quota event under a key. Stored as a success so that it never
+     * counts towards the failed-login limit of the same IP address.
+     */
+    public static function hit(string $ip, string $key): void
+    {
+        self::record($ip, $key, true);
+    }
+
     /** Wipe attempts recorded under one exact key, e.g. "2fa:user@example.com". */
     public static function clearKey(string $key): void
     {

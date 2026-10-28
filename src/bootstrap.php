@@ -63,5 +63,11 @@ if ($isHttps) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
-// Start the secure session.
-App\Session::start($config['session']);
+// Start the secure session. Merchant portal entry points define PORTAL
+// before including this file: they get their own session cookie, so a
+// merchant session and a staff session never share state.
+$sessionConfig = $config['session'];
+if (defined('PORTAL')) {
+    $sessionConfig['name'] = (string) ($config['portal']['session_name'] ?? 'MIPSPORTAL');
+}
+App\Session::start($sessionConfig);
