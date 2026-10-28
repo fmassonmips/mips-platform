@@ -20,7 +20,7 @@ final class Catalog
 {
     /** @var array<string,array{name:string,domain:string,tagline:string,status:string}> */
     private const MODULES = [
-        'bizpilot'    => ['name' => 'BizPilot',    'domain' => 'bizpilot.mu',     'tagline' => 'Gestion des PME',         'status' => 'coming_soon'],
+        'bizpilot'    => ['name' => 'BizPilot',    'domain' => 'bizpilot.mu',     'tagline' => 'Tableau de bord',         'status' => 'available'],
         'bookora'     => ['name' => 'Bookora',     'domain' => 'bookora.com',     'tagline' => 'Réservations en ligne',   'status' => 'coming_soon'],
         'facturo'     => ['name' => 'Facturo',     'domain' => 'facturo.mu',      'tagline' => 'Devis & factures',        'status' => 'available'],
         'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'coming_soon'],

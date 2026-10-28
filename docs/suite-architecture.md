@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio** et **FlowDesk** sont disponibles. Les 5 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk** et **BizPilot** sont disponibles. Les 4 autres apps sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -143,6 +143,21 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 | ClientBloom | Fiche fidélité reconnue par téléphone ou e-mail, affichée à côté du ticket. |
 
 **Hors périmètre :** réception des e-mails (boîte support), réponses types, délais contractuels (SLA) avec alertes, pièces jointes, satisfaction après résolution.
+
+## BizPilot (tableau de bord)
+
+Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
+
+| Bloc | Contenu (mois choisi, comparé au précédent) |
+|---|---|
+| À faire | Factures en retard (montant), devis envoyés depuis plus de 14 jours, documents non fiscalisés MRA, rendez-vous du jour, tickets sans réponse. |
+| Facturation | Facturé TTC et HT (avoirs déduits), factures marquées payées, impayés et retard (nets des avoirs), devis en attente et taux d'acceptation, graphique 6 mois facturé / payé, meilleurs clients. Montants en MUR ; documents en devise étrangère signalés à part. |
+| Rendez-vous | Nombre, part en ligne, annulations, taux d'absence, valeur des prestations honorées (prix affiché). |
+| Fidélité | Ventes via le programme, nouveaux clients, cashback émis / utilisé / en circulation. |
+| Satisfaction | Score NPS et note moyenne sur toutes les réponses du mois, nombre de réponses. |
+| Support | Tickets reçus et résolus, délai moyen de première réponse, file à traiter. |
+
+« Factures payées » se fonde sur la date à laquelle la facture est marquée payée (pas de suivi des paiements partiels ni des encaissements bancaires).
 
 ## Lien Facturo → ClientBloom
 
