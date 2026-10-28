@@ -33,7 +33,7 @@ $label   = static fn (DateTimeImmutable $d): string => $months[(int) $d->format(
 $short   = static fn (string $ym): string => mb_substr($months[(int) substr($ym, 5, 2)], 0, 4) . '.';
 
 $on = [];
-foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal'] as $slug) {
+foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal', 'staffzen'] as $slug) {
     $on[$slug] = Modules::isEnabled($org['id'], $slug);
 }
 $rs = static fn (int $c): string => Money::format($c, 'MUR');
@@ -123,6 +123,14 @@ if ($on['shoplokal']) {
     }
     if (($low = \App\ShopLokal\Products::lowStock($org['id'])) !== []) {
         $todo[] = [count($low) . ' produit(s) en stock bas dans la boutique', '/app.php?m=shoplokal&p=products', 'warn'];
+    }
+}
+if ($on['staffzen']) {
+    if (($lv = \App\StaffZen\Leaves::pendingCount($org['id'])) > 0) {
+        $todo[] = [$lv . ' demande(s) de congé à valider', '/app.php?m=staffzen&p=approvals', 'warn'];
+    }
+    if ($isNow && ($away = \App\StaffZen\Leaves::awayToday($org['id'])) !== []) {
+        $todo[] = ['Absent(s) aujourd\'hui : ' . implode(', ', array_map(static fn (string $n, string $h): string => $n . ($h !== '' ? ' (' . $h . ')' : ''), array_keys($away), $away)), '/app.php?m=staffzen&p=planning', 'info'];
     }
 }
 if ($on['teamnest'] && ($late = \App\TeamNest\Tasks::overdueCount($org['id'])) > 0) {

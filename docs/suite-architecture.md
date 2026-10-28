@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest** et **ShopLokal** sont disponibles. StaffZen et Bookora sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest**, **ShopLokal** et **StaffZen** sont disponibles. Bookora sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -186,6 +186,23 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** paiement par carte, variantes (taille, couleur), codes promo, zones de livraison, plusieurs photos, export.
 
+## StaffZen (congés & absences)
+
+| Élément | Règle |
+|---|---|
+| Décompte | En demi-journées, sur les jours travaillés de l'entreprise (lundi–vendredi par défaut), jours fériés exclus ; figé sur la demande (changer les jours travaillés ou les fériés ne recalcule pas l'existant). Une demande tient dans une année civile et 92 jours au plus. |
+| Types | Par défaut : congé annuel 20 j/an, congé maladie 15 j/an, sans solde non décompté. **Valeurs courantes à Maurice, à vérifier** avec les contrats et le Workers' Rights Act. Droit modifiable par personne et par année (arrivée en cours d'année, report). |
+| Fériés | Fêtes à date fixe de Maurice ajoutées en un clic (à vérifier chaque année) ; fêtes mobiles saisies à la main d'après la liste officielle. |
+| Demande | Le membre demande pour lui-même (jusqu'à 30 jours en arrière, pour une maladie) ; refus en cas de chevauchement (sauf matin + après-midi), de solde insuffisant (attente comprise) ou sans jour travaillé. Vérification sous verrou : deux demandes simultanées ne dépassent pas le solde. |
+| Validation | Owner/admin accordent ou refusent avec commentaire ; un admin ne valide pas sa propre demande (le propriétaire, si). « Enregistrer une absence » pour quelqu'un : accordée directement. |
+| Annulation | La personne annule une demande en attente ou un congé pas encore commencé ; un responsable annule tout. Le solde est rendu. |
+| E-mails | Nouvelle demande → responsables ; décision, absence enregistrée ou annulée par un responsable → la personne ; congé accordé annulé par la personne → responsables. |
+| Planning | Mois par personne (accordé / en attente / demi-journée, week-ends et fériés grisés) et « absents aujourd'hui ». Un membre voit « Absent » chez ses collègues, pas le type (maladie) ; les responsables voient le type. |
+| Équipe | Retirer quelqu'un annule ses demandes en attente ; ses absences passées restent. |
+| BizPilot | Demandes à valider et absents du jour dans « À faire ». |
+
+**Hors périmètre :** paie, pointage, report automatique du solde d'une année sur l'autre, acquisition au prorata, pièces jointes (certificat médical), export.
+
 ## BizPilot (tableau de bord)
 
 Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
@@ -241,6 +258,7 @@ mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
 mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
 mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 mysql -u root -p mips_platform < sql/migrations/015_team.sql
+mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
 ```
 
 Puis dans `config/config.php` :

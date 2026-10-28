@@ -664,3 +664,37 @@ input[type="time"] {
 /* -------- Team -------- */
 .invite-done { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-border); }
 .invite-done .success { margin-top: 0; }
+
+/* -------- StaffZen -------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.status[class*="status--sz-"] { text-transform: none; }
+.status--sz-pending   { background: #fff6e0; color: #8a5a00; }
+.status--sz-approved  { background: #e5f5ea; color: #1a7f37; }
+.status--sz-refused   { background: #fdecea; color: var(--color-error); }
+.status--sz-cancelled { background: #f1f2f4; color: var(--color-muted); }
+.sz-queue { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.sz-queue-item { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--color-border); border-left: 4px solid #d99a00; border-radius: 8px; }
+.sz-decide { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sz-decide input { width: 220px; }
+.sz-cal-wrap { overflow-x: auto; }
+.sz-cal { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+.sz-cal th, .sz-cal td { border: 1px solid var(--color-border); text-align: center; padding: 0; min-width: 24px; height: 30px; }
+.sz-cal thead th { font-weight: 600; padding: 2px 0; line-height: 1.2; }
+.sz-cal thead th span { display: block; font-weight: 400; color: var(--color-muted); font-size: 11px; }
+.sz-cal .sz-name { text-align: left; padding: 0 10px; white-space: nowrap; font-size: 13px; position: sticky; left: 0; background: var(--color-surface); z-index: 1; }
+.sz-cal .is-off { background: #f1f2f4; }
+.sz-cal .is-today { box-shadow: inset 0 0 0 2px var(--color-primary); }
+.sz-cal .sz-approved { background: #6cc28a; color: #fff; font-weight: 700; }
+.sz-cal .sz-pending { background: repeating-linear-gradient(45deg, #ffe7a8, #ffe7a8 4px, #fff6e0 4px, #fff6e0 8px); color: #8a5a00; font-weight: 700; }
+.sz-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sz-key { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--color-border); border-radius: 3px; margin-left: 8px; }
+.sz-key.sz-approved { background: #6cc28a; }
+.sz-key.sz-pending { background: #ffe7a8; }
+.sz-key.is-off { background: #f1f2f4; }
+.sz-allow { width: 72px !important; padding: 4px 6px !important; display: inline-block; }
+.sz-balances td { vertical-align: top; }
+.sz-days { display: flex; gap: 4px 16px; flex-wrap: wrap; }
+.sz-holidays { list-style: none; padding: 0; margin: 0 0 12px; columns: 2 260px; }
+.sz-holidays li { padding: 2px 0; break-inside: avoid; }
+.sz-holiday-btn { align-self: end; }
+[data-half-field][hidden] { display: none; }

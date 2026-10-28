@@ -6,8 +6,9 @@
  * so an e-mail whose account already belongs to a company cannot be invited.
  * The owner manages admins; admins manage members. The invitation link holds
  * a random token whose SHA-256 alone is stored. Removing someone deactivates
- * their account (their name stays on past work) and unassigns their open
- * tasks and tickets. Times are Mauritius local time, written by the application.
+ * their account (their name stays on past work), unassigns their open tasks
+ * and tickets and cancels their pending leave requests. Times are Mauritius
+ * local time, written by the application.
  */
 declare(strict_types=1);
 
@@ -280,6 +281,8 @@ final class Team
                 ->execute([':oid' => $org['id'], ':u' => $userId]);
             $pdo->prepare('UPDATE flowdesk_tickets SET assignee_id = NULL WHERE organization_id = :oid AND assignee_id = :u AND status IN (\'open\', \'pending\')')
                 ->execute([':oid' => $org['id'], ':u' => $userId]);
+            $pdo->prepare('UPDATE staffzen_requests SET status = \'cancelled\', decided_by = :by, decided_at = :at WHERE organization_id = :oid AND user_id = :u AND status = \'pending\'')
+                ->execute([':by' => $actorId, ':at' => Booking::now()->format('Y-m-d H:i:s'), ':oid' => $org['id'], ':u' => $userId]);
             $pdo->commit();
         } catch (\Throwable $e) {
             $pdo->rollBack();

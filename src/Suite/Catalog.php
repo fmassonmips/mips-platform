@@ -26,7 +26,7 @@ final class Catalog
         'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'available'],
         'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'available'],
         'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'available'],
-        'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'coming_soon'],
+        'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'available'],
         'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'available'],
         'rendezvous'  => ['name' => 'RendezVous',  'domain' => 'rendezvous.mu',   'tagline' => 'Prise de rendez-vous',    'status' => 'available'],
         'flowdesk'    => ['name' => 'FlowDesk',    'domain' => 'flowdesk.com',    'tagline' => 'Support client',          'status' => 'available'],
