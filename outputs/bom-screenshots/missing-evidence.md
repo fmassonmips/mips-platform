@@ -1,6 +1,7 @@
 # Preuves manquantes — dossier SPIN DIGITAL / BoM
 
-Constat établi le 2026-10-27 sur le dépôt `mips-platform` (commit `590d8d8`, prototype non déployé).
+Constat établi le 2026-10-27 sur le dépôt `mips-platform` (commit `590d8d8`, prototype non déployé),
+**mis à jour le 2026-10-28** après l'ajout du portail marchand (commit `d91d250`, toujours non déployé).
 Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS de production. Ces écrans doivent
 être recherchés dans le système réel (back-office V3, portail marchand) avant de conclure qu'ils n'existent pas.
 
@@ -8,11 +9,11 @@ Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS 
 
 | Vue | État dans le prototype | À fournir |
 |---|---|---|
-| S01 Connexion + T&Cs | Connexion et 2FA présentes (personnel). **Acceptation des T&Cs absente** : pas de version de conditions, pas de trace de consentement. | Captures du portail marchand réel avec l'étape d'acceptation, la version des conditions et la trace horodatée du consentement. |
-| S02 Parcours d'onboarding | Présent, **vue interne seulement**. | Vue côté marchand (feuille de route / étapes), si elle existe. |
-| S03 Préqualification | **Absent.** Fiche marchand interne sans activité, pays, volumes attendus ni moyens de paiement. | Formulaire de pré-check vu par le prospect, dans le système réel. |
-| S04 Collecte KYB | Présent, **vue interne seulement** ; dépôt fait par le personnel. | Écran d'upload côté marchand avec la liste des pièces, si elle existe. |
-| S05 Portail général | **Pas de portail marchand** ; seule la navigation du back-office existe. | Espace marchand réel (navigation, contexte marchand, rôle). |
+| S01 Connexion + T&Cs | **Présent dans le prototype** (S01c–f) : compte marchand, double authentification obligatoire, acceptation des conditions par version, journal du consentement. **Texte des conditions = remplissage.** | Le **texte réel** des conditions, validé par le juridique, puis une nouvelle capture. Si le dossier doit montrer le système en service : captures de la plateforme réelle. |
+| S02 Parcours d'onboarding | **Présent** : vue interne (S02a–b) et vue du prospect (S02c–d). Étape « décision » non illustrée côté marchand. | Rien d'obligatoire. Option : capture d'un dossier approuvé vu par le marchand. |
+| S03 Préqualification | **Présent dans le prototype** (S03a–b). Signaux pour l'analyste seulement ; pas de notation de risque automatique. | Validation par la conformité des secteurs sensibles et de la tranche de volume signalée ; règles d'éligibilité à formaliser. |
+| S04 Collecte KYB | **Présent** : vue interne (S04a–b) et dépôt par le marchand (S04c–d). **Aucun antivirus installé** dans la démo. | Installer et activer l'antivirus avant toute mise en service, et refaire la capture S04d (pièces « clean » au lieu de « not scanned »). |
+| S05 Portail général | **Partiel** : portail marchand limité à l'entrée en relation (S05b) ; navigation du back-office (S05). | Espace d'un **marchand actif** (transactions, relevés, règlements) : n'existe pas dans le prototype. |
 | S06 Dashboard marchand | **Absent** ; seul un rapport interne agrégé existe. | Capture 1 (back-office V3) ou dashboard marchand réel, en distinguant volume traité, fonds encaissés, fonds reçus et montants réglés. |
 | S07 Règlement | Rapprochement acquéreur ↔ plateforme présent ; **pas de rapprochement trust, pas de validation de règlement**. | Rapprochement du compte trust (fonds reçus vs droits des marchands) et circuit de validation des règlements. |
 
@@ -20,21 +21,24 @@ Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS 
 
 | Contrôle | État dans le prototype |
 |---|---|
-| Screening AML (sanctions, PEP, adverse media) | **Partiel** : résultat et référence de contrôle sanctions/PEP **saisis à la main** par personne (S04b). Aucun outil de filtrage connecté, **pas d'adverse media**, aucun filtrage continu ni re-screening automatique. |
+| Screening AML (sanctions, PEP, adverse media) | **Partiel** : résultat et référence de contrôle sanctions/PEP **saisis à la main** par personne (S04b). Le prospect peut déclarer une personne PEP sur le portail (il ne peut pas retirer ce statut), et toute modification d'identité remet le contrôle à faire. Aucun outil de filtrage connecté, **pas d'adverse media**, aucun filtrage continu ni re-screening automatique. |
 | Surveillance des transactions / antifraude | **Absent** : aucune règle, aucune alerte, aucun score. Le reporting signale seulement des anomalies de volume (« spike » d'un marchand), ce qui n'est pas un dispositif AML. |
 | Trust, droits des marchands, contrôle des règlements | **Absent** : pas de grand livre des droits des marchands, pas de rapprochement du compte trust, pas de circuit de validation des paiements aux marchands. |
 | Remboursements et chargebacks | **Absent** : les remboursements sont seulement comptés dans le reporting. Aucun traitement, aucune gestion de litige. |
 | Réclamations et suivi des échéances | **Absent** : pas de registre de réclamations ni de délais de traitement. Le seul suivi d'échéances existant porte sur les dossiers KYC et les préavis de contrats. |
-| Rôles, permissions, séparation préparateur/approbateur | **Présent** (C01, C03, C04) : 3 rôles ; accès par module ; double regard sur l'acceptation des pièces KYC et sur l'approbation des dossiers. Pas de séparation préparateur/approbateur sur la facturation ni sur le rapprochement. |
-| Journal d'audit | **Présent** (C02) : en ajout seul, avec filtres. Inaltérabilité dépendant des droits de la base de données. |
+| Rôles, permissions, séparation préparateur/approbateur | **Présent** (C01, C03, C04, C05) : 3 rôles pour le personnel ; comptes marchands séparés, chacun limité à son propre dossier ; accès par module ; publication des conditions réservée aux administrateurs ; double regard sur l'acceptation des pièces KYC et sur l'approbation des dossiers. Pas de séparation préparateur/approbateur sur la facturation ni sur le rapprochement. |
+| Journal d'audit | **Présent** (C02 ; actions du marchand visibles dans l'historique du dossier, S04d) : en ajout seul, avec filtres. Inaltérabilité dépendant des droits de la base de données. |
 
 ## 3. Spécifications à rédiger séparément (non implémentées ici)
 
-Proposées pour décision, **sans implémentation dans le cadre de cette demande** :
+Les points 1 à 3 de la version du 2026-10-27 (acceptation des conditions, portail marchand pour l'entrée en
+relation, préqualification) ont été **implémentés dans le prototype** le 2026-10-28, à la demande expresse
+du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10). Restent à spécifier,
+**sans implémentation dans le cadre de cette demande** :
 
-1. **Acceptation des T&Cs** : versionnement des conditions, acceptation obligatoire à la première connexion et à chaque nouvelle version, journal du consentement (utilisateur, version, horodatage, IP).
-2. **Portail marchand** : espace sécurisé pour le prospect et le marchand, avec pré-check, suivi des étapes, upload des pièces KYB et dashboard.
-3. **Formulaire de préqualification** : identité, activité et produits, pays, volumes attendus, moyens de paiement, avec règles d'éligibilité et de risque initial.
+1. **Espace du marchand actif** : transactions, relevés, règlements, remboursements, gestion des utilisateurs du marchand.
+2. **Texte des conditions d'utilisation** (juridique) et règles d'éligibilité de la préqualification (conformité).
+3. **Antivirus** des pièces déposées : installation, supervision, procédure en cas de détection.
 4. **Trust et règlement** : grand livre des droits des marchands, rapprochement quotidien du compte trust, circuit de validation des règlements en double regard.
 5. **Surveillance des transactions** : règles et seuils, file d'alertes, investigation, déclaration de soupçon.
 6. **Remboursements, chargebacks, réclamations** : registres, statuts, délais, escalade.
@@ -43,6 +47,8 @@ Proposées pour décision, **sans implémentation dans le cadre de cette demande
 ## 4. Points à vérifier avant insertion dans B01 / G01
 
 - Légendes : utiliser les **légendes exactes** du registre, pas les légendes génériques demandées, partout où elles surestiment la fonction (S01, S05, S06, S07).
-- Bandeau DEMO : il doit rester visible sur toute image insérée.
+- Bandeau DEMO : il doit rester visible sur toute image insérée. Les captures du portail portent la build `d91d250`, les autres la build `590d8d8` : ne pas les présenter comme une seule et même version.
+- S01f et C05 montrent un **texte de conditions de remplissage** : à remplacer par une capture du texte réel avant tout dépôt, ou à légender comme tel.
+- Le portail marchand **n'est pas déployé** : ne pas le présenter comme opérationnel ni comme un service SPIN.
 - Références MIPS INTERNATIONAL / FSC dans B01 et G01 : **non vérifiées**, je n'ai pas eu ces documents.
 - Toute capture d'un système réel doit masquer les données personnelles et bancaires, les clés API, les tokens et les certificats.
