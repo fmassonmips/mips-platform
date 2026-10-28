@@ -33,6 +33,20 @@ my.mips.mu
 - Le profil entreprise (raison sociale, BRN, n° TVA, adresse) est partagé par toutes les apps (`/api/suite/organization`).
 - Interface en français, formats mauriciens à l'affichage : montants en roupies « Rs 1,234.50 » (autres devises : code ISO, « EUR 1,234.50 »), dates « 26/10/2026 », heures sur 24 h (`App\Format`, `Money::format`). Stockage, champs de saisie, flux MRA et exports CSV restent en ISO (`2026-10-26`, `1234.50`).
 
+## Équipe (invitations)
+
+Page `/team.php`, liée depuis le lanceur. Code : `src/Suite/Team.php`.
+
+| Élément | Règle |
+|---|---|
+| Rôles | Propriétaire : tout. Administrateur : réglages, catalogue, facturation, invitation de membres. Membre : travail courant. Le propriétaire invite et nomme les administrateurs ; les administrateurs invitent et retirent les membres. |
+| Invitation | Par e-mail, lien personnel valable 7 jours, à usage unique ; le lien est aussi affiché pour l'envoyer par WhatsApp. Seule l'empreinte SHA-256 du jeton est stockée. Renvoyer remplace l'ancien lien (pas avant 10 minutes) ; 20 invitations par jour et par entreprise. |
+| Acceptation | La personne choisit son nom et son mot de passe ; son compte est créé actif (pas de validation manuelle) et elle est connectée. Deux ouvertures simultanées du lien : un seul compte. |
+| Une entreprise par compte | Une adresse dont le compte appartient déjà à une entreprise ne peut pas être invitée (pas encore de changement d'entreprise). Un compte sans entreprise (inscrit non validé, ou retiré d'une équipe) est réactivé avec le nouveau mot de passe. |
+| Retrait | Accès coupé immédiatement (compte désactivé), tâches TeamNest non terminées et tickets FlowDesk ouverts désassignés ; son nom reste sur le travail passé. Le propriétaire ne peut pas être retiré ni changer de rôle. |
+
+**Hors périmètre :** transfert de propriété, appartenance à plusieurs entreprises, connexion par Google, double authentification.
+
 ## Facturo (devis & factures)
 
 | Élément | Règle |
@@ -226,6 +240,7 @@ mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
 mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
 mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
+mysql -u root -p mips_platform < sql/migrations/015_team.sql
 ```
 
 Puis dans `config/config.php` :
@@ -245,4 +260,3 @@ Cron :
 - Ordre de construction des apps suivantes ; sort de Bookora face à RendezVous.
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
-- Invitation de collègues dans une entreprise (pas encore d'écran).
