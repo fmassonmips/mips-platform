@@ -37,6 +37,16 @@
   (9 à 10 entrées de menu) — visible sur C01–C05. Non corrigé.
 - Résolution : 1360 px de large, densité ×2 (fichiers ≈ 2720 px), lisibles à l'impression.
 - **Dates de capture** : 2026-10-27 (build `590d8d8`) et 2026-10-28 (build `d91d250`), voir ci-dessus.
+- **Mise à jour du 2026-10-30 — aucune nouvelle capture.** Depuis la build `d91d250`, le code a changé
+  **côté serveur uniquement** (aucun écran, gabarit, script ni style modifié) :
+  - blocage des connexions **par compte** après 5 échecs ; une adresse IP n'est bloquée qu'au-delà de 50 échecs,
+    tous comptes confondus. Avant, 5 échecs depuis une adresse IP bloquaient tous les comptes derrière elle ;
+  - fermeture des autres sessions au changement de mot de passe, désormais garantie même pour deux changements
+    dans la même seconde ;
+  - ajout de suites de tests automatiques (`tests/`), voir la section en fin de registre.
+
+  Aucune capture ne montre ces comportements : les images restent fidèles à l'interface actuelle. Elles portent
+  toutefois le numéro de leur build (`590d8d8` ou `d91d250`), **pas** celui de la version courante de la branche.
 
 ---
 
@@ -157,6 +167,32 @@
 | `C03-approved-case-four-eyes-decision.png` | Dossier approuvé : décision par un administrateur différent de l'analyste, note de décision, date de prochaine revue fixée selon le risque | admin | Mêmes réserves que S02 ; horodatages scriptés. | *KYB case approved under four-eyes control, with next review date* |
 | `C04-case-under-review-approver-view.png` | Dossier soumis vu par un approbateur : contrôles passés, boutons Approve / Reject | admin | Vue interne. | *Case under review: approver view* |
 | `C05-terms-versions-consent-count.png` | Versions des conditions d'utilisation du portail (non modifiables une fois publiées), nombre d'acceptations, empreinte sha256 du texte, publication d'une nouvelle version réservée aux administrateurs (build `d91d250`) | admin | **Texte de remplissage**, pas les conditions MIPS. Une seule version publiée. | *Versioned terms of use and acceptance record* |
+
+## Vérification automatique des fonctions montrées (2026-10-30)
+
+Huit suites de tests (`tests/run_tests.sh`, 478 vérifications) pilotent l'application par son API, sur une base
+jetable et des données **uniquement fictives**. Elles vérifient le **code du prototype**, pas un système en
+production. Le tableau indique, pour chaque capture, si le comportement montré est vérifié automatiquement.
+
+| Capture | Suite | Ce qui est vérifié | Non couvert |
+|---|---|---|---|
+| S01a–b | `admin_test.py` | Connexion avec second facteur TOTP, refus d'un code déjà utilisé, codes de secours à usage unique, blocage d'un compte après 5 échecs | **2FA obligatoire pour admin et finance** : désactivée dans la configuration de test |
+| S01c–f | `portal_test.py` | Confirmation de l'email, même réponse si l'adresse existe, 2FA obligatoire avant tout accès, acceptation de la version courante des conditions, journal (empreinte, IP, navigateur), nouvelle acceptation exigée à chaque nouvelle version | — |
+| S02a | `staff_onboarding_test.py` | Ouverture d'un dossier, retour en collecte | Liste et filtres de l'écran |
+| S02b, C03, C04 | — | — | **Blocages d'approbation et approbation par une personne différente de l'analyste : aucun test automatique.** Vérifiés à la main pendant le développement (build `590d8d8`) |
+| S02c–d | `portal_test.py` | Étape « submitted », jamais présentée comme « approved » ; aucun champ interne (note de risque, blocages) exposé au marchand | Décision finale côté marchand (non capturée non plus) |
+| S03a–b | `portal_test.py` | Validation du formulaire, une préqualification par compte, signaux réservés à l'analyste, acceptation qui ouvre le dossier, refus | — |
+| S04a–b | `staff_onboarding_test.py` | Format vérifié sur le contenu, pièce d'identité rattachée à une personne du dossier, double regard (le déposant ne peut pas valider sa pièce), téléchargement exact | Seuil de 25 % pour les bénéficiaires effectifs |
+| S04c–d | `portal_test.py` | Dépôt par le marchand, PEP déclarable mais jamais retirable, motif de refus visible, isolement entre marchands, antivirus bloquant quand il est requis (scanner de substitution) | Antivirus réel |
+| S05, S05b | toutes | Refus d'accès selon le rôle (compte sans rôle métier refusé sur chaque module), sessions personnel et marchand séparées | — |
+| S06 | `reporting_test.py` | Règles de nettoyage, séries de tendance, mois non importés affichés comme des trous | Données réelles |
+| S07 | `recon_test.py` | Six catégories d'écart bouclées au centime, remaps MID, alertes de périmètre, éléments à réclamer, détail journalier, exports | Fichier MCB réel |
+| C01 | `admin_test.py` | Activation, rôles appliqués dès la requête suivante, un administrateur ne peut ni se rétrograder ni se désactiver, remise à zéro de la 2FA | — |
+| C02 | `admin_test.py` | Filtres du journal, aucune trace de mot de passe dans le journal | Inaltérabilité (droits de la base, à configurer en production) |
+| C05 | `portal_test.py` | Publication réservée aux administrateurs, numéro de version unique, nouvelle acceptation exigée | — |
+
+**À ne pas écrire dans le dossier** : que ces tests prouvent le fonctionnement d'un service en production, ou
+que la plateforme a été « auditée ». Ce sont des tests de développement sur données fictives.
 
 ## Contrôle MIPS INTERNATIONAL / FSC
 

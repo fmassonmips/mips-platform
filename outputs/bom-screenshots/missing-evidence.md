@@ -2,6 +2,8 @@
 
 Constat établi le 2026-10-27 sur le dépôt `mips-platform` (commit `590d8d8`, prototype non déployé),
 **mis à jour le 2026-10-28** après l'ajout du portail marchand (commit `d91d250`, toujours non déployé).
+**Revu le 2026-10-30** : aucun nouvel écran ; corrections côté serveur et tests automatiques ajoutés
+(voir la fin du registre des captures). Le constat ci-dessous est inchangé, sauf la section 5.
 Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS de production. Ces écrans doivent
 être recherchés dans le système réel (back-office V3, portail marchand) avant de conclure qu'ils n'existent pas.
 
@@ -52,3 +54,10 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
 - Le portail marchand **n'est pas déployé** : ne pas le présenter comme opérationnel ni comme un service SPIN.
 - Références MIPS INTERNATIONAL / FSC dans B01 et G01 : **non vérifiées**, je n'ai pas eu ces documents.
 - Toute capture d'un système réel doit masquer les données personnelles et bancaires, les clés API, les tokens et les certificats.
+
+## 5. Tests automatiques : ce qui reste à couvrir
+
+- **Blocages d'approbation et approbation en double regard** (S02b, C03, C04) : aucun test automatique. Ce sont
+  des contrôles clés pour la BoM. Une suite dédiée est à écrire avant de les présenter comme vérifiés.
+- **2FA obligatoire pour admin et finance** : non vérifiée par les tests (désactivée dans la configuration de test).
+- Antivirus réel, fichier MCB réel, table BigQuery réelle : uniquement simulés.
