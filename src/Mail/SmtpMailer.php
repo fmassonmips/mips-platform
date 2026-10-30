@@ -105,7 +105,7 @@ final class SmtpMailer
         $domain   = substr(strrchr($from, '@') ?: '@localhost', 1);
         $headers  = [
             'Date: ' . date(DATE_RFC2822),
-            'From: ' . $this->encodeHeader($fromName) . ' <' . $from . '>',
+            'From: ' . $this->encodeName($fromName) . ' <' . $from . '>',
             'To: <' . $to . '>',
             'Subject: ' . $this->encodeHeader($subject),
             'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . $domain . '>',
@@ -125,6 +125,15 @@ final class SmtpMailer
             . $part('text/plain', $text)
             . $part('text/html', $html)
             . "--$boundary--";
+    }
+
+    /**
+     * Display name of an address: always a quoted string or encoded word, so a
+     * company called « PayPal <service@paypal.com> » stays a name, not an address.
+     */
+    private function encodeName(string $value): string
+    {
+        return preg_match('/^[\x20-\x7E]*$/', $value) ? '"' . addcslashes($value, '"\\') . '"' : $this->encodeHeader($value);
     }
 
     private function encodeHeader(string $value): string

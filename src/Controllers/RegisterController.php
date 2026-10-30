@@ -23,6 +23,7 @@ use App\Csrf;
 use App\Database;
 use App\Mail\SmtpMailer;
 use App\RateLimiter;
+use App\Request;
 use App\Response;
 use App\Validator;
 
@@ -64,7 +65,7 @@ final class RegisterController
         }
 
         $rl = $GLOBALS['config']['rate_limit'];
-        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $ip = Request::clientIp();
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
             Response::json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
         }

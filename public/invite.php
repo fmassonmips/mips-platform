@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../src/bootstrap.php';
 
+header('Referrer-Policy: no-referrer');
 $token      = is_string($_GET['t'] ?? null) ? $_GET['t'] : '';
 $invitation = \App\Suite\Team::findByToken($token);
 $current    = \App\Auth::current_user();

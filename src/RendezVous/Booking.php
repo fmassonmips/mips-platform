@@ -14,6 +14,7 @@ namespace App\RendezVous;
 
 use App\ClientBloom\Customers;
 use App\Database;
+use App\RateLimiter;
 use DateTimeImmutable;
 use DateTimeZone;
 
@@ -210,7 +211,9 @@ final class Booking
         }
 
         $appt = self::find($orgId, $id);
-        Notifier::safely(static fn () => Notifier::booked($orgId, $appt));
+        if ($source !== 'online' || RateLimiter::allowPublicMail($orgId, $appt['email'] ?? null)) {   // public form: capped mails to the typed address
+            Notifier::safely(static fn () => Notifier::booked($orgId, $appt));
+        }
         return [$appt, null];
     }
 

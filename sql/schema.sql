@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     role            VARCHAR(32)  NOT NULL DEFAULT 'user',
     is_active       TINYINT(1)   NOT NULL DEFAULT 1,
     password_changed_at DATETIME NULL,                     -- logs out the account's other sessions
+    verified_at     DATETIME     NULL,                     -- address confirmed (sign-up link, invitation); NULL = pending or seeded
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS user_tokens (
     user_id     BIGINT UNSIGNED NOT NULL,
     purpose     VARCHAR(8)      NOT NULL,                  -- verify | reset | notice
     token_hash  CHAR(64)        NOT NULL,
+    password_hash VARCHAR(255)  NULL,                      -- verify: the password chosen in that sign-up
     created_at  DATETIME        NOT NULL,
     expires_at  DATETIME        NOT NULL,
     used_at     DATETIME        NULL,

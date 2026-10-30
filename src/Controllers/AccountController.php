@@ -34,11 +34,12 @@ final class AccountController
         $data = Request::json();
         switch (Request::str($data, 'action', 10)) {
             case 'verify':
-                $user = Accounts::verify(Request::str($data, 't', 64));
-                if ($user === null) {
-                    Response::json(['error' => 'Ce lien n’est plus valable (déjà utilisé ou expiré). Connectez-vous, ou recréez votre compte pour recevoir un nouveau lien.'], 422);
+                [$user, $error] = Accounts::verify(Request::str($data, 't', 64), is_string($data['password'] ?? null) ? $data['password'] : '');
+                if ($error !== null) {
+                    Response::json(['error' => $error], 422);
                 }
                 Auth::login_user($user);
+                RateLimiter::record(Request::clientIp(), (string) $user['email'], true);   // this IP is now known
                 Response::json(['success' => true]);
 
             case 'forgot':
@@ -46,7 +47,7 @@ final class AccountController
                 if (Validator::email($email) !== null) {
                     Response::json(['error' => 'Format d’e-mail invalide.'], 422);
                 }
-                $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+                $ip = Request::clientIp();
                 if (RateLimiter::tooManyRequests($ip, 'forgot', 10, 3600)) {
                     Response::json(['error' => 'Trop de demandes depuis cette connexion. Réessayez dans une heure.'], 429);
                 }
@@ -62,6 +63,9 @@ final class AccountController
                     Response::json(['error' => $error], 422);
                 }
                 Auth::login_user($user);
+                // The mailbox owner is back in: lift a lock-out on the address, and know this IP.
+                RateLimiter::clear((string) $user['email']);
+                RateLimiter::record(Request::clientIp(), (string) $user['email'], true);
                 Response::json(['success' => true]);
 
             default:

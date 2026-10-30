@@ -19,28 +19,35 @@ final class Accounts
 {
     private const LIFETIME = ['verify' => '+48 hours', 'reset' => '+1 hour', 'notice' => '+1 hour'];   // notice: counts "already registered" e-mails, never a link
     private const LINKS_PER_HOUR = 3;
+    private const DUMMY_HASH = '$2y$12$5CpDbcYUSvJ.4yNwoJQ85uzydC4Bvb9TJHcW/jkX7PqTX6TYsm4ri';   // same as Auth: timing parity
 
     /**
      * After a valid sign-up form: create the (inactive) account and send the
      * confirmation link, or tell the owner of an existing address by e-mail.
+     *
+     * Each link carries the password chosen in its own sign-up, and the
+     * confirmation page asks for that password again: anyone can type an
+     * e-mail, so whoever registers an address first never decides the
+     * password of the person who owns the mailbox.
      */
     public static function register(string $email, string $name, string $password): void
     {
         $pdo  = Database::connection();
-        $stmt = $pdo->prepare('SELECT id, name, is_active FROM users WHERE email = :e');
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare('SELECT id, is_active, verified_at FROM users WHERE email = :e');
         $stmt->execute([':e' => $email]);
         $user = $stmt->fetch();
         if (!is_array($user)) {
             $now = self::now();
             $pdo->prepare(
                 'INSERT INTO users (email, password_hash, name, role, is_active, created_at, updated_at) VALUES (:e, :h, :n, \'user\', 0, :at, :at2)'
-            )->execute([':e' => $email, ':h' => password_hash($password, PASSWORD_DEFAULT), ':n' => $name, ':at' => $now, ':at2' => $now]);
-            self::sendVerification((int) $pdo->lastInsertId(), $email, $name);
+            )->execute([':e' => $email, ':h' => $hash, ':n' => $name, ':at' => $now, ':at2' => $now]);
+            self::sendVerification((int) $pdo->lastInsertId(), $email, $name, $hash);
             return;
         }
-        // Existing address: never touch its password here (anyone can type an e-mail).
-        if ((int) $user['is_active'] === 0 && self::hasTokens((int) $user['id'], 'verify')) {
-            self::sendVerification((int) $user['id'], $email, (string) $user['name']);
+        if (self::isPending($user)) {
+            // Never confirmed: a new link with this sign-up's password; the earlier links keep theirs.
+            self::sendVerification((int) $user['id'], $email, $name, $hash);
         } elseif ((int) $user['is_active'] === 1 && self::underLimit((int) $user['id'], 'notice')) {
             self::issue((int) $user['id'], 'notice');
             self::send($email, 'Votre compte MIPS existe déjà',
@@ -48,6 +55,7 @@ final class Accounts
                 . 'Se connecter : ' . self::url('/login.php') . "\nMot de passe oublié : " . self::url('/forgot.php')
                 . "\n\nSi ce n'était pas vous, ignorez ce message : rien n'a changé.\n");
         }
+        // Deactivated account (removed from a team, disabled): no link, it stays closed.
     }
 
     /**
@@ -56,31 +64,48 @@ final class Accounts
      */
     public static function resendIfPending(string $email, string $password): bool
     {
-        $stmt = Database::connection()->prepare('SELECT id, name, password_hash, is_active FROM users WHERE email = :e');
+        $stmt = Database::connection()->prepare('SELECT id, name, is_active, verified_at FROM users WHERE email = :e');
         $stmt->execute([':e' => $email]);
         $u = $stmt->fetch();
-        if (!is_array($u) || (int) $u['is_active'] === 1 || !self::hasTokens((int) $u['id'], 'verify')
-            || !password_verify($password, (string) $u['password_hash'])) {
+        if (!is_array($u) || !self::isPending($u)) {
+            password_verify($password, self::DUMMY_HASH);   // same cost as a pending account: no tell
             return false;
         }
-        self::sendVerification((int) $u['id'], $email, (string) $u['name']);
+        $hash = self::matchingSignup((int) $u['id'], $password, false);
+        if ($hash === null) {
+            return false;
+        }
+        self::sendVerification((int) $u['id'], $email, (string) $u['name'], $hash);
         return true;
     }
 
     /**
-     * Confirm the address: activates the account. Returns the user row to log in.
+     * Confirm the address with the password typed at sign-up: activates the
+     * account with that password. Returns [user row to log in, error].
      *
-     * @return array<string,mixed>|null
+     * @return array{0:?array<string,mixed>,1:?string}
      */
-    public static function verify(string $token): ?array
+    public static function verify(string $token, string $password): array
     {
-        $userId = self::consume($token, 'verify');
+        $userId = self::find($token, 'verify');
         if ($userId === null) {
-            return null;
+            return [null, 'Ce lien n’est plus valable (déjà utilisé ou expiré). Connectez-vous, ou recréez votre compte pour recevoir un nouveau lien.'];
+        }
+        $hash = self::matchingSignup($userId, $password, true);
+        if ($hash === null) {
+            return [null, 'Ce n’est pas le mot de passe choisi à l’inscription. Si vous ne l’avez plus, recréez votre compte avec la même adresse.'];
+        }
+        if (self::consume($token, 'verify') === null) {
+            return [null, 'Ce lien n’est plus valable. Connectez-vous.'];
         }
         $pdo = Database::connection();
-        $pdo->prepare('UPDATE users SET is_active = 1, updated_at = :at WHERE id = :id')->execute([':at' => self::now(), ':id' => $userId]);
-        return self::user($userId);
+        $now = self::now();
+        $pdo->prepare('UPDATE user_tokens SET used_at = :at WHERE user_id = :u AND purpose = \'verify\' AND used_at IS NULL')
+            ->execute([':at' => $now, ':u' => $userId]);
+        $pdo->prepare('UPDATE users SET password_hash = :h, is_active = 1, verified_at = :at, updated_at = :at2 WHERE id = :id AND verified_at IS NULL')
+            ->execute([':h' => $hash, ':at' => $now, ':at2' => $now, ':id' => $userId]);
+        $user = self::user($userId);
+        return $user !== null && (int) $user['is_active'] === 1 ? [$user, null] : [null, 'Ce compte est désactivé.'];
     }
 
     /** "Forgot password": a reset link for an active account; silent otherwise. */
@@ -120,33 +145,38 @@ final class Accounts
             return [null, 'Ce lien n\'est plus valable. Demandez-en un nouveau.'];
         }
         $now = self::now();
-        Database::connection()->prepare('UPDATE users SET password_hash = :h, password_changed_at = :at, updated_at = :at2 WHERE id = :id AND is_active = 1')
-            ->execute([':h' => password_hash($password, PASSWORD_DEFAULT), ':at' => $now, ':at2' => $now, ':id' => $userId]);
+        Database::connection()->prepare('UPDATE users SET password_hash = :h, password_changed_at = :at, verified_at = COALESCE(verified_at, :at3), updated_at = :at2 WHERE id = :id AND is_active = 1')
+            ->execute([':h' => password_hash($password, PASSWORD_DEFAULT), ':at' => $now, ':at2' => $now, ':at3' => $now, ':id' => $userId]);
         $user = self::user($userId);
         return $user !== null && (int) $user['is_active'] === 1 ? [$user, null] : [null, 'Ce compte est désactivé.'];
     }
 
-    private static function sendVerification(int $userId, string $email, string $name): void
+    private static function sendVerification(int $userId, string $email, string $name, string $passwordHash): void
     {
         if (!self::underLimit($userId, 'verify')) {
             return;
         }
-        $token = self::issue($userId, 'verify');
+        $token = self::issue($userId, 'verify', $passwordHash);
         self::send($email, 'Confirmez votre adresse pour MIPS',
             'Bonjour ' . $name . ",\n\nPour activer votre compte MIPS, confirmez votre adresse (lien valable 48 heures) :\n"
-            . self::url('/verify.php?t=' . $token) . "\n\nSi vous n'avez pas créé de compte, ignorez ce message.\n");
+            . self::url('/verify.php?t=' . $token) . "\nLe mot de passe choisi à l'inscription vous sera demandé.\n\nSi vous n'avez pas créé de compte, ignorez ce message.\n");
     }
 
-    /** New link; the previous unused links of the same kind stop working. */
-    private static function issue(int $userId, string $purpose): string
+    /**
+     * New link. A reset or notice replaces the previous unused ones; sign-up
+     * links stay valid side by side, each with its own password.
+     */
+    private static function issue(int $userId, string $purpose, ?string $passwordHash = null): string
     {
         $pdo = Database::connection();
         $now = self::now();
-        $pdo->prepare('UPDATE user_tokens SET used_at = :at WHERE user_id = :u AND purpose = :p AND used_at IS NULL')
-            ->execute([':at' => $now, ':u' => $userId, ':p' => $purpose]);
+        if ($purpose !== 'verify') {
+            $pdo->prepare('UPDATE user_tokens SET used_at = :at WHERE user_id = :u AND purpose = :p AND used_at IS NULL')
+                ->execute([':at' => $now, ':u' => $userId, ':p' => $purpose]);
+        }
         $token = bin2hex(random_bytes(32));
-        $pdo->prepare('INSERT INTO user_tokens (user_id, purpose, token_hash, created_at, expires_at) VALUES (:u, :p, :h, :at, :exp)')
-            ->execute([':u' => $userId, ':p' => $purpose, ':h' => hash('sha256', $token), ':at' => $now,
+        $pdo->prepare('INSERT INTO user_tokens (user_id, purpose, token_hash, password_hash, created_at, expires_at) VALUES (:u, :p, :h, :ph, :at, :exp)')
+            ->execute([':u' => $userId, ':p' => $purpose, ':h' => hash('sha256', $token), ':ph' => $passwordHash, ':at' => $now,
                 ':exp' => (new \DateTimeImmutable($now))->modify(self::LIFETIME[$purpose])->format('Y-m-d H:i:s')]);
         return $token;
     }
@@ -185,11 +215,49 @@ final class Accounts
         return $id === false ? null : (int) $id;
     }
 
-    private static function hasTokens(int $userId, string $purpose): bool
+    /**
+     * A sign-up never confirmed: inactive, address never verified, and created
+     * by the sign-up form (an account seeded inactive, or removed from a team
+     * after confirming, is not pending and gets no link).
+     *
+     * @param array<string,mixed> $user
+     */
+    private static function isPending(array $user): bool
     {
-        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM user_tokens WHERE user_id = :u AND purpose = :p');
-        $stmt->execute([':u' => $userId, ':p' => $purpose]);
-        return (int) $stmt->fetchColumn() > 0;
+        if ((int) $user['is_active'] === 1 || $user['verified_at'] !== null) {
+            return false;
+        }
+        $stmt = Database::connection()->prepare('SELECT 1 FROM user_tokens WHERE user_id = :u AND purpose = \'verify\' LIMIT 1');
+        $stmt->execute([':u' => (int) $user['id']]);
+        return $stmt->fetchColumn() !== false;
+    }
+
+    /**
+     * The password hash of a recent sign-up of this account that $password
+     * matches (only links still valid when $validOnly), or null. Always runs
+     * at least one password_verify, so a miss costs the same time.
+     */
+    private static function matchingSignup(int $userId, string $password, bool $validOnly): ?string
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT password_hash FROM user_tokens WHERE user_id = :u AND purpose = \'verify\' AND password_hash IS NOT NULL AND created_at > :since'
+            . ($validOnly ? ' AND used_at IS NULL AND expires_at > :now' : '') . ' ORDER BY id DESC LIMIT 10'
+        );
+        $params = [':u' => $userId, ':since' => (new \DateTimeImmutable(self::now()))->modify('-30 days')->format('Y-m-d H:i:s')];
+        if ($validOnly) {
+            $params[':now'] = self::now();
+        }
+        $stmt->execute($params);
+        $hashes = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($hashes as $h) {
+            if (password_verify($password, (string) $h)) {
+                return (string) $h;
+            }
+        }
+        if ($hashes === []) {
+            password_verify($password, self::DUMMY_HASH);
+        }
+        return null;
     }
 
     private static function underLimit(int $userId, string $purpose): bool

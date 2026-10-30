@@ -184,12 +184,15 @@ final class Ical
             return [null, 'Adresse refusée : utilisez le lien https fourni par la plateforme.'];
         }
         $port = (int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+        if (!$private && $port !== 443) {
+            return [null, 'Adresse refusée : utilisez le lien https fourni par la plateforme.'];
+        }
         $ips  = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (gethostbynamel($host) ?: []);
         if ($ips === []) {
             return [null, 'Adresse introuvable (' . $host . ').'];
         }
         foreach ($ips as $ip) {
-            if (!$private && !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            if (!$private && (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) || self::inDeniedRange($ip))) {
                 return [null, 'Adresse refusée : réseau privé.'];
             }
         }
@@ -198,6 +201,10 @@ final class Ical
         curl_setopt_array($ch, [
             CURLOPT_RESOLVE         => [$host . ':' . $port . ':' . $ips[0]],
             CURLOPT_FOLLOWLOCATION  => false,
+            CURLOPT_PROXY           => '',    // never through a proxy set in the environment: the pinned IP is the one checked
+            CURLOPT_NOPROXY         => '*',
+            CURLOPT_SSL_VERIFYPEER  => true,
+            CURLOPT_SSL_VERIFYHOST  => 2,
             CURLOPT_PROTOCOLS       => $private ? (CURLPROTO_HTTPS | CURLPROTO_HTTP) : CURLPROTO_HTTPS,
             CURLOPT_TIMEOUT         => (int) ($cfg['ical_timeout'] ?? 10),
             CURLOPT_CONNECTTIMEOUT  => 5,
@@ -216,12 +223,33 @@ final class Ical
             return [null, 'Calendrier trop volumineux.'];
         }
         if ($ok === false) {
-            return [null, 'Calendrier injoignable : ' . $err];
+            error_log('[Bookora iCal] ' . $host . ': ' . $err);   // details for us, not for the tenant
+            return [null, 'Calendrier injoignable. Vérifiez le lien.'];
         }
         if ($status !== 200) {
             return [null, 'Calendrier injoignable (HTTP ' . $status . ').'];
         }
         return [$buf, null];
+    }
+
+    /**
+     * IPv4 ranges PHP's NO_PRIV/NO_RES flags let through: carrier-grade NAT,
+     * IETF protocol assignments, benchmarking, multicast and reserved.
+     */
+    private static function inDeniedRange(string $ip): bool
+    {
+        $n = ip2long($ip);
+        if ($n === false) {
+            return false;
+        }
+        foreach (['100.64.0.0/10', '192.0.0.0/24', '198.18.0.0/15', '224.0.0.0/4', '240.0.0.0/4'] as $cidr) {
+            [$base, $bits] = explode('/', $cidr);
+            $mask = -1 << (32 - (int) $bits);
+            if (($n & $mask) === (ip2long($base) & $mask)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static function escape(string $text): string

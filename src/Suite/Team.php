@@ -16,7 +16,9 @@ namespace App\Suite;
 
 use App\Database;
 use App\Mail\SmtpMailer;
+use App\RateLimiter;
 use App\RendezVous\Booking;
+use App\Request;
 use App\Validator;
 
 final class Team
@@ -81,17 +83,16 @@ final class Team
 
         $pdo  = Database::connection();
         $stmt = $pdo->prepare(
-            'SELECT ou.organization_id FROM users u LEFT JOIN organization_users ou ON ou.user_id = u.id WHERE u.email = :e'
+            'SELECT ou.organization_id FROM users u JOIN organization_users ou ON ou.user_id = u.id WHERE u.email = :e'
         );
         $stmt->execute([':e' => $email]);
-        foreach ($stmt->fetchAll() as $r) {
-            if ($r['organization_id'] === null) {
-                continue;
-            }
-            return [null, (int) $r['organization_id'] === $org['id']
-                ? 'Cette personne fait déjà partie de l\'équipe.'
-                : 'Cette adresse a déjà un compte MIPS rattaché à une autre entreprise. Pour l\'instant, un compte ne peut appartenir qu\'à une entreprise : demandez-lui une autre adresse.'];
+        $memberOf = $stmt->fetchColumn();
+        if ($memberOf !== false && (int) $memberOf === $org['id']) {
+            return [null, 'Cette personne fait déjà partie de l\'équipe.'];
         }
+        // An address attached to another company gets the same answer as any other (no
+        // enumeration of MIPS accounts): the e-mail tells its owner, accepting is refused.
+        $elsewhere = $memberOf !== false;
 
         $now = Booking::now();
         $pdo->beginTransaction();
@@ -104,9 +105,13 @@ final class Team
                 $pdo->rollBack();
                 return [null, 'Limite de ' . self::INVITES_PER_DAY . ' invitations par jour atteinte. Réessayez demain.'];
             }
-            $prev = $pdo->prepare('SELECT created_at, accepted_at FROM organization_invitations WHERE organization_id = :oid AND email = :e');
+            $prev = $pdo->prepare('SELECT created_at, accepted_at, role FROM organization_invitations WHERE organization_id = :oid AND email = :e');
             $prev->execute([':oid' => $org['id'], ':e' => $email]);
             $p = $prev->fetch();
+            if (is_array($p) && $p['accepted_at'] === null && $p['role'] === 'admin' && $org['role'] !== 'owner') {
+                $pdo->rollBack();
+                return [null, 'Seul le propriétaire peut modifier l\'invitation d\'un administrateur.'];
+            }
             if (is_array($p) && $p['accepted_at'] === null
                 && $p['created_at'] > $now->modify('-' . self::RESEND_AFTER_MIN . ' minutes')->format('Y-m-d H:i:s')) {
                 $pdo->rollBack();
@@ -132,15 +137,22 @@ final class Team
         }
 
         $url = self::url($token);
-        self::safely(static fn () => self::mailInvitation($org, $user, $email, $role, $url));
+        self::safely(static fn () => self::mailInvitation($org, $user, $email, $role, $url, $elsewhere));
         return [$url, null];
     }
 
-    public static function revoke(int $orgId, int $id): ?string
+    /**
+     * @param array{id:int,name:string,role:string} $org
+     */
+    public static function revoke(array $org, int $id): ?string
     {
-        $stmt = Database::connection()->prepare('DELETE FROM organization_invitations WHERE organization_id = :oid AND id = :id AND accepted_at IS NULL');
-        $stmt->execute([':oid' => $orgId, ':id' => $id]);
-        return $stmt->rowCount() === 1 ? null : 'Invitation introuvable.';
+        // Admins invite members; only the owner withdraws an admin invitation.
+        $stmt = Database::connection()->prepare(
+            'DELETE FROM organization_invitations WHERE organization_id = :oid AND id = :id AND accepted_at IS NULL'
+            . ($org['role'] === 'owner' ? '' : ' AND role <> \'admin\'')
+        );
+        $stmt->execute([':oid' => $org['id'], ':id' => $id]);
+        return $stmt->rowCount() === 1 ? null : ($org['role'] === 'owner' ? 'Invitation introuvable.' : 'Invitation introuvable, ou invitation d\'administrateur (réservée au propriétaire).');
     }
 
     /**
@@ -190,26 +202,38 @@ final class Team
                 $pdo->rollBack();
                 return [null, 'Cette invitation n\'est plus valable. Demandez-en une nouvelle.'];
             }
-            $u = $pdo->prepare('SELECT id FROM users WHERE email = :e FOR UPDATE');
+            $u = $pdo->prepare('SELECT id, password_hash FROM users WHERE email = :e FOR UPDATE');
             $u->execute([':e' => $inv['email']]);
-            $userId = $u->fetchColumn();
-            $hash   = password_hash($password, PASSWORD_DEFAULT);
-            if ($userId === false) {
+            $existing = $u->fetch();
+            if (!is_array($existing)) {
                 $pdo->prepare(
-                    'INSERT INTO users (email, password_hash, name, role, is_active, created_at, updated_at) VALUES (:e, :h, :n, \'user\', 1, :at, :at2)'
-                )->execute([':e' => $inv['email'], ':h' => $hash, ':n' => $name, ':at' => $now, ':at2' => $now]);
+                    'INSERT INTO users (email, password_hash, name, role, is_active, verified_at, created_at, updated_at) VALUES (:e, :h, :n, \'user\', 1, :v, :at, :at2)'
+                )->execute([':e' => $inv['email'], ':h' => password_hash($password, PASSWORD_DEFAULT), ':n' => $name, ':v' => $now, ':at' => $now, ':at2' => $now]);
                 $userId = (int) $pdo->lastInsertId();
             } else {
-                $userId = (int) $userId;
+                $userId = (int) $existing['id'];
                 $m = $pdo->prepare('SELECT COUNT(*) FROM organization_users WHERE user_id = :u');
                 $m->execute([':u' => $userId]);
                 if ((int) $m->fetchColumn() > 0) {
                     $pdo->rollBack();
                     return [null, 'Ce compte appartient déjà à une entreprise. Connectez-vous avec votre mot de passe habituel.'];
                 }
-                // Account without a company (never activated, or removed from a team): the link proves the e-mail.
-                $pdo->prepare('UPDATE users SET password_hash = :h, name = :n, is_active = 1, updated_at = :at WHERE id = :id')
-                    ->execute([':h' => $hash, ':n' => $name, ':at' => $now, ':id' => $userId]);
+                // Account without a company (sign-up never confirmed, or removed from a team). The
+                // inviter holds the link too, so it proves nothing: the account's own password is required.
+                $ip = Request::clientIp();
+                $rl = $GLOBALS['config']['rate_limit'];
+                if (RateLimiter::tooManyAttempts($ip, (string) $inv['email'], (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
+                    $pdo->rollBack();
+                    return [null, 'Trop de tentatives. Veuillez réessayer plus tard.'];
+                }
+                if (!password_verify($password, (string) $existing['password_hash'])) {
+                    $pdo->rollBack();
+                    RateLimiter::record($ip, (string) $inv['email'], false);
+                    return [null, 'Mot de passe incorrect. Cette adresse a déjà un compte MIPS : saisissez son mot de passe.'];
+                }
+                $pdo->prepare('UPDATE users SET is_active = 1, updated_at = :at WHERE id = :id')->execute([':at' => $now, ':id' => $userId]);
+                $pdo->prepare('UPDATE user_tokens SET used_at = :at WHERE user_id = :u AND purpose = \'verify\' AND used_at IS NULL')
+                    ->execute([':at' => $now, ':u' => $userId]);
             }
             $pdo->prepare('INSERT INTO organization_users (organization_id, user_id, role, created_at) VALUES (:oid, :u, :r, :at)')
                 ->execute([':oid' => (int) $inv['organization_id'], ':u' => $userId, ':r' => $inv['role'], ':at' => $now]);
@@ -308,13 +332,17 @@ final class Team
      * @param array{id:int,name:string,role:string} $org
      * @param array<string,mixed>                   $user
      */
-    private static function mailInvitation(array $org, array $user, string $email, string $role, string $url): void
+    private static function mailInvitation(array $org, array $user, string $email, string $role, string $url, bool $elsewhere): void
     {
         if (!SmtpMailer::isConfigured()) {
             return;
         }
         $by   = (string) ($user['name'] ?? '') !== '' ? (string) $user['name'] : (string) $user['email'];
-        $text = 'Bonjour,' . "\n\n" . $by . ' vous invite à rejoindre ' . $org['name'] . ' sur MIPS, en tant que '
+        $text = $elsewhere
+              ? 'Bonjour,' . "\n\n" . $by . ' a voulu vous inviter à rejoindre ' . $org['name'] . ' sur MIPS. Votre compte MIPS est déjà rattaché à une autre entreprise,'
+                . ' et un compte ne peut appartenir qu\'à une entreprise pour l\'instant : donnez-lui une autre adresse e-mail.' . "\n\n"
+                . 'Si vous ne connaissez pas cette entreprise, ignorez ce message.' . "\n"
+              : 'Bonjour,' . "\n\n" . $by . ' vous invite à rejoindre ' . $org['name'] . ' sur MIPS, en tant que '
               . mb_strtolower(self::ROLES[$role]) . '.' . "\n\n" . 'Pour accepter, choisissez votre mot de passe ici (lien valable '
               . self::VALID_DAYS . ' jours) :' . "\n" . $url . "\n\n" . 'Si vous ne connaissez pas cette entreprise, ignorez ce message.' . "\n";
         SmtpMailer::fromConfig()->send($email, 'Invitation à rejoindre ' . str_replace(["\r", "\n"], ' ', $org['name']) . ' sur MIPS',

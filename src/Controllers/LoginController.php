@@ -20,6 +20,7 @@ use App\Accounts;
 use App\Auth;
 use App\Csrf;
 use App\RateLimiter;
+use App\Request;
 use App\Response;
 use App\Validator;
 
@@ -58,7 +59,7 @@ final class LoginController
 
         // Rate limit (IP + email).
         $rl  = $GLOBALS['config']['rate_limit'];
-        $ip  = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $ip  = Request::clientIp();
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
             Response::json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
         }
@@ -75,10 +76,9 @@ final class LoginController
             Response::json(['error' => 'Identifiants invalides.'], 401);
         }
 
-        // Success: bind session, clear rate-limit counters, rotate CSRF token.
+        // Success: bind session (rotates the CSRF token), clear this address's failures.
         Auth::login_user($user);
-        RateLimiter::clear($ip, $email);
-        unset($_SESSION['csrf_token']); // force new token on next page load
+        RateLimiter::clear($email);
 
         Response::json([
             'success' => true,

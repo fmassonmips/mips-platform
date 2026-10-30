@@ -36,4 +36,18 @@ final class Request
         $value = $data[$key] ?? null;
         return is_int($value) || (is_string($value) && ctype_digit($value)) ? (int) $value : 0;
     }
+
+    /**
+     * The client address used for rate limits. An IPv6 client usually owns a
+     * whole /64, so its addresses count as one.
+     */
+    public static function clientIp(): string
+    {
+        $ip  = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $bin = @inet_pton($ip);
+        if ($bin !== false && strlen($bin) === 16 && !str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) {
+            return (string) inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
+        }
+        return $ip;
+    }
 }

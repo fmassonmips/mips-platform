@@ -73,7 +73,7 @@ final class PublicController
                 foreach (['time' => 5, 'name' => 200, 'phone' => 40, 'email' => 254, 'note' => 600] as $f => $max) {
                     $in[$f] = Request::str($data, $f, $max);
                 }
-                [$appt, $error] = Booking::book($orgId, $in, 'online', (string) ($_SERVER['REMOTE_ADDR'] ?? ''), $t);
+                [$appt, $error] = Booking::book($orgId, $in, 'online', Request::clientIp(), $t);
                 if ($error !== null) {
                     Response::json(['error' => $error], 409);
                 }

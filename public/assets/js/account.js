@@ -18,6 +18,9 @@
         if (action === 'forgot') {
             payload.email = form.elements.email.value.trim();
         }
+        if (action === 'verify') {
+            payload.password = form.elements.password.value;
+        }
         if (action === 'reset') {
             if (form.elements.password.value !== form.elements.password2.value) {
                 errorBox.textContent = 'Les deux mots de passe ne correspondent pas.';

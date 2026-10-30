@@ -36,8 +36,14 @@ $i = $invitation;
       <form id="invite-accept" novalidate data-t="<?= $e($token) ?>">
         <div class="field"><label for="email">E-mail</label><input type="email" id="email" value="<?= $e($i['email']) ?>" readonly></div>
         <div class="field"><label for="name">Votre nom</label><input type="text" id="name" name="name" autocomplete="name" maxlength="120" required></div>
-        <div class="field"><label for="password"><?= (int) $i['has_account'] > 0 ? 'Nouveau mot de passe' : 'Choisissez un mot de passe' ?></label>
-          <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required></div>
+        <?php if ((int) $i['has_account'] > 0): ?>
+          <div class="field"><label for="password">Mot de passe de votre compte MIPS</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required></div>
+          <p class="small muted">Cette adresse a déjà un compte MIPS : son mot de passe est demandé.</p>
+        <?php else: ?>
+          <div class="field"><label for="password">Choisissez un mot de passe</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required></div>
+        <?php endif; ?>
         <button type="submit" id="submit-btn" class="btn-primary">Rejoindre l'équipe</button>
         <p id="error-message" class="error" role="alert" hidden></p>
       </form>

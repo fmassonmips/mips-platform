@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `018`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `019`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -72,6 +72,8 @@ server {
 server { listen 80; server_name my.mips.mu; return 301 https://$host$request_uri; }
 ```
 
+**Derrière un proxy ou un CDN (Cloudflare, répartiteur de charge)** : l'application lit l'adresse du client dans `REMOTE_ADDR`, sur laquelle reposent toutes les limites (connexion, inscription, formulaires publics). Sans réglage, tous les visiteurs auraient l'adresse du proxy et se bloqueraient entre eux. Configurer le serveur web pour réécrire `REMOTE_ADDR` avec la vraie adresse, **uniquement depuis les adresses du proxy** (Nginx : `set_real_ip_from <plages du proxy>; real_ip_header X-Forwarded-For;` — Apache : `mod_remoteip`). Ne jamais faire confiance à `X-Forwarded-For` venant d'Internet.
+
 Vérifier après installation : `curl -I https://my.mips.mu/login.php` doit renvoyer les en-têtes `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` (posés par l'application).
 
 ### PHP (php.ini de FPM)
@@ -94,7 +96,19 @@ post_max_size = 2M
 20 * * * *  php /var/www/mips/tools/bookora_ical_sync.php    >> /var/log/mips/cron.log 2>&1
 ```
 
-Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas.
+Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1. **Alerter sur ce code** (par exemple `MAILTO=ops@mips.mu` en tête de crontab avec `|| echo "échec"`, ou une sonde type Healthchecks.io) : une transmission MRA bloquée ne doit pas passer inaperçue.
+
+### Réseau sortant
+
+Le serveur n'a besoin de joindre que : le service SMTP, les URL MRA et les calendriers iCal des plateformes (https, port 443). Le code refuse déjà les adresses internes pour les calendriers ; un pare-feu sortant (`ufw default deny outgoing` + autorisations 443, port SMTP, DNS, NTP, dépôts de mises à jour) ajoute une seconde barrière, et bloque l'adresse de métadonnées du fournisseur cloud (`169.254.169.254`).
+
+### Valeurs de `app.env`
+
+| Valeur | Usage | Effet |
+|---|---|---|
+| `production` | serveur réel | erreurs masquées ; **URL MRA sandbox/simulation refusées** ; `demo_seed.php` refusé |
+| `demo` | instance de démonstration | erreurs masquées ; sandbox MRA autorisée ; `demo_seed.php` autorisé |
+| `development` | poste du développeur | erreurs affichées — jamais sur un serveur accessible |
 
 ## 3. Sauvegardes
 
@@ -115,7 +129,7 @@ sudo systemctl reload php8.3-fpm
 
 ## 5. Démonstration
 
-Sur une instance **séparée** (ex. `demo.my.mips.mu`, base à part) :
+Sur une instance **séparée** (ex. `demo.my.mips.mu`, base à part, `app.env = demo`) :
 `php tools/demo_seed.php --yes --reset --password='…'` chaque matin de démo (voir `suite-architecture.md`). Jamais sur la base de production.
 
 ## 6. Abonnements
@@ -137,6 +151,8 @@ En attendant le paiement en ligne : `php tools/subscribe.php --org=<id>` affiche
 - [ ] `app.env = production`, `app.url` = l'adresse publique exacte (liens des e-mails)
 - [ ] Base créée avec `schema.sql` **sans** `seed.sql` ; utilisateur `mips_app` sans droits de structure
 - [ ] `bookora.ical_allow_private = false`
+- [ ] Derrière un proxy/CDN : vraie adresse client restaurée (`real_ip`), testée en se trompant 6 fois de mot de passe depuis un téléphone : seul ce téléphone est bloqué
+- [ ] Pare-feu sortant en place ; alerte sur l'échec des cron
 - [ ] `billing.contact_email` renseigné
 - [ ] Cron installés ; première exécution manuelle de chaque script sans erreur
 

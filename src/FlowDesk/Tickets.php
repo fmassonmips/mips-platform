@@ -13,6 +13,7 @@ namespace App\FlowDesk;
 
 use App\ClientBloom\Customers;
 use App\Database;
+use App\RateLimiter;
 use App\RendezVous\Booking;
 
 final class Tickets
@@ -98,7 +99,9 @@ final class Tickets
         }
 
         $ticket = self::find($orgId, $id);
-        Notifier::safely(static fn () => Notifier::created($orgId, $ticket, $body));
+        if ($source !== 'web' || RateLimiter::allowPublicMail($orgId, $ticket['email'] ?? null)) {   // public form: capped mails to the typed address
+            Notifier::safely(static fn () => Notifier::created($orgId, $ticket, $body));
+        }
         return [$ticket, null];
     }
 

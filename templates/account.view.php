@@ -23,8 +23,9 @@ $e = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, '
   <main class="auth-card" aria-labelledby="auth-title">
     <h1 id="auth-title"><?= $e($page_title) ?></h1>
     <?php if ($mode === 'verify'): ?>
-      <p class="auth-subtitle">Un clic pour activer votre compte MIPS.</p>
+      <p class="auth-subtitle">Pour activer votre compte MIPS, saisissez le mot de passe choisi à l’inscription.</p>
       <form id="account-form" data-action="verify" data-t="<?= $e($token) ?>" novalidate>
+        <div class="field"><label for="password">Mot de passe</label><input type="password" id="password" name="password" autocomplete="current-password" required></div>
         <button type="submit" id="submit-btn" class="btn-primary">Confirmer mon adresse</button>
         <p id="error-message" class="error" role="alert" hidden></p>
       </form>

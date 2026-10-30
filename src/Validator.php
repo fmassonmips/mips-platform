@@ -34,8 +34,8 @@ final class Validator
         if (strlen($password) < $minLength) {
             return 'Le mot de passe doit contenir au moins ' . $minLength . ' caractères.';
         }
-        if (strlen($password) > 255) {
-            return 'Le mot de passe est trop long.';
+        if (strlen($password) > 72) {   // bcrypt ignores what comes after 72 bytes
+            return 'Le mot de passe est trop long (72 caractères au plus).';
         }
         return null;
     }

@@ -75,6 +75,7 @@ final class Auth
         $_SESSION['last_activity'] = time();
         // Bind to a hash of the User-Agent to make stolen-cookie replay harder.
         $_SESSION['ua_hash']       = self::userAgentHash();
+        unset($_SESSION['csrf_token']);   // new token on the next page load
     }
 
     /**
@@ -100,6 +101,13 @@ final class Auth
         // UA binding check — a mismatch means the cookie is being replayed
         // from a different client. Drop the session.
         if (($_SESSION['ua_hash'] ?? '') !== self::userAgentHash()) {
+            self::logout_user();
+            return null;
+        }
+
+        // Absolute lifetime: log in again after N hours, however active.
+        $max = (int) ($GLOBALS['config']['session']['max_lifetime'] ?? 0);
+        if ($max > 0 && time() - (int) ($_SESSION['logged_in_at'] ?? 0) > $max) {
             self::logout_user();
             return null;
         }

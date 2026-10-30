@@ -34,6 +34,7 @@ return [
         'name'         => 'MIPSSESSID',
         'lifetime'     => 0,        // 0 = until browser closes (cookie is session-scoped)
         'idle_timeout' => 1800,     // 30 min of inactivity = auto logout
+        'max_lifetime' => 43200,    // 12 h after login = log in again, even when active
         'path'         => '/',
         'domain'       => '',
         // MUST be true over HTTPS in production.
