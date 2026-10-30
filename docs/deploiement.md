@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `023`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `024`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -180,6 +180,7 @@ En ligne de commande, `php tools/subscribe.php --org=<id> [--app=<slug>|all [--e
 
 **Données et légal**
 - [ ] Sauvegarde nocturne en place **et restauration testée**
+- [ ] Bloc `legal` de `config.local.php` rempli (raison sociale, adresse, BRN, e-mails, hébergeur, service d'e-mail) : plus aucun « [… à compléter] » sur /cgu.php et /confidentialite.php ; `draft => false` une fois les textes validés par le juriste
 - [ ] CGU / politique de confidentialité publiées (Data Protection Act 2017 de Maurice : finalités, durée de conservation, sous-traitants — hébergeur, service e-mail) — à valider par un juriste
 - [ ] Enregistrement comme « controller / processor » auprès du Data Protection Office si requis — à vérifier
 - [ ] Règle de conservation des données d'un client qui ne s'abonne pas, écrite dans les CGU

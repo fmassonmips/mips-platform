@@ -114,7 +114,7 @@ final class Auth
         }
 
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, name, role, created_at, password_changed_at
+            'SELECT id, email, name, role, created_at, password_changed_at, terms_version
              FROM users
              WHERE id = :id AND is_active = 1
                AND NOT EXISTS (SELECT 1 FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id

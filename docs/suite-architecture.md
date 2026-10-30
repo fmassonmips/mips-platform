@@ -319,6 +319,15 @@ Page `/data.php`, réservée au propriétaire (lien « Télécharger ou fermer l
 | Annulation | Par le propriétaire jusqu'à la date, ou par l'équipe MIPS (back-office, filtre « Fermeture demandée », noté au journal) : tout redevient comme avant. |
 | Suppression | `tools/purge_companies.php` (cron quotidien) après 30 jours (`organizations.deletion_scheduled_at`, migration 023) : toutes les données de l'entreprise (tables filles d'abord, aucun lien RESTRICT ne bloque) et les comptes de l'équipe qui n'appartiennent à aucune autre entreprise. Le journal du back-office garde une ligne « Entreprise supprimée » ; le propriétaire reçoit un e-mail. |
 
+## Conditions d'utilisation et confidentialité
+
+| Élément | Règle |
+|---|---|
+| Pages | `/cgu.php` et `/confidentialite.php`, publiques, liées sous les formulaires de connexion, d'inscription et de compte. Leur texte (`templates/legal/`) décrit les règles réelles du produit (essai, lecture seule, export, suppression, MRA, cookie, durées de conservation) : changer l'un, c'est changer l'autre. |
+| Éditeur | Bloc `legal` de la configuration ; une valeur vide s'affiche « [… à compléter] », jamais inventée. `legal.draft` affiche « Version provisoire » tant que le juriste n'a pas validé. |
+| Acceptation | Case obligatoire à l'inscription et à l'acceptation d'une invitation (refus serveur sinon) ; version (`App\Legal::VERSION`) et date enregistrées sur le compte (migration 024). |
+| Nouvelle version | Monter `Legal::VERSION` : chaque utilisateur qui n'a pas accepté la version en vigueur voit un bandeau « J'accepte » sur son tableau de bord (non bloquant). Les comptes antérieurs à la migration le voient une fois. |
+
 ## Back-office MIPS
 
 Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
@@ -367,6 +376,7 @@ mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
 mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
 mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
 mysql -u root -p mips_platform < sql/migrations/023_closure.sql
+mysql -u root -p mips_platform < sql/migrations/024_terms.sql
 ```
 
 Puis dans `config/config.php` :

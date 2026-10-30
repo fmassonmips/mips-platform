@@ -11,6 +11,7 @@
 /** @var bool $is_staff MIPS team: link to the back-office */
 /** @var list<array{label:string,done:bool,url:string,cta:string}>|null $checklist « Bien démarrer », null when hidden */
 /** @var ?string $closing deletion date when the owner asked to close the account */
+/** @var bool $terms_due the user has not accepted the terms in force */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -49,6 +50,16 @@
         <?php if ($org['role'] === 'owner'): ?><dt>Données</dt><dd><a href="/data.php">Télécharger ou fermer le compte</a></dd><?php endif; ?>
       </dl>
     </section>
+
+    <?php if ($terms_due): ?>
+      <section class="card ro-banner" id="terms-card">
+        <p><strong>Conditions d’utilisation</strong> : merci de lire et d’accepter les
+          <a href="/cgu.php" target="_blank" rel="noopener">conditions générales d’utilisation</a> et la
+          <a href="/confidentialite.php" target="_blank" rel="noopener">politique de confidentialité</a>
+          (version du <?= htmlspecialchars(\App\Format::date(\App\Legal::VERSION), ENT_QUOTES, 'UTF-8') ?>).</p>
+        <div class="actions"><button type="button" class="btn-primary btn-inline" id="terms-accept">J’accepte</button></div>
+      </section>
+    <?php endif; ?>
 
     <?php if ($closing !== null): ?>
       <section class="card bk-warning">

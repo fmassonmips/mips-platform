@@ -52,6 +52,10 @@
           minlength="8">
       </div>
 
+      <label class="checkbox legal-accept"><input type="checkbox" id="accept-terms" name="accept_terms" required>
+        J’accepte les <a href="/cgu.php" target="_blank" rel="noopener">conditions générales d’utilisation</a>
+        et la <a href="/confidentialite.php" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
+
       <button type="submit" id="submit-btn" class="btn-primary">Créer un compte</button>
 
       <p id="error-message" class="error" role="alert" hidden></p>
@@ -60,6 +64,8 @@
     <p id="done-message" class="success" role="status" hidden></p>
 
     <p class="auth-link">Déjà un compte ? <a href="/login.php">Se connecter</a></p>
+
+    <p class="legal-links"><a href="/cgu.php">Conditions d’utilisation</a> · <a href="/confidentialite.php">Confidentialité</a></p>
   </main>
   <script src="/assets/js/register.js"></script>
 </body>

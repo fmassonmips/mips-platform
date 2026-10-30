@@ -18,6 +18,7 @@ $can_manage = \App\Suite\Tenant::canManage($org);
 $team_size  = count(\App\Suite\Tenant::members($org['id']));
 $is_staff   = \App\Backoffice\Staff::is($user);
 $closing    = \App\Suite\Closure::scheduledAt($org['id']);
+$terms_due  = !\App\Legal::accepted($user);
 $checklist  = $closing === null ? \App\Suite\Onboarding::checklist($org) : null;
 $csrf_token = \App\Csrf::token();
 $page_title = 'Tableau de bord';

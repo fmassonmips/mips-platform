@@ -35,6 +35,16 @@ return [
     'billing' => [
         'contact_email' => '',
     ],
+    'legal' => [
+        'draft'         => true,   // false once a lawyer has validated /cgu.php and /confidentialite.php
+        'company'       => '',
+        'address'       => '',
+        'brn'           => '',
+        'contact_email' => '',
+        'privacy_email' => '',
+        'host'          => '',
+        'mail_provider' => '',
+    ],
     'backoffice' => [
         // MIPS team accounts allowed in the back-office (their own MIPS login).
         'staff' => [/* 'prenom@mips.mu', */],

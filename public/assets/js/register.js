@@ -50,7 +50,7 @@
                     'Accept': 'application/json',
                     'X-CSRF-Token': csrfToken,
                 },
-                body: JSON.stringify({ name: name, email: email, password: password }),
+                body: JSON.stringify({ name: name, email: email, password: password, accept_terms: document.getElementById('accept-terms').checked }),
             });
 
             let data = {};

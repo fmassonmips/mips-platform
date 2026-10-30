@@ -28,6 +28,25 @@
         window.location.assign('/login.php');
     });
 
+    // Terms of use / privacy policy in force not yet accepted.
+    const termsAccept = document.getElementById('terms-accept');
+    if (termsAccept) {
+        termsAccept.addEventListener('click', async function () {
+            termsAccept.disabled = true;
+            const res = await fetch('/api/auth/terms', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ action: 'accept' }),
+            }).catch(function () { return null; });
+            if (res && res.ok) {
+                document.getElementById('terms-card').remove();
+            } else {
+                termsAccept.disabled = false;
+            }
+        });
+    }
+
     // « Bien démarrer »: hide the checklist for good.
     const obHide = document.getElementById('ob-hide');
     if (obHide) {

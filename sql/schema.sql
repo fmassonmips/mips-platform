@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_changed_at DATETIME NULL,                     -- logs out the account's other sessions
     verified_at     DATETIME     NULL,                     -- address confirmed (sign-up link, invitation); NULL = pending or seeded
     last_login_at   DATETIME     NULL,
+    terms_version   VARCHAR(20)  NULL,                     -- CGU + privacy policy version accepted (App\Legal::VERSION)
+    terms_accepted_at DATETIME   NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,

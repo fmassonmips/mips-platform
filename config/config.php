@@ -77,6 +77,19 @@ return [
         'contact_email' => '',
     ],
 
+    // Terms of use (/cgu.php) and privacy policy (/confidentialite.php): publisher details.
+    // Empty values print as « [… à compléter] ». draft: « version provisoire » banner until a lawyer validates the texts.
+    'legal' => [
+        'draft'         => true,
+        'company'       => '',   // raison sociale de l'éditeur
+        'address'       => '',
+        'brn'           => '',
+        'contact_email' => '',
+        'privacy_email' => '',   // requests about personal data (access, erasure…)
+        'host'          => '',   // hosting provider and country, e.g. "OVHcloud, France"
+        'mail_provider' => '',   // e-mail sending service, e.g. "Brevo (Sendinblue), France"
+    ],
+
     // Back-office (/backoffice.php): e-mail addresses of the MIPS team members allowed in.
     // Empty: nobody. Anyone else gets a 404. Restrict it by IP at the web server as well.
     'backoffice' => [

@@ -51,6 +51,8 @@
 
     <p class="auth-link"><a href="/forgot.php">Mot de passe oublié ?</a></p>
     <p class="auth-link">Pas encore de compte ? <a href="/register.php">Créer un compte</a></p>
+
+    <p class="legal-links"><a href="/cgu.php">Conditions d’utilisation</a> · <a href="/confidentialite.php">Confidentialité</a></p>
   </main>
   <script src="/assets/js/login.js"></script>
 </body>

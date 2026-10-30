@@ -44,6 +44,9 @@ $i = $invitation;
           <div class="field"><label for="password">Choisissez un mot de passe</label>
             <input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required></div>
         <?php endif; ?>
+        <label class="checkbox legal-accept"><input type="checkbox" id="accept-terms" name="accept_terms" required>
+        J’accepte les <a href="/cgu.php" target="_blank" rel="noopener">conditions générales d’utilisation</a>
+        et la <a href="/confidentialite.php" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
         <button type="submit" id="submit-btn" class="btn-primary">Rejoindre l'équipe</button>
         <p id="error-message" class="error" role="alert" hidden></p>
       </form>
