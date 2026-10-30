@@ -11,7 +11,7 @@ La PR ajoute environ 28 600 lignes (315 fichiers, 40 commits) sur la branche `cl
 ## 2. Relancer les tests
 
 ```bash
-tests/e2e/run.sh              # les 28 suites, ~25 min
+tests/e2e/run.sh              # les 27 suites, ~30 min
 tests/e2e/run.sh e2e22 e2e25  # quelques suites
 ```
 
