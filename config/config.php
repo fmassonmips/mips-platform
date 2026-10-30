@@ -59,7 +59,9 @@ return [
 
     // MRA e-invoicing. Defaults are the SANDBOX endpoints from the MRA Technical
     // Guidelines; take the LIVE URLs from the MRA e-Invoicing Developer Portal
-    // once the EBS has passed its test drive.
+    // once the EBS has passed its test drive. With app.env = production, sandbox /
+    // simulation URLs are refused (documents stay pending): a test IRN must never
+    // be stored as fiscalised.
     'mra' => [
         'auth_url'        => 'https://einvoice-sandbox.mra.mu/einvoice-token-service/token-api/generate-token',
         'transmit_url'    => 'https://einvoice-sandbox.mra.mu/realtime/invoice/transmit-simulation',

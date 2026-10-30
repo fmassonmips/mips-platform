@@ -118,6 +118,12 @@ final class Client
                 throw new MraException('Valeur d’en-tête invalide.', false);
             }
         }
+        // In production a sandbox or simulation URL would store a non-legal IRN as "fiscalised":
+        // refuse, the documents stay pending until the LIVE URLs are configured.
+        if ($url === '' || (($GLOBALS['config']['app']['env'] ?? 'production') === 'production'
+            && preg_match('/sandbox|simulation/i', $url))) {
+            throw new MraException('Configuration MRA incomplète : renseignez les URL LIVE du portail MRA (mra.auth_url, mra.transmit_url).');
+        }
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [

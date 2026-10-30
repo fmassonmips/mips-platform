@@ -224,8 +224,11 @@ final class Ledger
         foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $id) {
             [, $error] = self::inTransaction($orgId, (int) $id, static function (array $c) use ($orgId, $months): array {
                 $balance = (int) $c['balance_cents'];
-                if ($balance <= 0) {
-                    return [[], null];
+                // Re-checked under the lock: a purchase between the first SELECT and here keeps the balance.
+                $still = Database::connection()->prepare('SELECT last_activity_at < DATE_SUB(NOW(), INTERVAL :m MONTH) FROM clientbloom_customers WHERE id = :id');
+                $still->execute([':m' => $months, ':id' => (int) $c['id']]);
+                if ($balance <= 0 || (int) $still->fetchColumn() !== 1) {
+                    return [[], 'active'];
                 }
                 self::insert($orgId, null, (int) $c['id'], 'expire', 0, -$balance, 0, "Aucune activité depuis $months mois", null);
                 Database::connection()->prepare('UPDATE clientbloom_customers SET balance_cents = 0 WHERE id = :id')

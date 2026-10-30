@@ -53,7 +53,12 @@ use App\TeamNest\Tasks;
 const DEMO_NAME   = 'Le Lagon Bleu';
 const DEMO_DOMAIN = 'lagonbleu.example';
 
-$opts = getopt('', ['yes', 'reset', 'password:', 'email:']);
+$opts = getopt('', ['yes', 'reset', 'password:', 'email:', 'force-production']);
+if (($GLOBALS['config']['app']['env'] ?? 'production') === 'production' && !isset($opts['force-production'])) {
+    fwrite(STDERR, "app.env is 'production': the demo company belongs on a separate demo instance.\n"
+        . "Set app.env to 'demo' in config/config.local.php there, or add --force-production if you really mean it.\n");
+    exit(1);
+}
 if (!isset($opts['yes'])) {
     fwrite(STDERR, "Creates a demo company with sample data. For demo / staging databases only.\nRun again with --yes to proceed.\n");
     exit(1);
