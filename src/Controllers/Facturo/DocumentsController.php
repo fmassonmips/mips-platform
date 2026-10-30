@@ -13,8 +13,13 @@
  *   mra     { "id" }                      retry MRA fiscalisation of a pending/rejected document
  *   delete  { "id" }                      drafts only
  *
+ * Owner/admin only: issue an invoice or credit note, change an invoice's status
+ * (paid / unpaid), create a credit note, retry MRA. Members prepare drafts and
+ * quotes, issue and follow quotes, and e-mail issued documents.
+ *
  * Responses:
  *   200 { "success": true, "id": <document id> }
+ *   403 { "error": "..." }               reserved to the owner and administrators
  *   409 { "error": "..." }               not allowed in the document's current state
  *   422 { "error": "..." }               invalid input
  */
@@ -29,6 +34,7 @@ use App\Facturo\Documents;
 use App\Facturo\Fiscalisation;
 use App\Request;
 use App\Response;
+use App\Suite\Tenant;
 
 final class DocumentsController
 {
@@ -37,8 +43,13 @@ final class DocumentsController
         [$user, $org] = Api::context();
         $data = Request::json();
         $id   = Request::int($data, 'id');
+        $action = Request::str($data, 'action', 16);
 
-        switch (Request::str($data, 'action', 16)) {
+        if (!Tenant::canManage($org) && self::fiscalAction($org['id'], $action, $id)) {
+            Response::json(['error' => 'Réservé au propriétaire et aux administrateurs : demandez-leur d’émettre la facture, de la marquer payée ou de faire l’avoir.'], 403);
+        }
+
+        switch ($action) {
             case 'save':
                 [$draft, $error] = Documents::validate($org['id'], $data, $id);
                 if ($error !== null) {
@@ -93,6 +104,21 @@ final class DocumentsController
             default:
                 Response::json(['error' => 'Action invalide.'], 422);
         }
+    }
+
+    /**
+     * Acts on the books (numbered invoice, MRA, payment state): anything but a quote.
+     */
+    private static function fiscalAction(int $orgId, string $action, int $id): bool
+    {
+        if (in_array($action, ['credit', 'mra'], true)) {
+            return true;
+        }
+        if (!in_array($action, ['issue', 'status'], true)) {
+            return false;
+        }
+        $doc = Documents::find($orgId, $id);
+        return $doc === null || $doc['type'] !== 'quote';
     }
 
     private function done(int $id, ?string $error): never

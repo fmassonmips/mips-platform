@@ -29,6 +29,6 @@ Isolation des données entre entreprises (aucun accès croisé trouvé sur les 1
 - Sans SMTP configuré, l'inscription répond « compte existant » : configurer le SMTP avant l'ouverture publique.
 - Les limites reposent sur l'adresse IP du client : derrière un proxy ou un CDN, la vraie adresse doit être restaurée (voir `deploiement.md`).
 
-## Décision à prendre
+## Décision prise : Facturo réservé aux administrateurs pour ce qui engage la comptabilité
 
-Facturo n'a aucune restriction de rôle : un simple membre peut émettre une facture, l'avoir et la marquer payée. Si la facturation doit être réservée au propriétaire et aux administrateurs, c'est un changement court.
+Un membre prépare : clients, brouillons, devis (émission et suivi), facture brouillon depuis un devis, envoi par e-mail d'un document émis. Seuls le propriétaire et les administrateurs émettent une facture ou un avoir, marquent une facture payée ou impayée, créent un avoir et relancent la MRA (refus 403 côté serveur, boutons masqués).

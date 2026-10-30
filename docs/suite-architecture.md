@@ -64,6 +64,7 @@ Page `/team.php`, liée depuis le lanceur. Code : `src/Suite/Team.php`.
 | Élément | Règle |
 |---|---|
 | Clients | Par entreprise ; suppression impossible s'ils ont des documents. |
+| Rôles | Membres : clients, brouillons, devis (émission et suivi), envoi par e-mail des documents émis. Propriétaire et administrateurs seulement : émettre une facture ou un avoir, marquer payée / impayée, créer un avoir, relancer la MRA (contrôlé côté serveur, boutons masqués). |
 | Brouillon | Modifiable et supprimable, sans numéro. |
 | Émission | Numéro séquentiel sans trou par entreprise, type et année : `FAC-2026-0001`, `DEV-2026-0001`. Le document devient non modifiable ; les coordonnées vendeur et client sont figées à cet instant. |
 | Facture | `draft → issued ⇄ paid` ; `issued → credited` quand des avoirs couvrent tout le montant. Émission refusée sans raison sociale et BRN. |
