@@ -11,10 +11,9 @@ import des transactions (`Commission_Data`, BigQuery), facturation des commissio
 > par un acquéreur aux transactions de la plateforme. Il ne regarde ni le solde d'un compte bancaire, ni ce que MIPS
 > doit à chaque marchand. Ne jamais le présenter comme une preuve de protection des fonds des marchands.
 
-> **[FLUX À CONFIRMER] — bloquant.** Le § 2 décrit un modèle de flux **supposé** (les acquéreurs règlent MIPS sur un
-> compte trust, MIPS reverse aux marchands). Si, pour tout ou partie des moyens de paiement, l'acquéreur paie le marchand
-> **directement**, ces flux ne passent pas par le trust et sortent du périmètre. Faire valider le schéma réel des flux,
-> par moyen de paiement et par banque, par la direction financière **avant** de coder.
+> **[MODÈLE À CHOISIR] — bloquant.** D'après les éléments disponibles (§ 2.1), MIPS fonctionne aujourd'hui en
+> **passerelle** : les acquéreurs paient les marchands directement et MIPS ne détient pas leurs fonds. Ce module ne sert
+> que si SPIN DIGITAL **encaisse pour compte** (modèle B, § 2.2). Choisir le modèle avant de coder.
 
 > **[CONFORMITÉ] — bloquant.** Les obligations de cantonnement (*safeguarding*) applicables à MIPS / SPIN DIGITAL
 > (texte de la Banque de Maurice, conditions de licence, fréquence de rapprochement, délai de couverture d'un déficit,
@@ -41,33 +40,83 @@ Tous les montants en **centimes entiers** (jamais de flottants). Fuseau horaire 
 
 ---
 
-## 2. Flux de fonds supposés [FLUX À CONFIRMER]
+## 2. Flux de fonds : constat et schéma proposé
 
-```
-  Porteur de carte / payeur
-          │ paiement
-          ▼
-  Acquéreur / banque (MCB, SBM, ABSA, wallets…)
-          │ règlement (brut ou net de frais acquéreur ?)          ── H1, H2
-          ▼
-  ┌──────────────────────── COMPTE TRUST (MUR) ────────────────────────┐
-  │  + règlements acquéreurs                                           │
-  │  − reversements aux marchands                                      │── H3
-  │  − commissions MIPS prélevées vers le compte d'exploitation        │── H4
-  │  − remboursements / chargebacks débités par l'acquéreur            │── H5
-  │  ± frais bancaires, intérêts (ne doivent pas toucher les droits)   │── H6
-  └────────────────────────────────────────────────────────────────────┘
-```
+### 2.1 Constat (vérifié le 2026-10-30)
 
-| Hypothèse | À confirmer |
+**Aujourd'hui, MIPS ne détient vraisemblablement pas les fonds des marchands.** Quatre indices concordants :
+
+| Indice | Source |
 |---|---|
-| H1 | Quels moyens de paiement et quelles banques règlent **sur le trust** (et lesquels paient le marchand directement) |
-| H2 | Règlement **brut** ou **net** des frais de l'acquéreur ; délai (J+1, J+2…) ; un virement par jour ou par lot |
-| H3 | Fréquence des reversements aux marchands, fichier de virement utilisé, montant minimum |
-| H4 | Moment où la commission MIPS est « acquise » et sortie du trust (à chaque reversement ? mensuellement après facture ?) |
-| H5 | Les chargebacks sont-ils débités sur le trust, compensés sur le règlement suivant, ou facturés à part ? |
-| H6 | Qui supporte les frais bancaires et à qui reviennent les intérêts du compte trust [CONFORMITÉ] |
-| H7 | Devise : MUR uniquement, ou un trust par devise (USD, EUR) ? Le module gère **un rapprochement par compte et par devise**, sans conversion |
+| MIPS se présente comme passerelle : règlement « dans n'importe quelle banque à Maurice », **« pas de compte intermédiaire »**, l'argent va **directement** sur le compte du marchand | Fiche de l'application MIPS sur l'App Store Shopify (déclaration commerciale, pas une constatation du régulateur) |
+| La commission MIPS est **facturée** au marchand (module facturation : factures mensuelles avec TVA), et non retenue sur un reversement | Prototype `mips-platform`, `src/Billing/` |
+| Le rapprochement MCB se fait **par numéro de point de vente (Outlet) de chaque marchand** chez l'acquéreur : chaque marchand a son propre contrat acquéreur | Spec `my-mips-mcb-reconciliation.md`, colonnes `Outlet_Number` / `card_merchant_id` |
+| Les transactions portent la banque de règlement par moyen de paiement (`fi_name`) : MCB (MPGS, Juice, PowerCard, MyT Money, virement), SBM (MPGS_SBM), ABSA (Cybersource), BNI (MPGS, Madagascar) | Export `Commission_Data` d'octobre 2026, 9 couples moyen de paiement / banque |
+
+**Conséquence : dans le modèle actuel, il n'y a pas de compte trust à réconcilier.** Le module décrit ici ne s'applique
+que si l'entité qui sollicite la licence (SPIN DIGITAL) **encaisse** les fonds pour le compte des marchands.
+À confirmer par la direction financière : aucun moyen de paiement (notamment les portefeuilles MyT Money et Juice,
+ou le virement bancaire) ne transite-t-il déjà par un compte MIPS ?
+
+**Cadre réglementaire — non vérifié à la source.** Les textes de la Banque de Maurice (formulaire de demande de licence
+de prestataire de services de paiement, National Payment Systems Act 2018) étaient **inaccessibles** le 2026-10-30
+(erreur 503 sur bom.mu). Des sources secondaires indiquent : une section du formulaire de licence consacrée à la
+protection des fonds des utilisateurs (séparation des fonds propres, ou assurance) ; pour la monnaie électronique,
+un trust, un compte dédié, des mécanismes de rapprochement et un acte de trust ; selon un cabinet de conseil,
+des comptes trust dans des banques mauriciennes, un rapprochement et une **certification annuelle par l'auditeur**.
+**À lire dans le texte avant de coder.**
+
+### 2.2 Les deux modèles possibles
+
+| | **A — Passerelle (actuel)** | **B — Encaissement pour compte (agrégateur)** |
+|---|---|---|
+| Contrat acquéreur | un par marchand (MID / Outlet du marchand) | un contrat **au nom de SPIN/MIPS**, marchands en sous-marchands |
+| Qui reçoit l'argent | le marchand, directement | le **compte trust** SPIN/MIPS |
+| Commission MIPS | facturée chaque mois | **retenue** au reversement (facture = relevé) |
+| Risque pour le marchand si MIPS fait défaut | aucun sur les fonds | fonds exposés → **cantonnement obligatoire** |
+| Réconciliation trust | **sans objet** | **obligatoire chaque jour** (ce document) |
+| Ce que MIPS rapproche | volumes acquéreur ↔ plateforme (existant) ; factures ↔ paiements des marchands | banque ↔ grand livre ↔ droits des marchands |
+
+**Recommandation.** Ne pas lancer le développement de ce module tant que le modèle n'est pas choisi.
+- Si le dossier SPIN reste en **modèle A**, il faut le dire explicitement au régulateur (« aucun fonds de marchand détenu »,
+  schéma des flux à l'appui) au lieu de promettre une réconciliation trust qui n'aurait rien à réconcilier.
+- Si SPIN vise le **modèle B**, les contrats acquéreurs doivent être renégociés (agrégation autorisée, MID au nom de SPIN)
+  **avant** tout développement, et le schéma ci-dessous s'applique.
+
+### 2.3 Schéma proposé pour le modèle B
+
+```mermaid
+flowchart LR
+    P[Payeur] -->|carte / QR / wallet| ACQ[Acquéreurs<br/>MCB · SBM · ABSA]
+    ACQ -->|règlement J+1, BRUT,<br/>référence de lot| T[(Compte TRUST MUR<br/>banque mauricienne)]
+    ACQ -.->|frais acquéreur<br/>facturés à part| OP[(Compte d'exploitation<br/>SPIN/MIPS)]
+    T -->|reversement J+1<br/>net de commission,<br/>réf. unique par ligne| M[Comptes des marchands]
+    T -->|commission retenue,<br/>sortie le même jour| OP
+    OP -.->|couverture d'un déficit| T
+    ACQ -->|chargeback| T
+```
+
+| Choix proposé | Pourquoi |
+|---|---|
+| **Un compte trust par devise**, MUR d'abord, dans la banque qui reçoit le plus de règlements (MCB : 6 des 9 couples moyen de paiement / banque) | Moins de virements entre banques, rapprochement plus simple |
+| Règlements acquéreurs **bruts**, frais acquéreur facturés séparément au compte d'exploitation | Le crédit bancaire égale la somme des transactions du lot : appariement exact |
+| Reversement **quotidien J+1**, net de la commission MIPS | Les fonds restent peu de temps sur le trust ; la commission sort le jour même, donc pas d'excédent durable |
+| Commission sortie vers le compte d'exploitation **dans le même lot** que les reversements | Le trust ne contient que des fonds des marchands à chaque clôture |
+| **Réserve chargeback** par marchand selon le risque KYC, conservée sur le trust | Couvre les débits de chargeback sans toucher aux fonds des autres marchands |
+| **Aucun frais bancaire** prélevé sur le trust : refacturé au compte d'exploitation par accord avec la banque | Évite les déficits mécaniques [CONFORMITÉ] |
+| Devises autres que le MUR (BNI / Madagascar, USD) **hors du trust MUR** : compte séparé ou hors périmètre au départ | Pas de conversion dans le rapprochement |
+
+Paramètres H1 à H7 résultants (à valider) :
+
+| Hypothèse | Proposition |
+|---|---|
+| H1 Moyens de paiement au trust | tous ceux couverts par les nouveaux contrats d'agrégation ; les autres restent en modèle A |
+| H2 Brut ou net | **brut**, J+1 |
+| H3 Reversements | quotidiens, J+1, sans minimum |
+| H4 Commission | retenue au reversement, sortie le même jour |
+| H5 Chargebacks | débités sur le trust, imputés au marchand, réserve dédiée |
+| H6 Frais / intérêts | hors trust ; affectation des intérêts : [CONFORMITÉ] |
+| H7 Devises | MUR seulement au démarrage |
 
 ---
 
@@ -279,7 +328,7 @@ Validation finale : **un mois réel, en parallèle** du processus manuel actuel,
 
 ## 13. Questions à trancher (avant développement)
 
-1. **[FLUX]** Schéma réel des flux par moyen de paiement et par banque (H1 à H7). Qui a ce schéma aujourd'hui ?
+1. **[MODÈLE]** SPIN DIGITAL : passerelle (A) ou encaissement pour compte (B) ? Si B : contrats acquéreurs d'agrégation, et validation des propositions H1 à H7 (§ 2.3). Confirmer qu'aucun flux actuel (wallets, virement) ne transite déjà par un compte MIPS.
 2. **[CONFORMITÉ]** Texte applicable au cantonnement (Banque de Maurice / licence), fréquence de rapprochement exigée, délai de couverture d'un déficit, rapports à transmettre, conservation.
 3. Combien de comptes trust, dans quelles banques et devises ? Les relevés sont-ils disponibles en camt.053 ou MT940 ?
 4. La commission MIPS : quand est-elle acquise et sortie du trust ? Avant ou après facture ?
