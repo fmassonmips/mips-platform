@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 error_reporting(E_ALL);
+date_default_timezone_set('Indian/Mauritius');   // every date the app writes or compares is Mauritius time (the DB session too)
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 

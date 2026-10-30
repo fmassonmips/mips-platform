@@ -1,6 +1,6 @@
 # Mise en ligne de my.mips.mu
 
-Guide pour installer la suite sur un serveur de production (ou de démonstration), puis la liste à cocher avant d'y mettre les données d'un client.
+Guide pour installer la suite sur un serveur de production (ou de démonstration), puis la liste à cocher avant d'y mettre les données d'un client. Avant la première mise en production, le code doit avoir été relu : voir `docs/relecture.md` et `tests/e2e/run.sh`.
 
 ## 1. Ce qu'il faut
 
@@ -12,7 +12,7 @@ Guide pour installer la suite sur un serveur de production (ou de démonstration
 | Serveur web | Nginx (exemple ci-dessous) ou Apache, **racine web = `public/`** |
 | HTTPS | Certificat valide (Let's Encrypt) ; les cookies de session sont `Secure` |
 | E-mail | Un service d'envoi SMTP (Brevo, Postmark, Amazon SES…) avec SPF, DKIM et DMARC sur le domaine d'envoi |
-| Horloge | Fuseau du serveur indifférent : l'application écrit l'heure de Maurice elle-même |
+| Horloge | Fuseau du serveur indifférent : l'application se met à l'heure de Maurice (PHP et chaque connexion à la base). Garder l'horloge synchronisée (NTP) ; les sauvegardes et requêtes SQL lancées à la main avec `mysql` sont en heure du serveur, sauf `SET time_zone = '+04:00'` |
 
 Seul `public/` est exposé au web. `src/`, `config/`, `templates/`, `sql/` et `tools/` restent hors de la racine web.
 
