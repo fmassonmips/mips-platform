@@ -1,7 +1,9 @@
 <?php
 /**
- * Application configuration.
- * Copy and edit this file per environment. Never commit real credentials.
+ * Application configuration: versioned defaults, no secrets.
+ * Each server puts its own values (database, secret_key, SMTP, MRA…) in
+ * config/config.local.php, which is not versioned and only lists what it
+ * changes; see config/config.local.example.php.
  */
 declare(strict_types=1);
 
