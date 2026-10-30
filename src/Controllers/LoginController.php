@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Accounts;
 use App\Auth;
 use App\Csrf;
 use App\RateLimiter;
@@ -67,6 +68,10 @@ final class LoginController
         RateLimiter::record($ip, $email, $user !== null);
 
         if ($user === null) {
+            // Right password on a sign-up never confirmed: send the link again and say so.
+            if (Accounts::resendIfPending(strtolower($email), $password)) {
+                Response::json(['error' => 'Votre adresse n’est pas encore confirmée : nous venons de vous renvoyer le lien d’activation.'], 403);
+            }
             Response::json(['error' => 'Identifiants invalides.'], 401);
         }
 

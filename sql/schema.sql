@@ -19,12 +19,29 @@ CREATE TABLE IF NOT EXISTS users (
     name            VARCHAR(120) NULL,
     role            VARCHAR(32)  NOT NULL DEFAULT 'user',
     is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+    password_changed_at DATETIME NULL,                     -- logs out the account's other sessions
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_email (email),
     KEY idx_users_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- user_tokens (single-use links sent by e-mail) ---------------------------
+-- Only the SHA-256 of the token is stored.
+CREATE TABLE IF NOT EXISTS user_tokens (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id     BIGINT UNSIGNED NOT NULL,
+    purpose     VARCHAR(8)      NOT NULL,                  -- verify | reset | notice
+    token_hash  CHAR(64)        NOT NULL,
+    created_at  DATETIME        NOT NULL,
+    expires_at  DATETIME        NOT NULL,
+    used_at     DATETIME        NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_user_tokens_hash (token_hash),
+    KEY idx_user_tokens_user (user_id, purpose, created_at),
+    CONSTRAINT fk_user_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---- login_attempts (rate limiting) ------------------------------------

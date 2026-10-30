@@ -6,7 +6,8 @@
  *   { "email": "...", "name": "...", "password": "..." }
  *
  * Responses:
- *   201 { "success": true, "message": "Account created. An administrator will activate it." }
+ *   201 { "success": true, "verify": true, "message": "..." }   e-mail configured: confirmation link sent
+ *   201 { "success": true, "message": "Account created. An administrator will activate it." }   no e-mail
  *   409 { "error": "An account with this email already exists." }
  *   422 { "error": "..." }
  *   429 { "error": "Too many attempts. Please try again later." }
@@ -17,8 +18,10 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Accounts;
 use App\Csrf;
 use App\Database;
+use App\Mail\SmtpMailer;
 use App\RateLimiter;
 use App\Response;
 use App\Validator;
@@ -64,6 +67,20 @@ final class RegisterController
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
             Response::json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
+        }
+
+        // With e-mail: self-service sign-up confirmed by a link; the answer is the same whether
+        // the address is new or not (the e-mail tells the owner). Without e-mail: manual activation.
+        if (SmtpMailer::isConfigured()) {
+            if (RateLimiter::tooManyRequests($ip, 'signup', 10, 3600)) {
+                Response::json(['error' => 'Trop d’inscriptions depuis cette connexion. Réessayez dans une heure.'], 429);
+            }
+            RateLimiter::recordRequest($ip, 'signup');
+            Accounts::register(strtolower($email), $name, $password);
+            Response::json([
+                'success' => true, 'verify' => true,
+                'message' => 'Presque fini : ouvrez le lien envoyé à ' . strtolower($email) . ' pour activer votre compte (pensez aux indésirables).',
+            ], 201);
         }
 
         $hash = password_hash($password, PASSWORD_DEFAULT);

@@ -49,6 +49,7 @@
       <p id="error-message" class="error" role="alert" hidden></p>
     </form>
 
+    <p class="auth-link"><a href="/forgot.php">Mot de passe oublié ?</a></p>
     <p class="auth-link">Pas encore de compte ? <a href="/register.php">Créer un compte</a></p>
   </main>
   <script src="/assets/js/login.js"></script>

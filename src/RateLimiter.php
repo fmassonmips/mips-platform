@@ -47,12 +47,31 @@ final class RateLimiter
     }
 
     /**
+     * Requests of one kind (sign-up, password reset…) from an IP within a window.
+     * Stored as successful rows under a "#kind" marker, so they never count as
+     * failed logins (an office behind one IP must still be able to log in).
+     */
+    public static function tooManyRequests(string $ip, string $kind, int $max, int $window): bool
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM login_attempts WHERE ip_address = :ip AND email = :k AND success = 1 AND attempted_at >= :since'
+        );
+        $stmt->execute([':ip' => $ip, ':k' => '#' . $kind, ':since' => date('Y-m-d H:i:s', time() - $window)]);
+        return (int) $stmt->fetchColumn() >= $max;
+    }
+
+    public static function recordRequest(string $ip, string $kind): void
+    {
+        self::record($ip, '#' . $kind, true);
+    }
+
+    /**
      * Wipe attempts for a given IP/email pair. Called after a successful login.
      */
     public static function clear(string $ip, string $email): void
     {
         $stmt = Database::connection()->prepare(
-            'DELETE FROM login_attempts WHERE ip_address = :ip OR email = :email'
+            'DELETE FROM login_attempts WHERE (ip_address = :ip OR email = :email) AND email NOT LIKE \'#%\''   // keep sign-up / reset counters
         );
         $stmt->execute([':ip' => $ip, ':email' => $email]);
     }

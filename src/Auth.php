@@ -105,13 +105,23 @@ final class Auth
         }
 
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, name, role, created_at
+            'SELECT id, email, name, role, created_at, password_changed_at
              FROM users
              WHERE id = :id AND is_active = 1
              LIMIT 1'
         );
         $stmt->execute([':id' => (int) $_SESSION['user_id']]);
         $user = $stmt->fetch();
+
+        // A password change (reset link) ends the sessions opened before it.
+        if (is_array($user) && $user['password_changed_at'] !== null
+            && strtotime((string) $user['password_changed_at']) > (int) ($_SESSION['logged_in_at'] ?? 0)) {
+            self::logout_user();
+            return null;
+        }
+        if (is_array($user)) {
+            unset($user['password_changed_at']);
+        }
 
         return is_array($user) ? $user : null;
     }

@@ -57,6 +57,8 @@
       <p id="error-message" class="error" role="alert" hidden></p>
     </form>
 
+    <p id="done-message" class="success" role="status" hidden></p>
+
     <p class="auth-link">Déjà un compte ? <a href="/login.php">Se connecter</a></p>
   </main>
   <script src="/assets/js/register.js"></script>

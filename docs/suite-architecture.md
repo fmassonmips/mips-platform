@@ -33,6 +33,18 @@ my.mips.mu
 - Le profil entreprise (raison sociale, BRN, n° TVA, adresse) est partagé par toutes les apps (`/api/suite/organization`).
 - Interface en français, formats mauriciens à l'affichage : montants en roupies « Rs 1,234.50 » (autres devises : code ISO, « EUR 1,234.50 »), dates « 26/10/2026 », heures sur 24 h (`App\Format`, `Money::format`). Stockage, champs de saisie, flux MRA et exports CSV restent en ISO (`2026-10-26`, `1234.50`).
 
+## Comptes : inscription et mot de passe oublié
+
+Code : `src/Accounts.php`, `AccountController` (`/api/auth/account`), pages `/verify.php`, `/forgot.php`, `/reset.php`.
+
+| Élément | Règle |
+|---|---|
+| Inscription | Avec un SMTP configuré : compte inactif + lien de confirmation (48 h) ; le lien ouvre une page avec un bouton (les antivirus de messagerie qui suivent les liens ne le consomment pas) ; confirmer active le compte, connecte et crée l'entreprise. Sans SMTP : activation manuelle comme avant. |
+| Pas d'énumération | Inscription avec une adresse déjà utilisée : même réponse qu'une nouvelle adresse ; le titulaire reçoit « Votre compte MIPS existe déjà » ; son mot de passe ne change pas. « Mot de passe oublié » répond pareil que l'adresse existe ou non. |
+| Connexion avant confirmation | Bon mot de passe : « pas encore confirmée », lien renvoyé. Mauvais : « Identifiants invalides ». |
+| Mot de passe oublié | Lien valable 1 h, une seule fois, seulement pour un compte actif ; une nouvelle demande remplace l'ancien lien. Le nouveau mot de passe connecte et ferme les autres sessions du compte (`users.password_changed_at`). |
+| Limites | 3 e-mails par heure et par adresse ; 10 inscriptions et 10 demandes de réinitialisation par heure et par connexion (compteurs séparés des échecs de connexion). Seule l'empreinte SHA-256 des liens est stockée. |
+
 ## Équipe (invitations)
 
 Page `/team.php`, liée depuis le lanceur. Code : `src/Suite/Team.php`.
@@ -298,6 +310,7 @@ mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 mysql -u root -p mips_platform < sql/migrations/015_team.sql
 mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
 mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
+mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
 ```
 
 Puis dans `config/config.php` :
