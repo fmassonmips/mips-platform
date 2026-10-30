@@ -249,6 +249,14 @@ Code : `src/ClientBloom/FacturoRewards.php`, appelé par `DocumentsController` a
 Le résultat est affiché sur la facture ou l'avoir (`clientbloom_note`) avec un lien vers la fiche client ; la référence du
 mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne bloque jamais la facturation (journalisée).
 
+## Entreprise de démonstration
+
+`php tools/demo_seed.php --yes [--password=…] [--email=…] [--reset]` crée « Le Lagon Bleu » (resort avec spa et boutique à Trou-aux-Biches) et trois mois d'activité dans les 10 apps, datés par rapport au jour du lancement : factures (dont 2 en retard), devis, 40 clients fidélité, ~440 rendez-vous spa, 46 avis, 14 tickets, 2 projets, 22 commandes, congés, ~70 séjours. Tout passe par les classes des apps (numérotation, TVA, cashback, stock, disponibilités) puis est antidaté. Aucun e-mail n'est envoyé.
+
+- Compte propriétaire : `demo@lagonbleu.example` ; mot de passe aléatoire affiché, ou `--password`. Les quatre collègues (`@lagonbleu.example`) ne peuvent pas se connecter.
+- `--reset` supprime l'entreprise de démo (celle de ce nom dont le propriétaire a l'e-mail de démo) et les comptes `@lagonbleu.example`, puis la recrée ; rien d'autre n'est touché.
+- À relancer avant une démo pour que « aujourd'hui » et le mois en cours aient des données. Base de démo ou de préproduction uniquement.
+
 ## Ajouter une app
 
 1. Passer son `status` à `available` dans `src/Suite/Catalog.php`.
