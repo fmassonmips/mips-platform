@@ -57,7 +57,8 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
 
 ## 5. Tests automatiques : ce qui reste à couvrir
 
-- **Blocages d'approbation et approbation en double regard** (S02b, C03, C04) : aucun test automatique. Ce sont
-  des contrôles clés pour la BoM. Une suite dédiée est à écrire avant de les présenter comme vérifiés.
+- ~~Blocages d'approbation et approbation en double regard~~ : couverts depuis le 2026-10-30 par
+  `onboarding_approval_test.py` (78 vérifications). La suite a révélé un contournement du double regard
+  (réassigner le dossier puis le trancher soi-même), corrigé le même jour.
 - **2FA obligatoire pour admin et finance** : non vérifiée par les tests (désactivée dans la configuration de test).
 - Antivirus réel, fichier MCB réel, table BigQuery réelle : uniquement simulés.

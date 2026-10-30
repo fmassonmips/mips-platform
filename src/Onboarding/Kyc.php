@@ -96,6 +96,36 @@ final class Kyc
         return ['requirement' => $req, 'party_id' => $pid, 'expires' => $expires];
     }
 
+    /**
+     * Remember users who handled a case (creator, analysts, whoever reassigned it).
+     *
+     * @param list<int|null> $userIds
+     */
+    public function recordHandlers(int $caseId, array $userIds): void
+    {
+        $ins = $this->db->prepare('INSERT IGNORE INTO onboarding_case_handlers (case_id, user_id) VALUES (:c, :u)');
+        foreach (array_unique(array_filter(array_map('intval', $userIds))) as $u) {
+            $ins->execute([':c' => $caseId, ':u' => $u]);
+        }
+    }
+
+    /**
+     * Four eyes on the decision: true when the user created the case, is or
+     * was its analyst, or changed its assignment.
+     *
+     * @param array<string,mixed> $case
+     */
+    public function hasHandled(array $case, int $userId): bool
+    {
+        $analyst = $case['assigned_to'] ?? $case['created_by'];
+        if ((int) ($case['created_by'] ?? 0) === $userId || ($analyst !== null && (int) $analyst === $userId)) {
+            return true;
+        }
+        $stmt = $this->db->prepare('SELECT 1 FROM onboarding_case_handlers WHERE case_id = :c AND user_id = :u');
+        $stmt->execute([':c' => $case['id'], ':u' => $userId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     /** @return array<string,mixed> */
     public function getCase(int $id): array
     {
@@ -272,9 +302,8 @@ final class Kyc
             if (!in_array((string) $user['role'], $this->cfg['approver_roles'] ?? ['admin'], true)) {
                 throw new RuntimeException('Your role cannot approve or reject onboarding cases.', 403);
             }
-            $analyst = $case['assigned_to'] ?? $case['created_by'];
-            if ($analyst !== null && (int) $analyst === (int) $user['id']) {
-                throw new RuntimeException('Four eyes: the assigned analyst cannot decide the case. Another approver must.', 409);
+            if ($this->hasHandled($case, (int) $user['id'])) {
+                throw new RuntimeException('Four eyes: you have handled this case (created it, were its analyst or reassigned it). Another approver must decide.', 409);
             }
             if ($notes === null || trim($notes) === '') {
                 throw new RuntimeException('A decision note is required.', 422);

@@ -14,6 +14,7 @@ namespace App\Portal;
 use App\Audit;
 use App\Database;
 use App\Mailer;
+use App\Onboarding\Kyc;
 use PDO;
 use RuntimeException;
 
@@ -258,6 +259,7 @@ final class Prequalification
                  VALUES (:m, 'initial', :a, :d, :n, :u)"
             )->execute([':m' => $merchantId, ':a' => (int) $staff['id'], ':d' => $due, ':n' => 'Opened from portal application #' . $id, ':u' => (int) $staff['id']]);
             $caseId = (int) $this->db->lastInsertId();
+            (new Kyc())->recordHandlers($caseId, [(int) $staff['id']]);
 
             $this->db->prepare(
                 "UPDATE prequalifications SET status = 'accepted', decided_by = :u, decided_at = NOW(), decision_note = :n,

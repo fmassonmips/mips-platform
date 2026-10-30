@@ -1,11 +1,12 @@
 # Tests de bout en bout
 
-Huit suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
+Neuf suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
 
 | Suite | Vérifie | Vérifications |
 |---|---|---|
 | `portal_test.py` | Portail marchand : inscription, confirmation d'email, double authentification, conditions d'utilisation versionnées, préqualification, acceptation par MIPS, personnes et pièces, isolement entre comptes marchands et vis-à-vis du back-office, envoi du dossier, double regard, antivirus, réinitialisation de mot de passe, désactivation de compte, journal d'audit | 113 |
 | `staff_onboarding_test.py` | Dépôt et revue des pièces par le personnel (non-régression du stockage partagé), double regard, téléchargement, retour en collecte | 11 |
+| `onboarding_approval_test.py` | Approbation des dossiers KYC : chacun des blocages (nom légal et BRN, pièces manquantes, refusées, en attente ou expirées, contrat signé, dirigeant, bénéficiaire effectif, seuil de 25 %, filtrage sanctions/PEP, note de risque, PEP et risque élevé), rôle d'approbateur, double regard sur la décision (ni le créateur, ni un analyste passé ou présent, ni celui qui a réassigné le dossier), double regard sur les pièces, note de décision, date de prochaine revue, états définitifs, revue périodique | 78 |
 | `reporting_test.py` | Import Commission_Data : colonnes manquantes, fichier sans date, règles de nettoyage figées (SUCCESS seul, tests, remboursements seuls), rapport mensuel ligne par ligne (TPE, online, passerelles, rails, FX, segments, top marchands, alertes), tendance 12 mois, exports CSV et Excel, remplacement d'un mois réimporté, droits d'accès, journal d'audit | 65 |
 | `billing_test.py` | Règles de commission (validation, priorité marchand > rail spécifique > type de rail > canal, dates de validité, désactivation), factures avec TVA 15 %, une par marchand et devise, cycle brouillon → émise → payée / annulée, numérotation sans trou, mois verrouillé contre la réimport, marchand non facturable, export comptable | 47 |
 | `recon_test.py` | Rapprochement MCB / MIPS : correspondances de MID et liste de surveillance, ventilation de l'écart (vérifications de carte, décalage de fin de mois, surveillance, un seul côté, écart réel), règle de signe, avertissements de périmètre (extraction filtrée, marchand témoin, lignes hors mois), vue journalière, éléments à réclamer, exports, recalcul | 55 |

@@ -43,6 +43,8 @@
     tous comptes confondus. Avant, 5 échecs depuis une adresse IP bloquaient tous les comptes derrière elle ;
   - fermeture des autres sessions au changement de mot de passe, désormais garantie même pour deux changements
     dans la même seconde ;
+  - double regard sur la décision renforcé : un analyste qui réassigne le dossier à un collègue ne peut plus le
+    trancher lui-même (contournement trouvé par les tests) ;
   - ajout de suites de tests automatiques (`tests/`), voir la section en fin de registre.
 
   Aucune capture ne montre ces comportements : les images restent fidèles à l'interface actuelle. Elles portent
@@ -170,7 +172,7 @@
 
 ## Vérification automatique des fonctions montrées (2026-10-30)
 
-Huit suites de tests (`tests/run_tests.sh`, 478 vérifications) pilotent l'application par son API, sur une base
+Neuf suites de tests (`tests/run_tests.sh`, 556 vérifications) pilotent l'application par son API, sur une base
 jetable et des données **uniquement fictives**. Elles vérifient le **code du prototype**, pas un système en
 production. Le tableau indique, pour chaque capture, si le comportement montré est vérifié automatiquement.
 
@@ -179,7 +181,7 @@ production. Le tableau indique, pour chaque capture, si le comportement montré 
 | S01a–b | `admin_test.py` | Connexion avec second facteur TOTP, refus d'un code déjà utilisé, codes de secours à usage unique, blocage d'un compte après 5 échecs | **2FA obligatoire pour admin et finance** : désactivée dans la configuration de test |
 | S01c–f | `portal_test.py` | Confirmation de l'email, même réponse si l'adresse existe, 2FA obligatoire avant tout accès, acceptation de la version courante des conditions, journal (empreinte, IP, navigateur), nouvelle acceptation exigée à chaque nouvelle version | — |
 | S02a | `staff_onboarding_test.py` | Ouverture d'un dossier, retour en collecte | Liste et filtres de l'écran |
-| S02b, C03, C04 | — | — | **Blocages d'approbation et approbation par une personne différente de l'analyste : aucun test automatique.** Vérifiés à la main pendant le développement (build `590d8d8`) |
+| S02b, C03, C04 | `onboarding_approval_test.py` | Chacun des blocages d'approbation, rôle d'approbateur, décision par une personne qui n'a jamais eu la main sur le dossier (ni créateur, ni analyste passé ou présent, ni auteur d'une réassignation), note de décision obligatoire, prochaine revue selon le risque, marchand activé, décision définitive | — |
 | S02c–d | `portal_test.py` | Étape « submitted », jamais présentée comme « approved » ; aucun champ interne (note de risque, blocages) exposé au marchand | Décision finale côté marchand (non capturée non plus) |
 | S03a–b | `portal_test.py` | Validation du formulaire, une préqualification par compte, signaux réservés à l'analyste, acceptation qui ouvre le dossier, refus | — |
 | S04a–b | `staff_onboarding_test.py` | Format vérifié sur le contenu, pièce d'identité rattachée à une personne du dossier, double regard (le déposant ne peut pas valider sa pièce), téléchargement exact | Seuil de 25 % pour les bénéficiaires effectifs |

@@ -475,6 +475,22 @@ CREATE TABLE IF NOT EXISTS onboarding_cases (
     CONSTRAINT fk_onboarding_cases_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---- onboarding_case_handlers: everyone who has had a hand on a case --------
+-- Creator, every analyst ever assigned, and whoever changed the assignment.
+-- None of them may approve or reject the case (four eyes): handing the case
+-- to a colleague must not let the former analyst decide it.
+CREATE TABLE IF NOT EXISTS onboarding_case_handlers (
+    case_id         BIGINT UNSIGNED NOT NULL,
+    user_id         BIGINT UNSIGNED NOT NULL,
+    since           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (case_id, user_id),
+    CONSTRAINT fk_case_handlers_case FOREIGN KEY (case_id) REFERENCES onboarding_cases (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Existing cases: their creator and current analyst.
+INSERT IGNORE INTO onboarding_case_handlers (case_id, user_id)
+    SELECT id, created_by FROM onboarding_cases WHERE created_by IS NOT NULL
+    UNION SELECT id, assigned_to FROM onboarding_cases WHERE assigned_to IS NOT NULL;
+
 -- ---- kyc_parties: directors, beneficial owners, signatories ----------------
 -- id_number is encrypted with the application key (personal data).
 CREATE TABLE IF NOT EXISTS kyc_parties (

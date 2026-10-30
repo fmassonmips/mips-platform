@@ -166,8 +166,7 @@ final class OnboardingController
             }, $history->fetchAll()),
             'requirements' => $this->kyc->requirements(),
             'staff'        => $staff,
-            'can_decide'   => in_array((string) $user['role'], $roles, true)
-                && (int) ($case['assigned_to'] ?? $case['created_by'] ?? 0) !== (int) $user['id'],
+            'can_decide'   => in_array((string) $user['role'], $roles, true) && !$this->kyc->hasHandled($case, (int) $user['id']),
             'me'           => (int) $user['id'],
             'ubo_threshold_pct' => (float) ($GLOBALS['config']['kyc']['ubo_threshold_pct'] ?? 25),
             'crypto_ready' => Crypto::configured(),
@@ -204,6 +203,7 @@ final class OnboardingController
             'INSERT INTO onboarding_cases (merchant_id, kind, assigned_to, due_date, created_by) VALUES (:m, :k, :a, :d, :u)'
         )->execute([':m' => $merchantId, ':k' => $kind, ':a' => (int) $user['id'], ':d' => $due, ':u' => (int) $user['id']]);
         $id = (int) $this->db->lastInsertId();
+        $this->kyc->recordHandlers($id, [(int) $user['id']]);
 
         $carried = ['parties' => 0, 'documents' => 0];
         if ($kind === 'initial') {
@@ -270,7 +270,7 @@ final class OnboardingController
     public function update(): void
     {
         Request::require_method('POST');
-        Auth::require_access('onboarding');
+        $user = Auth::require_access('onboarding');
         Request::require_csrf();
 
         $d    = Request::body();
@@ -296,6 +296,10 @@ final class OnboardingController
 
         $this->db->prepare('UPDATE onboarding_cases SET risk_rating = :r, assigned_to = :a, due_date = :d, notes = :n WHERE id = :id')
             ->execute([':r' => $risk, ':a' => $assigned, ':d' => $due, ':n' => $notes ?: null, ':id' => $case['id']]);
+        if ((string) ($case['assigned_to'] ?? '') !== (string) ($assigned ?? '')) {
+            // Former and new analyst, and whoever reassigned: none of them may decide the case.
+            $this->kyc->recordHandlers((int) $case['id'], [$case['assigned_to'], $assigned, (int) $user['id']]);
+        }
 
         $changes = [];
         foreach (['risk_rating' => $risk, 'assigned_to' => $assigned, 'due_date' => $due] as $k => $v) {
