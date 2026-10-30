@@ -172,13 +172,13 @@
 
 ## Vérification automatique des fonctions montrées (2026-10-30)
 
-Neuf suites de tests (`tests/run_tests.sh`, 556 vérifications) pilotent l'application par son API, sur une base
+Dix suites de tests (`tests/run_tests.sh`, 579 vérifications) pilotent l'application par son API, sur une base
 jetable et des données **uniquement fictives**. Elles vérifient le **code du prototype**, pas un système en
 production. Le tableau indique, pour chaque capture, si le comportement montré est vérifié automatiquement.
 
 | Capture | Suite | Ce qui est vérifié | Non couvert |
 |---|---|---|---|
-| S01a–b | `admin_test.py` | Connexion avec second facteur TOTP, refus d'un code déjà utilisé, codes de secours à usage unique, blocage d'un compte après 5 échecs | **2FA obligatoire pour admin et finance** : désactivée dans la configuration de test |
+| S01a–b | `admin_test.py`, `staff_2fa_required_test.py` | Connexion avec second facteur TOTP, refus d'un code déjà utilisé, codes de secours à usage unique, blocage d'un compte après 5 échecs ; 2FA obligatoire pour admin et finance : modules fermés sans 2FA, désactivation refusée, nouvel enrôlement après remise à zéro ou promotion | — |
 | S01c–f | `portal_test.py` | Confirmation de l'email, même réponse si l'adresse existe, 2FA obligatoire avant tout accès, acceptation de la version courante des conditions, journal (empreinte, IP, navigateur), nouvelle acceptation exigée à chaque nouvelle version | — |
 | S02a | `staff_onboarding_test.py` | Ouverture d'un dossier, retour en collecte | Liste et filtres de l'écran |
 | S02b, C03, C04 | `onboarding_approval_test.py` | Chacun des blocages d'approbation, rôle d'approbateur, décision par une personne qui n'a jamais eu la main sur le dossier (ni créateur, ni analyste passé ou présent, ni auteur d'une réassignation), note de décision obligatoire, prochaine revue selon le risque, marchand activé, décision définitive | — |

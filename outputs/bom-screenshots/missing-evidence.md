@@ -60,5 +60,5 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
 - ~~Blocages d'approbation et approbation en double regard~~ : couverts depuis le 2026-10-30 par
   `onboarding_approval_test.py` (78 vérifications). La suite a révélé un contournement du double regard
   (réassigner le dossier puis le trancher soi-même), corrigé le même jour.
-- **2FA obligatoire pour admin et finance** : non vérifiée par les tests (désactivée dans la configuration de test).
+- ~~2FA obligatoire pour admin et finance~~ : couverte depuis le 2026-10-30 par `staff_2fa_required_test.py` (23 vérifications).
 - Antivirus réel, fichier MCB réel, table BigQuery réelle : uniquement simulés.
