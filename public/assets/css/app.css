@@ -729,3 +729,11 @@ input[type="time"] {
 .sz-key.bk-held { background: #ffe7a8; }
 .sz-key.bk-block { background: #c9ced6; }
 .sz-key.bk-ical { background: #f2b8b5; }
+
+/* -------- Trial over: read-only apps -------- */
+.ro-banner { border-left: 4px solid #d99a00; background: #fffaf0; }
+.ro-banner p { margin: 0; }
+.app-badge--ro { background: #fff6e0; color: #8a5a00; }
+.is-readonly .app-main button:not(.ro-ok button):not(form[method="get"] button) { display: none; }
+.is-readonly .app-main details:has(form):not(.ro-ok) { display: none; }   /* "new …" panels; read-only details (answers) stay */
+.is-readonly .app-main input:disabled, .is-readonly .app-main select:disabled, .is-readonly .app-main textarea:disabled { background: #f7f8fa; color: var(--color-text); }

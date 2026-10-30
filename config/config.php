@@ -66,6 +66,12 @@ return [
         'timeout'         => 20,
     ],
 
+    // Subscriptions: e-mail shown to companies whose free trial is over ("Passer à l'abonnement").
+    // Empty: they are told to contact MIPS.
+    'billing' => [
+        'contact_email' => '',
+    ],
+
     // Bookora: calendars imported from Airbnb / Booking.com (iCal). Private
     // network addresses and plain http are refused unless allowed (local tests only).
     'bookora' => [

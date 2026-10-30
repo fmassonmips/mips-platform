@@ -34,7 +34,7 @@ $short   = static fn (string $ym): string => mb_substr($months[(int) substr($ym,
 
 $on = [];
 foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal', 'staffzen', 'bookora'] as $slug) {
-    $on[$slug] = Modules::isEnabled($org['id'], $slug);
+    $on[$slug] = Modules::isReadable($org['id'], $slug);   // read-only apps (trial over) still report their figures
 }
 $rs = static fn (int $c): string => Money::format($c, 'MUR');
 

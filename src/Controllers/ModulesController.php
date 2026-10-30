@@ -73,9 +73,7 @@ final class ModulesController
             if (!Catalog::isAvailable($slug)) {
                 Response::json(['error' => 'Cette application n’est pas encore disponible.'], 409);
             }
-            if (in_array($slug, Modules::trialEndedFor($org['id']), true)) {
-                Response::json(['error' => 'Votre essai gratuit de cette application est terminé.'], 409);
-            }
+            // A module whose trial is over comes back read-only (activate() never restarts a trial).
             Modules::activate($org['id'], $slug);
         } elseif ($action === 'deactivate') {
             Modules::deactivate($org['id'], $slug);
@@ -91,6 +89,7 @@ final class ModulesController
     {
         $enabled = Modules::enabledFor($org['id']);
         $ended   = Modules::trialEndedFor($org['id']);
+        $ro      = Modules::readOnlyFor($org['id']);
 
         $modules = [];
         foreach (Catalog::all() as $slug => $m) {
@@ -102,6 +101,7 @@ final class ModulesController
                 'status'        => $m['status'],
                 'enabled'       => isset($enabled[$slug]),
                 'trial_ended'   => in_array($slug, $ended, true),
+                'read_only'     => isset($ro[$slug]),
                 'trial_ends_at' => $enabled[$slug]['trial_ends_at'] ?? null,
             ];
         }

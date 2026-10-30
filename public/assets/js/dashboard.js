@@ -59,4 +59,15 @@
             }
         });
     });
+
+    // App whose free trial is over: read-only. Form controls are disabled (values stay readable) and
+    // action buttons are hidden by CSS; navigation (GET forms, .ro-ok) keeps working. The server refuses
+    // every write anyway.
+    if (document.body.classList.contains('is-readonly')) {
+        document.querySelectorAll('.app-main input, .app-main select, .app-main textarea, .app-main button').forEach(function (el) {
+            if (!el.closest('form[method="get"], .ro-ok')) {
+                el.disabled = true;
+            }
+        });
+    }
 })();
