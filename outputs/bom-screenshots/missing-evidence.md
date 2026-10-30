@@ -14,7 +14,7 @@ Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS 
 | S01 Connexion + T&Cs | **Présent dans le prototype** (S01c–f) : compte marchand, double authentification obligatoire, acceptation des conditions par version, journal du consentement. **Texte des conditions = remplissage.** | Le **texte réel** des conditions, validé par le juridique, puis une nouvelle capture. Si le dossier doit montrer le système en service : captures de la plateforme réelle. |
 | S02 Parcours d'onboarding | **Présent** : vue interne (S02a–b) et vue du prospect (S02c–d). Étape « décision » non illustrée côté marchand. | Rien d'obligatoire. Option : capture d'un dossier approuvé vu par le marchand. |
 | S03 Préqualification | **Présent dans le prototype** (S03a–b). Signaux pour l'analyste seulement ; pas de notation de risque automatique. | Validation par la conformité des secteurs sensibles et de la tranche de volume signalée ; règles d'éligibilité à formaliser. |
-| S04 Collecte KYB | **Présent** : vue interne (S04a–b) et dépôt par le marchand (S04c–d). **Aucun antivirus installé** dans la démo. | Installer et activer l'antivirus avant toute mise en service, et refaire la capture S04d (pièces « clean » au lieu de « not scanned »). |
+| S04 Collecte KYB | **Présent** : vue interne (S04a–b) et dépôt par le marchand (S04c–d). S04d recapturée le 2026-10-30 avec ClamAV actif et les signatures officielles : pièces « antivirus OK ». | Installer, superviser et rendre obligatoire l'antivirus sur la plateforme réelle avant toute mise en service ; procédure en cas de détection. |
 | S05 Portail général | **Partiel** : portail marchand limité à l'entrée en relation (S05b) ; navigation du back-office (S05). | Espace d'un **marchand actif** (transactions, relevés, règlements) : n'existe pas dans le prototype. |
 | S06 Dashboard marchand | **Absent** ; seul un rapport interne agrégé existe. | Capture 1 (back-office V3) ou dashboard marchand réel, en distinguant volume traité, fonds encaissés, fonds reçus et montants réglés. |
 | S07 Règlement | Rapprochement acquéreur ↔ plateforme présent ; **pas de rapprochement trust, pas de validation de règlement**. | Rapprochement du compte trust (fonds reçus vs droits des marchands) et circuit de validation des règlements. |
@@ -61,7 +61,8 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
   `onboarding_approval_test.py` (78 vérifications). La suite a révélé un contournement du double regard
   (réassigner le dossier puis le trancher soi-même), corrigé le même jour.
 - ~~2FA obligatoire pour admin et finance~~ : couverte depuis le 2026-10-30 par `staff_2fa_required_test.py` (23 vérifications).
-- Antivirus : le vrai moteur ClamAV est testé depuis le 2026-10-30 (`antivirus_clamav_test.py`), mais avec une base de
-  signatures de test ; la base officielle n'a pas pu être téléchargée dans l'environnement de test. La capture S04d
-  reste « not scanned » tant que l'antivirus n'est pas installé sur l'instance capturée.
+- Antivirus : le vrai moteur ClamAV est testé depuis le 2026-10-30 (`antivirus_clamav_test.py`) avec une signature de
+  test. S04d a été recapturée le même jour avec ClamAV et les **signatures officielles** (miroir Microsoft). Reste non
+  montré à l'écran : le refus d'une pièce infectée avec la base officielle (la chaîne EICAR dans un PDF n'est pas
+  détectée par cette base ; seul un fichier EICAR pur l'est, et il est refusé avant l'antivirus par le contrôle de format).
 - Fichier MCB réel, table BigQuery réelle : uniquement simulés.

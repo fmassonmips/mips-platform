@@ -6,7 +6,8 @@
   **non fusionnée, jamais déployée**. Ce n'est **pas** la plateforme MIPS de production, ni le
   « back-office V3 » de la capture 1 déjà partagée, ni my.mips.mu. Deux versions du prototype :
   - build `590d8d8`, capturée le **2026-10-27** : back-office interne (S01a–b, S02a–b, S04a–b, S05, S06, S07, C01–C04) ;
-  - build `d91d250`, capturée le **2026-10-28** : **portail marchand** ajouté (S01c–f, S02c–d, S03a–b, S04c–d, S05b, C05).
+  - build `d91d250`, capturée le **2026-10-28** : **portail marchand** ajouté (S01c–f, S02c–d, S03a–b, S04c, S05b, C05) ;
+  - build `94a0e87`, capturée le **2026-10-30** : **S04d refaite avec l'antivirus ClamAV actif** (voir S04 ci-dessous).
     Chaque image porte le numéro de build de sa version dans le bandeau.
 - **Environnement** : instance de démonstration locale (PHP 8.3, MariaDB 10.11, base `mips_demo`),
   configuration `env = demo`, emails écrits dans un journal (aucun envoi), 2FA activée comme en production.
@@ -48,7 +49,8 @@
   - ajout de suites de tests automatiques (`tests/`), voir la section en fin de registre.
 
   Aucune capture ne montre ces comportements : les images restent fidèles à l'interface actuelle. Elles portent
-  toutefois le numéro de leur build (`590d8d8` ou `d91d250`), **pas** celui de la version courante de la branche.
+  toutefois le numéro de leur build (`590d8d8` ou `d91d250`), **pas** celui de la version courante de la branche, sauf S04d
+  (build `94a0e87`, recapturée le 2026-10-30).
 
 ---
 
@@ -112,12 +114,12 @@
 | Limites | Vue interne (build `590d8d8`) ; dépôt fait par le personnel sur ce cas. Le dépôt côté marchand est S04c–d. Liste de pièces et seuil de 25 % = configuration par défaut **non validée par la conformité**. Contrôle sanctions/PEP **saisi manuellement**, sans outil de filtrage connecté. Documents = PDF « SPECIMEN » ; aucun document d'identité réel ; numéros d'identité absents (stockés chiffrés, jamais affichés). |
 | Légende | *KYB document collection and verification workflow (internal back-office view)* |
 
-| Fichier | `S04c-merchant-document-upload.png`, `S04d-merchant-uploads-staff-view.png` (build `d91d250`) |
+| Fichier | `S04c-merchant-document-upload.png` (build `d91d250`, 2026-10-28), `S04d-merchant-uploads-staff-view.png` (build `94a0e87`, **recapturée le 2026-10-30 avec ClamAV**) |
 |---|---|
 | Écran / parcours | Portail marchand → Documents ; puis côté MIPS : dossier KYC ouvert depuis la candidature |
 | Rôle | S04c : prospect fictif ; S04d : `demo.analyst@example.com` (finance, analyste) |
 | Fonction démontrée | Le prospect déclare ses administrateurs, bénéficiaires effectifs (avec %) et signataires, et **dépose lui-même** les pièces société et par personne (PDF, JPEG, PNG ; date d'expiration obligatoire pour les pièces d'identité) ; statut de chaque pièce ; **motif de refus** donné par MIPS (ici : relevé bancaire trop ancien) et nouveau dépôt possible ; liste de ce qui manque avant l'envoi. Côté MIPS : pièces marquées « merchant (portal) », acceptation ou refus par l'analyste (le déposant étant le marchand, le double regard est respecté), compte portail et historique horodaté des actions du marchand. |
-| Limites | Pièces = **spécimens fictifs** (PDF « SPECIMEN », image « SPECIMEN — FICTITIOUS IDENTITY DOCUMENT »). **Aucun antivirus installé** dans la démo : les pièces apparaissent « not scanned » sur S04d (le contrôle antivirus existe dans le code et a été testé avec un scanner de substitution, pas avec un antivirus réel). Filtrage sanctions/PEP toujours **saisi à la main** par MIPS. |
+| Limites | Pièces = **spécimens fictifs** (PDF « SPECIMEN », image « SPECIMEN — FICTITIOUS IDENTITY DOCUMENT »). **Antivirus (S04d)** : chaque pièce affiche « antivirus OK ». Elle a été analysée au dépôt par ClamAV 1.5.4 (démon `clamd`, `clamdscan --fdpass`), antivirus rendu obligatoire (`require_antivirus`), avec les **signatures officielles** vérifiées par `sigtool` (main v63, daily v28169 du 2026-10-30, bytecode v339), téléchargées depuis le miroir ClamAV de Microsoft (`packages.microsoft.com/clamav`) car le serveur officiel refuse l'environnement. « antivirus OK » veut dire « aucune signature connue détectée », pas « fichier garanti sain ». Pour obtenir S04d, le parcours du portail a été **rejoué à l'identique** sur une copie de la base de démonstration : dates du 2026-10-30, application #3 ; S04c (2026-10-28) montre le même parcours fictif, pas la même exécution. Filtrage sanctions/PEP toujours **saisi à la main** par MIPS. |
 | Légende | *KYB document collection by the applicant, with MIPS review (development prototype, demonstration data)* |
 
 ## S05 — Interface générale du portail — **PARTIEL (onboarding seulement)**
@@ -185,7 +187,7 @@ production. Le tableau indique, pour chaque capture, si le comportement montré 
 | S02c–d | `portal_test.py` | Étape « submitted », jamais présentée comme « approved » ; aucun champ interne (note de risque, blocages) exposé au marchand | Décision finale côté marchand (non capturée non plus) |
 | S03a–b | `portal_test.py` | Validation du formulaire, une préqualification par compte, signaux réservés à l'analyste, acceptation qui ouvre le dossier, refus | — |
 | S04a–b | `staff_onboarding_test.py` | Format vérifié sur le contenu, pièce d'identité rattachée à une personne du dossier, double regard (le déposant ne peut pas valider sa pièce), téléchargement exact | Seuil de 25 % pour les bénéficiaires effectifs |
-| S04c–d | `portal_test.py`, `antivirus_clamav_test.py` | Dépôt par le marchand, PEP déclarable mais jamais retirable, motif de refus visible, isolement entre marchands, antivirus bloquant quand il est requis ; avec le vrai moteur ClamAV (`clamscan` et démon `clamd`) : pièce infectée refusée, refus si les signatures manquent ou si l'antivirus est arrêté | Signatures officielles (non téléchargeables dans l'environnement de test) ; aucun antivirus installé sur la démo capturée |
+| S04c–d | `portal_test.py`, `antivirus_clamav_test.py` | Dépôt par le marchand, PEP déclarable mais jamais retirable, motif de refus visible, isolement entre marchands, antivirus bloquant quand il est requis ; avec le vrai moteur ClamAV (`clamscan` et démon `clamd`) : pièce infectée refusée, refus si les signatures manquent ou si l'antivirus est arrêté | La suite utilise une signature de test ; S04d a été produite avec les signatures officielles (voir S04). La chaîne EICAR placée à la fin d'un PDF n'est **pas** détectée par les signatures officielles (EICAR doit être en début de fichier) : le cas « pièce infectée » n'a donc pas pu être montré à l'écran avec la base officielle |
 | S05, S05b | toutes | Refus d'accès selon le rôle (compte sans rôle métier refusé sur chaque module), sessions personnel et marchand séparées | — |
 | S06 | `reporting_test.py` | Règles de nettoyage, séries de tendance, mois non importés affichés comme des trous | Données réelles |
 | S07 | `recon_test.py` | Six catégories d'écart bouclées au centime, remaps MID, alertes de périmètre, éléments à réclamer, détail journalier, exports | Fichier MCB réel |
