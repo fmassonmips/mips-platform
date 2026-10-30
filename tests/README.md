@@ -1,6 +1,6 @@
 # Tests de bout en bout
 
-Six suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
+Huit suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
 
 | Suite | Vérifie | Vérifications |
 |---|---|---|
@@ -9,6 +9,8 @@ Six suites qui pilotent l'application par son API, comme le ferait un navigateur
 | `reporting_test.py` | Import Commission_Data : colonnes manquantes, fichier sans date, règles de nettoyage figées (SUCCESS seul, tests, remboursements seuls), rapport mensuel ligne par ligne (TPE, online, passerelles, rails, FX, segments, top marchands, alertes), tendance 12 mois, exports CSV et Excel, remplacement d'un mois réimporté, droits d'accès, journal d'audit | 65 |
 | `billing_test.py` | Règles de commission (validation, priorité marchand > rail spécifique > type de rail > canal, dates de validité, désactivation), factures avec TVA 15 %, une par marchand et devise, cycle brouillon → émise → payée / annulée, numérotation sans trou, mois verrouillé contre la réimport, marchand non facturable, export comptable | 47 |
 | `recon_test.py` | Rapprochement MCB / MIPS : correspondances de MID et liste de surveillance, ventilation de l'écart (vérifications de carte, décalage de fin de mois, surveillance, un seul côté, écart réel), règle de signe, avertissements de périmètre (extraction filtrée, marchand témoin, lignes hors mois), vue journalière, éléments à réclamer, exports, recalcul | 55 |
+| `merchants_test.py` | Fiches marchands : validation du profil, responsable de compte, nom d'import verrouillé dès qu'il y a des transactions, historique des modifications (qui, quoi, avant, après), recherche, contacts (un seul principal), identifiants MID/TUI uniques, contrats (validation, PDF contrôlé sur son contenu, stockage hors web, empreinte, téléchargement exact, document remplacé conservé, suppression des brouillons seulement), alertes de préavis | 71 |
+| `admin_test.py` | Comptes du personnel : demande de compte et activation par un administrateur, rôles appliqués dès la requête suivante, un administrateur ne peut ni se rétrograder ni se désactiver, lien de réinitialisation à usage unique, mot de passe oublié sans révéler les comptes existants, changement de mot de passe qui ferme les autres sessions, 2FA (activation, rejeu refusé, codes de secours à usage unique, régénération, désactivation, remise à zéro par un administrateur), consultation du journal d'audit, limitation des tentatives de connexion | 86 |
 | `bigquery_test.py` | Import direct depuis BigQuery via un émulateur local : jeton de compte de service signé, requête paramétrée avec plafond de coût, attente du job et pagination, bornes du mois à l'heure de Maurice, mois vide, clé refusée | 23 |
 
 ## Lancer
@@ -26,9 +28,10 @@ Le script :
 5. démarre un serveur SMTP de test (`smtpsink.py`), l'émulateur BigQuery (`bigquery_emulator.py`) et le serveur web intégré de PHP (`router.php`) ;
 6. lance les suites, puis arrête les serveurs et supprime le dossier temporaire.
 
-Code de sortie 0 si tout passe. Durée : environ deux minutes (une étape attend le pas TOTP suivant de 30 s).
+Code de sortie 0 si tout passe. Durée : environ trois minutes (deux étapes attendent le pas TOTP suivant de 30 s).
 
-Les suites s'enchaînent dans un ordre fixe (la facturation et BigQuery s'appuient sur les mois importés avant).
+Les suites s'enchaînent dans un ordre fixe : la facturation et BigQuery s'appuient sur les mois importés avant, et
+`admin_test.py` reste en dernier car il bloque volontairement les connexions depuis 127.0.0.1 avant de les rouvrir.
 Pour n'en lancer qu'une partie : `TESTS="reporting_test.py billing_test.py" tests/run_tests.sh`.
 
 ## Prérequis
@@ -72,5 +75,15 @@ Ils ne proviennent d'aucun export réel. Les exports réels ne doivent jamais ê
   `refund_total_refunded` et l'assujettissement des commissions à la TVA restent à confirmer (voir les alertes du rapport).
 - L'émulateur BigQuery reproduit le protocole (jeton, requête, pagination), pas le service réel : un premier import
   sur le vrai projet reste à faire avec un compte de service en lecture seule.
-- Non couverts : fiches marchands (contacts, contrats, identifiants), administration des comptes du personnel,
-  2FA du personnel, écrans (seule l'API est pilotée).
+- La configuration de test n'impose pas la 2FA au personnel (`require_2fa_roles` vide) : la règle « 2FA obligatoire
+  pour admin et finance » n'est pas vérifiée par ces suites.
+- La garde « au moins un administrateur actif » n'est pas atteignable par l'API (un administrateur ne peut déjà pas se
+  retirer lui-même) ; elle protège contre deux retraits simultanés et n'est pas testée.
+- Non couverts : les écrans (seule l'API est pilotée).
+
+## Point relevé par les tests
+
+La limitation des tentatives compte les échecs **par adresse IP ou par email**. Toutes les demandes venant de la même
+adresse, cinq échecs en 15 minutes bloquent **tous** les comptes derrière cette adresse, y compris avec le bon mot de passe
+(vérifié par `admin_test.py`). Les demandes de mot de passe oublié et les inscriptions en double comptent aussi comme des
+échecs. Derrière un accès internet partagé (bureau MIPS), un seul poste peut donc bloquer les connexions de toute l'équipe.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end tests: merchant portal, staff onboarding, reporting, billing,
-# MCB reconciliation and BigQuery import, on fictitious data only.
+# MCB reconciliation, BigQuery import, merchant records and staff
+# administration, on fictitious data only.
 #
 # Builds a throw-away instance: a copy of the code in a temporary folder,
 # its own database (dropped and recreated), test staff accounts, a local SMTP
@@ -25,7 +26,7 @@ DB_NAME=${DB_NAME:-mips_test}
 PORT=${PORT:-8099}
 SMTP_PORT=${SMTP_PORT:-2525}
 BQ_PORT=${BQ_PORT:-9050}
-TESTS=${TESTS:-portal_test.py staff_onboarding_test.py reporting_test.py billing_test.py recon_test.py bigquery_test.py}
+TESTS=${TESTS:-portal_test.py staff_onboarding_test.py reporting_test.py billing_test.py recon_test.py bigquery_test.py merchants_test.py admin_test.py}
 WORK=$(mktemp -d)
 APP_DIR=$WORK/app
 MAIL_FILE=$WORK/mail.txt
@@ -129,7 +130,8 @@ done
 export BASE_URL="http://127.0.0.1:$PORT" MAIL_FILE APP_DIR DB_NAME MYSQL BQ_LOG BQ_KEY
 STATUS=0
 cd "$ROOT/tests"
-# Order matters: billing re-imports after reporting, BigQuery compares with October.
+# Order matters: billing re-imports after reporting, BigQuery compares with October,
+# admin_test.py locks sign-in from 127.0.0.1 on purpose and must stay last.
 for t in $TESTS; do
   echo
   echo "######## $t"

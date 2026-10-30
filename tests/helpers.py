@@ -26,7 +26,7 @@ def finish():
 
 
 def sql(q):
-    return subprocess.run((os.environ.get('MYSQL', 'mysql').split() + ['-N', DB, '-e', q]), capture_output=True, text=True).stdout.strip()
+    return subprocess.run((os.environ.get('MYSQL', 'mysql').split() + ['-N', DB, '-e', q]), capture_output=True, text=True, errors='replace').stdout.strip()
 
 
 class Client:
