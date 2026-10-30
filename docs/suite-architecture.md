@@ -308,6 +308,17 @@ Envoyés une fois chacun (`notification_log`, migration 022) par `tools/reminder
 | Fin d'essai | Au propriétaire et aux administrateurs, un e-mail par entreprise et par étape listant les apps concernées : 7 jours avant, la veille, et le jour du passage en lecture seule (ce que cela change, données conservées, contact abonnement). Un essai prolongé depuis le back-office a de nouveau ses rappels pour sa nouvelle date. |
 | Factures en retard (Facturo) | Désactivé par défaut ; case « Relancer automatiquement les factures en retard » (onglet Entreprise, propriétaire/administrateur). Au client, 7 jours puis 30 jours après l'échéance, dans la langue de la facture, au nom de l'entreprise (réponses vers son e-mail), avec le lien vers la facture ; noté « Relance automatique » dans l'historique d'envoi. Seulement : factures émises et impayées, fiscalisées si la MRA est activée, montant restant après avoirs, client avec e-mail, échéance postérieure à l'activation (aucune relance en masse des anciennes factures), Facturo utilisable (pas en lecture seule). Au-delà de 30 jours sans premier rappel, un seul rappel, rédigé comme le premier. |
 
+## Vos données : export et fermeture du compte
+
+Page `/data.php`, réservée au propriétaire (lien « Télécharger ou fermer le compte » sur le tableau de bord).
+
+| Élément | Règle |
+|---|---|
+| Export | ZIP (`/export.php`) : un CSV par table de l'entreprise (UTF-8 avec BOM, virgule ; lignes de facture, de commande, de réservation, messages, temps… rattachés à leur parent), l'équipe, les photos des produits et des logements en fichiers, un LISEZMOI. Sans mots de passe, secrets MRA ni jetons des liens publics ; cellules commençant par = + - @ préfixées d'une apostrophe. L'équipe MIPS l'obtient depuis le back-office (`/export.php?org=…`), noté au journal. |
+| Fermeture | Nom de l'entreprise retapé + mot de passe (échecs comptés comme à la connexion). Tout de suite : apps et pages publiques fermées, membres déconnectés (« fermeture du compte demandée » à la connexion), plus aucun e-mail automatique ; le propriétaire seul peut se connecter, pour exporter ou annuler. E-mail au propriétaire avec la date. |
+| Annulation | Par le propriétaire jusqu'à la date, ou par l'équipe MIPS (back-office, filtre « Fermeture demandée », noté au journal) : tout redevient comme avant. |
+| Suppression | `tools/purge_companies.php` (cron quotidien) après 30 jours (`organizations.deletion_scheduled_at`, migration 023) : toutes les données de l'entreprise (tables filles d'abord, aucun lien RESTRICT ne bloque) et les comptes de l'équipe qui n'appartiennent à aucune autre entreprise. Le journal du back-office garde une ligne « Entreprise supprimée » ; le propriétaire reçoit un e-mail. |
+
 ## Back-office MIPS
 
 Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
@@ -328,6 +339,7 @@ Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `bac
 2. Créer `templates/modules/<slug>.view.php` (rendu dans la coquille commune).
 3. Ses tables SQL portent `organization_id` + clé étrangère vers `organizations`.
 4. Ses endpoints commencent par `Modules::require($user, '<slug>')` (pages) ou une vérification équivalente (API).
+5. Ajouter ses tables à `Suite\DataExport::TABLES` (export) et, si une autre table y pointe en `RESTRICT`, à `Suite\Closure::DELETE_ORDER` (suppression) : le test `e2e25` vérifie que chaque table de l'entreprise est exportée.
 
 ## Mise en place sur une base existante
 
@@ -354,6 +366,7 @@ mysql -u root -p mips_platform < sql/migrations/019_account_hardening.sql
 mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
 mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
 mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
+mysql -u root -p mips_platform < sql/migrations/023_closure.sql
 ```
 
 Puis dans `config/config.php` :
@@ -371,6 +384,7 @@ Cron :
 0 * * * *   php tools/rendezvous_reminders.php
 20 * * * *  php tools/bookora_ical_sync.php
 5 5 * * *   php tools/reminders.php
+45 22 * * * php tools/purge_companies.php
 ```
 
 ## Reste à décider

@@ -87,7 +87,8 @@ $daysLeft = static function (?string $end): string {
           <?php foreach ($companies as $c): ?>
             <tr>
               <td><a href="/backoffice.php?org=<?= (int) $c['id'] ?>"><?= $e($c['name']) ?></a>
-                <?= $c['suspended_at'] !== null ? ' <span class="tag tag--warn">suspendue</span>' : '' ?></td>
+                <?= $c['suspended_at'] !== null ? ' <span class="tag tag--warn">suspendue</span>' : '' ?>
+                <?= $c['deletion_scheduled_at'] !== null ? ' <span class="tag tag--warn">suppression le ' . $e(Format::date((string) $c['deletion_scheduled_at'])) . '</span>' : '' ?></td>
               <td><?= $e($c['owner_email'] ?? '—') ?></td>
               <td class="num"><?= (int) $c['members'] ?></td>
               <td class="nowrap">
@@ -115,8 +116,19 @@ $daysLeft = static function (?string $end): string {
       </section>
     <?php endif; ?>
 
+    <?php if ($company['deletion_scheduled_at'] !== null): ?>
+      <section class="card bk-warning">
+        <p><strong>Fermeture demandée par le propriétaire</strong> : apps et pages publiques fermées, seul le propriétaire peut se connecter.
+          Données supprimées définitivement le <?= $e(Format::dateTime((string) $company['deletion_scheduled_at'])) ?>.</p>
+        <div class="actions"><button type="button" class="btn-secondary" data-bo="reopen" data-confirm="Annuler la fermeture demandée par le propriétaire ?">Annuler la fermeture</button></div>
+      </section>
+    <?php endif; ?>
+
     <section class="card" id="bo-company" data-org="<?= $id ?>">
-      <h2><?= $e($company['name']) ?> <span class="muted small">#<?= $id ?></span></h2>
+      <div class="card-head">
+        <h2><?= $e($company['name']) ?> <span class="muted small">#<?= $id ?></span></h2>
+        <div class="actions"><a class="btn-secondary" href="/export.php?org=<?= $id ?>">Exporter les données (ZIP)</a></div>
+      </div>
       <dl class="bo-profile">
         <dt>Raison sociale</dt><dd><?= $e($company['legal_name'] ?: '—') ?></dd>
         <dt>BRN</dt><dd><?= $e($company['brn'] ?: '—') ?></dd>

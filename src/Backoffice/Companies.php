@@ -23,6 +23,7 @@ final class Companies
         'customers' => 'Abonnées',
         'inactive'  => 'Sans connexion depuis 14 jours',
         'suspended' => 'Suspendues',
+        'closing'   => 'Fermeture demandée',
     ];
 
     public const MAX_EXTEND_DAYS = 90;
@@ -73,6 +74,7 @@ final class Companies
             'customers' => 'HAVING subscribed > 0',
             'inactive'  => 'HAVING last_login_at IS NULL OR last_login_at < NOW() - INTERVAL 14 DAY',
             'suspended' => 'HAVING suspended_at IS NOT NULL',
+            'closing'   => 'HAVING deletion_scheduled_at IS NOT NULL',
             default     => '',
         };
         $where  = '';
@@ -84,7 +86,7 @@ final class Companies
             $params = [':q1' => $like, ':q2' => $like, ':q3' => $like, ':q4' => $like];
         }
         $stmt = Database::connection()->prepare(
-            'SELECT o.id, o.name, o.created_at, o.suspended_at,
+            'SELECT o.id, o.name, o.created_at, o.suspended_at, o.deletion_scheduled_at,
                     (SELECT u.email FROM organization_users ou JOIN users u ON u.id = ou.user_id
                       WHERE ou.organization_id = o.id ORDER BY ou.role = \'owner\' DESC, ou.created_at LIMIT 1) AS owner_email,
                     (SELECT COUNT(*) FROM organization_users ou WHERE ou.organization_id = o.id) AS members,
@@ -111,7 +113,7 @@ final class Companies
     public static function find(int $orgId): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, name, legal_name, brn, vat_number, address, email, phone, created_at, suspended_at, suspended_reason, mra_enabled
+            'SELECT id, name, legal_name, brn, vat_number, address, email, phone, created_at, suspended_at, suspended_reason, mra_enabled, deletion_scheduled_at
              FROM organizations WHERE id = :id'
         );
         $stmt->execute([':id' => $orgId]);
@@ -295,6 +297,16 @@ final class Companies
         }
         Log::add($staffId, $orgId, 'unsuspend', '');
         return null;
+    }
+
+    /** Cancel a closing requested by the owner (they asked by phone, wrong click…). */
+    public static function reopen(int $staffId, int $orgId): ?string
+    {
+        $error = \App\Suite\Closure::cancel($orgId);
+        if ($error === null) {
+            Log::add($staffId, $orgId, 'reopen', '');
+        }
+        return $error;
     }
 
     public static function note(int $staffId, int $orgId, string $text): ?string

@@ -17,7 +17,8 @@ $subscribe   = trim((string) ($GLOBALS['config']['billing']['contact_email'] ?? 
 $can_manage = \App\Suite\Tenant::canManage($org);
 $team_size  = count(\App\Suite\Tenant::members($org['id']));
 $is_staff   = \App\Backoffice\Staff::is($user);
-$checklist  = \App\Suite\Onboarding::checklist($org);
+$closing    = \App\Suite\Closure::scheduledAt($org['id']);
+$checklist  = $closing === null ? \App\Suite\Onboarding::checklist($org) : null;
 $csrf_token = \App\Csrf::token();
 $page_title = 'Tableau de bord';
 

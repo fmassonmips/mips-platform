@@ -59,7 +59,7 @@ final class Reminders
             $stmt = Database::connection()->prepare(
                 'SELECT d.organization_id, d.id
                  FROM facturo_documents d JOIN organizations o ON o.id = d.organization_id
-                 WHERE o.facturo_reminders_since IS NOT NULL AND o.suspended_at IS NULL
+                 WHERE o.facturo_reminders_since IS NOT NULL AND o.suspended_at IS NULL AND o.deletion_scheduled_at IS NULL
                    AND d.type = \'invoice\' AND d.status = \'issued\' AND d.due_date IS NOT NULL
                    AND d.due_date >= DATE(o.facturo_reminders_since)
                    AND d.due_date <= DATE_SUB(:today, INTERVAL ' . self::STAGES[$stage] . ' DAY)

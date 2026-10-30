@@ -18,9 +18,12 @@ final class Log
         'suspend'   => 'Suspension',
         'unsuspend' => 'Réactivation',
         'note'      => 'Note',
+        'export'    => 'Export des données',
+        'reopen'    => 'Fermeture annulée',
+        'purge'     => 'Entreprise supprimée',
     ];
 
-    public static function add(int $staffId, ?int $orgId, string $action, string $detail): void
+    public static function add(?int $staffId, ?int $orgId, string $action, string $detail): void   // staff null: automatic
     {
         Database::connection()->prepare(
             'INSERT INTO backoffice_log (staff_user_id, organization_id, action, detail, created_at) VALUES (:s, :o, :a, :d, NOW())'
@@ -36,7 +39,7 @@ final class Log
     {
         $stmt = Database::connection()->prepare(
             'SELECT l.action, l.detail, l.created_at, l.organization_id, o.name AS organization_name,
-                    COALESCE(NULLIF(u.name, \'\'), u.email, \'—\') AS staff_name
+                    COALESCE(NULLIF(u.name, \'\'), u.email, \'Automatique\') AS staff_name
              FROM backoffice_log l
              LEFT JOIN users u ON u.id = l.staff_user_id
              LEFT JOIN organizations o ON o.id = l.organization_id'

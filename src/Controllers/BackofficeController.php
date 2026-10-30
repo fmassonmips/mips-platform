@@ -8,6 +8,7 @@
  *   extend     { "app", "days": 1..90, "reason" }
  *   suspend    { "reason" }                      shown to the members at login
  *   unsuspend  {}
+ *   reopen     {}                            cancel the closing the owner asked for
  *   note       { "text" }
  *
  * Responses: 200 { "success": true } · 404 / 405 / 419 / 422 { "error": "..." }
@@ -47,6 +48,7 @@ final class BackofficeController
             'extend'    => Companies::extend($staffId, $orgId, $app, Request::int($data, 'days'), Request::str($data, 'reason', 300)),
             'suspend'   => Companies::suspend($staff, $orgId, Request::str($data, 'reason', 300)),
             'unsuspend' => Companies::unsuspend($staffId, $orgId),
+            'reopen'    => Companies::reopen($staffId, $orgId),
             'note'      => Companies::note($staffId, $orgId, Request::str($data, 'text', 1000)),
             default     => 'Action invalide.',
         };

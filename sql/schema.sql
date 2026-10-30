@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS organizations (
     onboarded_at     DATETIME     NULL,
     -- Facturo: overdue invoices reminded from this date on (NULL = off); older invoices are never reminded
     facturo_reminders_since DATETIME NULL,
+    -- Deletion requested by the owner: closed at once, data deleted on this date (cancellable until then)
+    deletion_scheduled_at DATETIME NULL,
     -- MRA e-invoicing credentials (password encrypted with app.secret_key)
     mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
     mra_username     VARCHAR(100) NULL,

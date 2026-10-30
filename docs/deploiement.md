@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `022`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `023`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -102,6 +102,7 @@ post_max_size = 2M
 0 * * * *   php /var/www/mips/tools/rendezvous_reminders.php >> /var/log/mips/cron.log 2>&1
 20 * * * *  php /var/www/mips/tools/bookora_ical_sync.php    >> /var/log/mips/cron.log 2>&1
 5 5 * * *   php /var/www/mips/tools/reminders.php            >> /var/log/mips/cron.log 2>&1   # 9 h 05 à Maurice si le serveur est en UTC (sinon 5 9 * * *) : fins d'essai, factures en retard
+45 22 * * * php /var/www/mips/tools/purge_companies.php      >> /var/log/mips/cron.log 2>&1   # comptes fermés depuis 30 jours
 ```
 
 Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1. **Alerter sur ce code** (par exemple `MAILTO=ops@mips.mu` en tête de crontab avec `|| echo "échec"`, ou une sonde type Healthchecks.io) : une transmission MRA bloquée ne doit pas passer inaperçue.

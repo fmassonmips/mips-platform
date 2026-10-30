@@ -785,3 +785,4 @@ input[type="time"] {
 .wz-app input { margin-top: 3px; }
 .wz-app strong { display: block; }
 .wz-invites .form-grid { margin-bottom: 0; }
+a.btn-primary, a.btn-secondary { text-decoration: none; }

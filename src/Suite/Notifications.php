@@ -40,7 +40,7 @@ final class Notifications
             $rows = $pdo->query(
                 'SELECT m.organization_id, m.module_slug, m.trial_ends_at
                  FROM organization_modules m JOIN organizations o ON o.id = m.organization_id
-                 WHERE m.status = \'trial\' AND m.trial_ends_at IS NOT NULL AND o.suspended_at IS NULL AND ' . $when . '
+                 WHERE m.status = \'trial\' AND m.trial_ends_at IS NOT NULL AND o.suspended_at IS NULL AND o.deletion_scheduled_at IS NULL AND ' . $when . '
                  ORDER BY m.organization_id, m.trial_ends_at'
             )->fetchAll();
             $byOrg = [];

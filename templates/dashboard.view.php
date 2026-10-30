@@ -10,6 +10,7 @@
 /** @var int $team_size */
 /** @var bool $is_staff MIPS team: link to the back-office */
 /** @var list<array{label:string,done:bool,url:string,cta:string}>|null $checklist « Bien démarrer », null when hidden */
+/** @var ?string $closing deletion date when the owner asked to close the account */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -45,8 +46,17 @@
         <dt>Entreprise</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Votre rôle</dt><dd><?= htmlspecialchars(['owner' => 'propriétaire', 'admin' => 'administrateur', 'member' => 'membre'][$org['role']] ?? $org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Équipe</dt><dd><?= $team_size ?> personne<?= $team_size > 1 ? 's' : '' ?> · <a href="/team.php"><?= $can_manage ? 'Gérer l’équipe' : 'Voir l’équipe' ?></a></dd>
+        <?php if ($org['role'] === 'owner'): ?><dt>Données</dt><dd><a href="/data.php">Télécharger ou fermer le compte</a></dd><?php endif; ?>
       </dl>
     </section>
+
+    <?php if ($closing !== null): ?>
+      <section class="card bk-warning">
+        <p><strong>Fermeture du compte demandée :</strong> les apps sont fermées et toutes les données seront supprimées le
+          <?= htmlspecialchars(\App\Format::dateTime($closing), ENT_QUOTES, 'UTF-8') ?>.
+          <a href="/data.php">Télécharger les données ou annuler</a></p>
+      </section>
+    <?php endif; ?>
 
     <?php if ($checklist !== null): $done = count(array_filter(array_column($checklist, 'done'))); ?>
       <section class="card ob-card" id="ob-card">

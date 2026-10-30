@@ -118,7 +118,8 @@ final class Auth
              FROM users
              WHERE id = :id AND is_active = 1
                AND NOT EXISTS (SELECT 1 FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
-                               WHERE ou.user_id = users.id AND o.suspended_at IS NOT NULL)   -- company suspended by MIPS
+                               WHERE ou.user_id = users.id
+                                 AND (o.suspended_at IS NOT NULL OR (o.deletion_scheduled_at IS NOT NULL AND ou.role <> \'owner\')))   -- suspended by MIPS, or closing (owner only)
              LIMIT 1'
         );
         $stmt->execute([':id' => (int) $_SESSION['user_id']]);
@@ -138,13 +139,15 @@ final class Auth
     }
 
     /**
-     * Why the user's company is suspended, or null when it is not.
+     * Why the user's company is closed to them (suspended by MIPS, or being closed by its
+     * owner: only the owner still gets in), or null when it is not.
      */
     public static function suspension(int $userId): ?string
     {
         $stmt = Database::connection()->prepare(
-            'SELECT COALESCE(o.suspended_reason, \'\') FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
-             WHERE ou.user_id = :u AND o.suspended_at IS NOT NULL LIMIT 1'
+            'SELECT IF(o.suspended_at IS NOT NULL, COALESCE(o.suspended_reason, \'\'), \'fermeture du compte demandée par le propriétaire\')
+             FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
+             WHERE ou.user_id = :u AND (o.suspended_at IS NOT NULL OR (o.deletion_scheduled_at IS NOT NULL AND ou.role <> \'owner\')) LIMIT 1'
         );
         $stmt->execute([':u' => $userId]);
         $reason = $stmt->fetchColumn();
