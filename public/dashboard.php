@@ -19,6 +19,7 @@ $team_size  = count(\App\Suite\Tenant::members($org['id']));
 $is_staff   = \App\Backoffice\Staff::is($user);
 $closing    = \App\Suite\Closure::scheduledAt($org['id']);
 $terms_due  = !\App\Legal::accepted($user);
+$digest_off = (int) \App\Database::connection()->query('SELECT digest_opt_out FROM users WHERE id = ' . (int) $user['id'])->fetchColumn();
 $checklist  = $closing === null ? \App\Suite\Onboarding::checklist($org) : null;
 $csrf_token = \App\Csrf::token();
 $page_title = 'Tableau de bord';

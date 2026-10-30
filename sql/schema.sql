@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_login_at   DATETIME     NULL,
     terms_version   VARCHAR(20)  NULL,                     -- CGU + privacy policy version accepted (App\Legal::VERSION)
     terms_accepted_at DATETIME   NULL,
+    digest_opt_out  TINYINT(1)   NOT NULL DEFAULT 0,       -- 1 = no Monday summary e-mail
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,

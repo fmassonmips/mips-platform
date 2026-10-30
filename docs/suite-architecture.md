@@ -306,6 +306,7 @@ Envoyés une fois chacun (`notification_log`, migration 022) par `tools/reminder
 |---|---|
 | Bienvenue | À la confirmation d'une inscription : les premiers pas et le lien vers l'assistant. Réponses vers `billing.contact_email`. |
 | Fin d'essai | Au propriétaire et aux administrateurs, un e-mail par entreprise et par étape listant les apps concernées : 7 jours avant, la veille, et le jour du passage en lecture seule (ce que cela change, données conservées, contact abonnement). Un essai prolongé depuis le back-office a de nouveau ses rappels pour sa nouvelle date. |
+| Résumé du lundi | Au propriétaire et aux administrateurs, le lundi : la semaine écoulée (lundi–dimanche) et ce qui attend, pour les apps utilisées, avec les chiffres de BizPilot (`App\BizPilot\Digest`, mêmes fonctions que l'écran) : facturé / encaissé / à encaisser et en retard, commandes, rendez-vous de la semaine passée et à venir, nuitées, ventes à la caisse, tickets, réponses ; « À faire » avec liens (factures en retard, devis à relancer, commandes et réservations à confirmer, tickets sans réponse, congés à valider, tâches en retard). Rien si rien ne s'est passé. Une fois par personne et par semaine. Désactivable par chacun (tableau de bord, ou lien en un clic dans l'e-mail, signé avec `app.secret_key`, confirmé par un bouton pour que les antivirus qui ouvrent les liens ne désabonnent pas ; `users.digest_opt_out`, migration 026). `php tools/reminders.php --digest` l'envoie un autre jour. |
 | Factures en retard (Facturo) | Désactivé par défaut ; case « Relancer automatiquement les factures en retard » (onglet Entreprise, propriétaire/administrateur). Au client, 7 jours puis 30 jours après l'échéance, dans la langue de la facture, au nom de l'entreprise (réponses vers son e-mail), avec le lien vers la facture ; noté « Relance automatique » dans l'historique d'envoi. Seulement : factures émises et impayées, fiscalisées si la MRA est activée, montant restant après avoirs, client avec e-mail, échéance postérieure à l'activation (aucune relance en masse des anciennes factures), Facturo utilisable (pas en lecture seule). Au-delà de 30 jours sans premier rappel, un seul rappel, rédigé comme le premier. |
 
 ## Vos données : export et fermeture du compte
@@ -379,6 +380,7 @@ mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
 mysql -u root -p mips_platform < sql/migrations/023_closure.sql
 mysql -u root -p mips_platform < sql/migrations/024_terms.sql
 mysql -u root -p mips_platform < sql/migrations/025_usage.sql
+mysql -u root -p mips_platform < sql/migrations/026_digest.sql
 ```
 
 Puis dans `config/config.php` :

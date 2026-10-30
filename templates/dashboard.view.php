@@ -12,6 +12,7 @@
 /** @var list<array{label:string,done:bool,url:string,cta:string}>|null $checklist « Bien démarrer », null when hidden */
 /** @var ?string $closing deletion date when the owner asked to close the account */
 /** @var bool $terms_due the user has not accepted the terms in force */
+/** @var int $digest_off 1 = the Monday summary e-mail is turned off */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -48,6 +49,7 @@
         <dt>Votre rôle</dt><dd><?= htmlspecialchars(['owner' => 'propriétaire', 'admin' => 'administrateur', 'member' => 'membre'][$org['role']] ?? $org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Équipe</dt><dd><?= $team_size ?> personne<?= $team_size > 1 ? 's' : '' ?> · <a href="/team.php"><?= $can_manage ? 'Gérer l’équipe' : 'Voir l’équipe' ?></a></dd>
         <?php if ($org['role'] === 'owner'): ?><dt>Données</dt><dd><a href="/data.php">Télécharger ou fermer le compte</a></dd><?php endif; ?>
+        <?php if ($can_manage): ?><dt>Résumé du lundi</dt><dd><a href="/digest.php"><?= (int) ($digest_off ?? 0) === 1 ? 'désactivé' : 'par e-mail' ?> · changer</a></dd><?php endif; ?>
       </dl>
     </section>
 

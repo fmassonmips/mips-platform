@@ -1,7 +1,8 @@
 <?php
 /**
- * Daily automatic e-mails: end-of-trial reminders (owner/admins) and reminders
- * of overdue Facturo invoices (to clients, companies that switched them on).
+ * Daily automatic e-mails: end-of-trial reminders (owner/admins), reminders
+ * of overdue Facturo invoices (to clients, companies that switched them on)
+ * and, on Mondays, the week's summary (App\BizPilot\Digest; --digest: any day).
  * Each e-mail is sent once; one that fails is tried again on the next run.
  * Run once a day, in the morning (Mauritius time) from cron:
  *   5 5 * * *  php tools/reminders.php        (05:05 UTC = 09:05 in Mauritius)
@@ -30,6 +31,18 @@ try {
     } catch (\Throwable $e) {
         error_log('[reminders] trials: ' . $e->getMessage());
         echo "End-of-trial reminders failed: see the PHP log.\n";
+        $status = 1;
+    }
+    try {
+        // Mondays (Mauritius date): the week's summary to owners and admins. --digest sends it any day.
+        [$sent, $failed] = \App\BizPilot\Digest::run(in_array('--digest', $argv, true));
+        echo $sent . ' weekly summary(ies) sent' . ($failed > 0 ? ", $failed failed (retried next run)" : '') . ".\n";
+        if ($failed > 0) {
+            $status = 1;
+        }
+    } catch (\Throwable $e) {
+        error_log('[reminders] digest: ' . $e->getMessage());
+        echo "Weekly summaries failed: see the PHP log.\n";
         $status = 1;
     }
     try {
