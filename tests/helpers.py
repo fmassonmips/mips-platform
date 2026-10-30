@@ -85,3 +85,25 @@ def wait_next_step():
     time.sleep(31 - time.time() % 30)
 
 
+
+
+def staff(email, page='/dashboard.php'):
+    """Signed-in staff client (test accounts have no 2FA), CSRF token taken after login."""
+    c = Client('/login.php')
+    r = c.post('/api/auth/login', {'email': email, 'password': 'Admin123!'})
+    if r.status_code != 200:
+        raise SystemExit(f'login failed for {email}: {r.status_code} {r.text}')
+    c.refresh(page)
+    return c
+
+
+def near(a, b, eps=0.005):
+    """Money comparison: values from JSON may be strings ("10.00") or floats."""
+    try:
+        return a is not None and b is not None and abs(float(a) - float(b)) < eps
+    except (TypeError, ValueError):
+        return False
+
+
+def fixture(name):
+    return open(os.path.join(FILES, name), 'rb').read()

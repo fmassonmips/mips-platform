@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# End-to-end tests of the merchant portal and the staff onboarding flow.
+# End-to-end tests: merchant portal, staff onboarding, reporting, billing,
+# MCB reconciliation and BigQuery import, on fictitious data only.
 #
 # Builds a throw-away instance: a copy of the code in a temporary folder,
 # its own database (dropped and recreated), test staff accounts, a local SMTP
-# sink and PHP's built-in server. Nothing outside these is touched.
+# sink, a BigQuery emulator and PHP's built-in server. Nothing outside these
+# is touched.
 #
 #   tests/run_tests.sh
 #
@@ -12,6 +14,8 @@
 #   DB_NAME    test database, DROPPED at each run       [mips_test]
 #   PORT       web server port                          [8099]
 #   SMTP_PORT  SMTP sink port                           [2525]
+#   BQ_PORT    BigQuery emulator port                   [9050]
+#   TESTS      suites to run, space-separated           [all]
 #   KEEP=1     keep the temporary folder and servers for inspection
 set -euo pipefail
 
@@ -20,9 +24,13 @@ MYSQL=${MYSQL:-mysql}
 DB_NAME=${DB_NAME:-mips_test}
 PORT=${PORT:-8099}
 SMTP_PORT=${SMTP_PORT:-2525}
+BQ_PORT=${BQ_PORT:-9050}
+TESTS=${TESTS:-portal_test.py staff_onboarding_test.py reporting_test.py billing_test.py recon_test.py bigquery_test.py}
 WORK=$(mktemp -d)
 APP_DIR=$WORK/app
 MAIL_FILE=$WORK/mail.txt
+BQ_KEY=$WORK/bq-service-account.json
+BQ_LOG=$WORK/bigquery.log
 DB_USER=mips_test
 DB_PASS=$(php -r 'echo bin2hex(random_bytes(12));')
 
@@ -55,9 +63,9 @@ chmod +x "$APP_DIR/fakescan.sh"
 
 echo "== test configuration"
 APP_KEY=$(php -r 'echo base64_encode(random_bytes(32));')
-python3 - "$APP_DIR/config/config.php" "$DB_NAME" "$DB_USER" "$DB_PASS" "$APP_KEY" "$PORT" "$SMTP_PORT" <<'PY'
+python3 - "$APP_DIR/config/config.php" "$DB_NAME" "$DB_USER" "$DB_PASS" "$APP_KEY" "$PORT" "$SMTP_PORT" "$BQ_PORT" "$BQ_KEY" <<'PY'
 import sys
-path, db, user, pw, key, port, smtp = sys.argv[1:]
+path, db, user, pw, key, port, smtp, bq, bqkey = sys.argv[1:]
 s = open(path).read()
 for old, new in [
     ("'env'     => 'production'", "'env'     => 'test'"),
@@ -71,6 +79,12 @@ for old, new in [
     ("'transport'  => 'log'", "'transport'  => 'smtp'"),
     ("'port'       => 587,", f"'port'       => {smtp},"),
     ("'encryption' => 'tls',", "'encryption' => 'none',"),
+    ("'sentinel_merchants'  => ['CEB']", "'sentinel_merchants'  => ['Sentinel Test Ltd']"),
+    ("'bigquery' => [\n        'enabled'          => false,", "'bigquery' => [\n        'enabled'          => true,"),
+    ("'project'          => '',", "'project'          => 'test-proj',"),
+    ("'table'            => '',", "'table'            => 'test-proj.ds.commission',"),
+    ("'credentials_path' => '',", f"'credentials_path' => '{bqkey}',"),
+    ("'api_base'         => 'https://bigquery.googleapis.com'", f"'api_base'         => 'http://127.0.0.1:{bq}'"),
 ]:
     if old not in s:
         sys.exit(f"config.php changed, cannot set: {old}")
@@ -89,21 +103,34 @@ $MYSQL -e "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_P
            GRANT ALL ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';"
 HASH=$(php -r 'echo password_hash("Admin123!", PASSWORD_DEFAULT);')
 $MYSQL "$DB_NAME" -e "INSERT INTO users (email, password_hash, name, role, is_active, activated_at) VALUES
-  ('admin@example.com', '$HASH', 'Test Admin', 'admin', 1, NOW()),
-  ('fin@example.com',   '$HASH', 'Test Finance', 'finance', 1, NOW());"
+  ('admin@example.com',  '$HASH', 'Test Admin', 'admin', 1, NOW()),
+  ('fin@example.com',    '$HASH', 'Test Finance', 'finance', 1, NOW()),
+  ('viewer@example.com', '$HASH', 'Test Viewer', 'user', 1, NOW());"
+
+echo "== BigQuery test service account (throw-away key)"
+openssl genrsa -out "$WORK/bq.pem" 2048 2>/dev/null
+openssl rsa -in "$WORK/bq.pem" -pubout -out "$WORK/bq.pub" 2>/dev/null
+python3 - "$WORK/bq.pem" "$BQ_KEY" "$BQ_PORT" <<'PY'
+import json, sys
+pem, out, port = sys.argv[1:]
+json.dump({'type': 'service_account', 'project_id': 'test-proj', 'client_email': 'reader@test-proj.iam.gserviceaccount.com',
+           'private_key': open(pem).read(), 'token_uri': f'http://127.0.0.1:{port}/token'}, open(out, 'w'))
+PY
 
 echo "== servers"
 python3 "$ROOT/tests/smtpsink.py" "$MAIL_FILE" "$SMTP_PORT" & PIDS+=($!)
+python3 "$ROOT/tests/bigquery_emulator.py" "$WORK/bq.pub" "$ROOT/tests/fixtures/bigquery_rows.csv" "$BQ_LOG" "$BQ_PORT" test-proj.ds.commission & PIDS+=($!)
 APP_PUBLIC="$APP_DIR/public" php -d opcache.enable=0 -S "127.0.0.1:$PORT" "$ROOT/tests/router.php" >"$WORK/server.log" 2>&1 & PIDS+=($!)
 for _ in $(seq 1 50); do
   curl -s -o /dev/null "http://127.0.0.1:$PORT/login.php" && break
   sleep 0.2
 done
 
-export BASE_URL="http://127.0.0.1:$PORT" MAIL_FILE APP_DIR DB_NAME MYSQL
+export BASE_URL="http://127.0.0.1:$PORT" MAIL_FILE APP_DIR DB_NAME MYSQL BQ_LOG BQ_KEY
 STATUS=0
 cd "$ROOT/tests"
-for t in portal_test.py staff_onboarding_test.py; do
+# Order matters: billing re-imports after reporting, BigQuery compares with October.
+for t in $TESTS; do
   echo
   echo "######## $t"
   python3 "$t" || STATUS=1
