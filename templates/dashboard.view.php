@@ -9,6 +9,7 @@
 /** @var bool $can_manage */
 /** @var int $team_size */
 /** @var bool $is_staff MIPS team: link to the back-office */
+/** @var list<array{label:string,done:bool,url:string,cta:string}>|null $checklist « Bien démarrer », null when hidden */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -46,6 +47,22 @@
         <dt>Équipe</dt><dd><?= $team_size ?> personne<?= $team_size > 1 ? 's' : '' ?> · <a href="/team.php"><?= $can_manage ? 'Gérer l’équipe' : 'Voir l’équipe' ?></a></dd>
       </dl>
     </section>
+
+    <?php if ($checklist !== null): $done = count(array_filter(array_column($checklist, 'done'))); ?>
+      <section class="card ob-card" id="ob-card">
+        <h2>Bien démarrer <span class="muted small"><?= $done ?> / <?= count($checklist) ?></span></h2>
+        <ul class="ob-list">
+          <?php foreach ($checklist as $s): ?>
+            <li class="<?= $s['done'] ? 'ob-done' : '' ?>">
+              <span class="ob-check" aria-hidden="true"><?= $s['done'] ? '✓' : '' ?></span>
+              <span class="ob-text"><?= htmlspecialchars($s['label'], ENT_QUOTES, 'UTF-8') ?><?= $s['done'] ? ' <span class="sr-only">(fait)</span>' : '' ?></span>
+              <?php if (!$s['done']): ?><a class="btn-link" href="<?= htmlspecialchars($s['url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($s['cta'], ENT_QUOTES, 'UTF-8') ?></a><?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <p class="small muted"><button type="button" class="btn-link" id="ob-hide">Masquer cette liste</button></p>
+      </section>
+    <?php endif; ?>
 
     <section class="suite" aria-labelledby="suite-title">
       <h2 id="suite-title">Applications</h2>

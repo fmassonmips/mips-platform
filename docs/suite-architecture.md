@@ -284,6 +284,20 @@ mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne
 - `--reset` supprime l'entreprise de démo (celle de ce nom dont le propriétaire a l'e-mail de démo) et les comptes `@lagonbleu.example`, puis la recrée ; rien d'autre n'est touché.
 - À relancer avant une démo pour que « aujourd'hui » et le mois en cours aient des données. Base de démo ou de préproduction uniquement.
 
+## Premiers pas et import depuis Excel
+
+| Élément | Règle |
+|---|---|
+| Assistant | `/welcome.php`, ouvert juste après la confirmation de l'adresse (propriétaire/administrateur) : 1. profil de l'entreprise (raison sociale et BRN, imprimés sur les documents), 2. choix des apps (essai de 30 jours chacune), 3. invitation de collègues. Chaque étape se passe ; « Plus tard » ramène au tableau de bord. Il réutilise les API existantes (`/api/suite/organization`, `/modules`, `/team`). |
+| « Bien démarrer » | Carte du tableau de bord (propriétaire/administrateur) : profil complet, une app activée, équipe invitée, données importées. Chaque étape est lue dans les données, jamais cochée à la main. Disparaît pour de bon quand tout est fait ou avec « Masquer cette liste » (`organizations.onboarded_at`, migration 021 ; les entreprises existantes ne la voient pas). |
+| Import | `/import.php?type=clients` (Facturo), `customers` (ClientBloom), `products` (ShopLokal) ; propriétaire/administrateur, app utilisable (pas en lecture seule). Lien « Importer depuis Excel » sur chaque liste et modèle CSV téléchargeable. |
+| Fichier | CSV d'Excel ou Google Sheets, UTF-8 (avec ou sans BOM) ou Windows-1252, séparateur « ; », « , » ou tabulation ; 1 Mo et 2000 lignes au plus. Un .xlsx est refusé avec la marche à suivre (« Enregistrer sous » → CSV UTF-8). |
+| Colonnes | Associées d'après leurs noms (français ou anglais : « Raison sociale », « Courriel », « Tél. », « Désignation », « Prix TTC »…), corrigeables avant l'import. |
+| Vérification | Chaque ligne passe les mêmes contrôles que la saisie dans l'app ; aperçu sans rien enregistrer : lignes prêtes, déjà présentes, à corriger (numéro de ligne et raison). L'import enregistre les lignes valides en une transaction et ignore les autres ; réimporter le même fichier corrigé n'ajoute que le nouveau. |
+| Doublons | Clients Facturo : même e-mail (ou même nom et téléphone sans e-mail). ClientBloom : même téléphone ou même e-mail. Produits : même nom. Dans le fichier comme dans l'app. |
+| Formats | Prix : 250 / 250,00 / 1 250,50 / 1,250 / Rs 1 250 ; TVA : 15 %, 0 %, exonéré (vide = 15 %). Anniversaire jour en premier (14/02/1990). Téléphone : +230 retiré. Consentement aux offres : oui / yes / x / 1, sinon non. |
+| ClientBloom | Les clients importés ne reçoivent pas le bonus de bienvenue ; leur cashback démarre à zéro. |
+
 ## Back-office MIPS
 
 Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
@@ -328,6 +342,7 @@ mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
 mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
 mysql -u root -p mips_platform < sql/migrations/019_account_hardening.sql
 mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
+mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
 ```
 
 Puis dans `config/config.php` :

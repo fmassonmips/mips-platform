@@ -47,7 +47,7 @@
                 done.hidden = false;
                 return;
             }
-            window.location.assign('/dashboard.php');
+            window.location.assign(action === 'verify' ? '/welcome.php' : '/dashboard.php');   // new account: first steps
         } catch (err) {
             errorBox.textContent = err.message;
             errorBox.hidden = false;

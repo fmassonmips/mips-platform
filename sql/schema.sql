@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS organizations (
     -- Suspended by the MIPS team: members cannot log in, public pages close, data kept
     suspended_at     DATETIME     NULL,
     suspended_reason VARCHAR(300) NULL,
+    -- First steps done or hidden: the dashboard no longer shows « Bien démarrer »
+    onboarded_at     DATETIME     NULL,
     -- MRA e-invoicing credentials (password encrypted with app.secret_key)
     mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
     mra_username     VARCHAR(100) NULL,

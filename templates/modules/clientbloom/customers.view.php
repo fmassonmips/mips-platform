@@ -5,6 +5,7 @@
  * @var string $query
  * @var list<array<string,mixed>> $customers
  * @var bool $can_manage
+ * @var array{id:int,name:string,role:string} $org
  */
 use App\ClientBloom\Customers;
 use App\Facturo\Money;
@@ -14,6 +15,7 @@ use App\Facturo\Money;
     <h2>Clients</h2>
     <div class="actions">
       <?php if ($can_manage): ?>
+        <?php if (\App\Suite\Tenant::canManage($org) && \App\Suite\Modules::isEnabled($org['id'], 'clientbloom')): ?><a class="btn-secondary" href="/import.php?type=customers">Importer depuis Excel</a><?php endif; ?>
         <a class="btn-secondary" href="/clientbloom/export.php?s=<?= $e(rawurlencode($segment)) ?>">Exporter (CSV)</a>
       <?php endif; ?>
       <a class="btn-secondary" href="/app.php?m=clientbloom&amp;p=customer">Nouveau client</a>

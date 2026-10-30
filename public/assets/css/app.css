@@ -757,3 +757,31 @@ input[type="time"] {
 .bo-log { list-style: none; padding: 0; margin: 12px 0 0; }
 .bo-log li { padding: 8px 0; border-top: 1px solid var(--color-border); }
 .bo-link { font-size: 14px; }
+
+/* -------- Import from Excel -------- */
+.im-steps { padding-left: 20px; margin: 0 0 16px; }
+.im-steps li { margin-bottom: 4px; }
+.im-mapping { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 12px; }
+.im-summary { font-weight: 600; }
+.im-errors { padding-left: 18px; margin: 0 0 12px; color: var(--color-error); font-size: 14px; max-height: 240px; overflow-y: auto; }
+#im-check[hidden], #im-done[hidden] { display: none; }
+
+/* -------- First steps -------- */
+.ob-card h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ob-list { list-style: none; padding: 0; margin: 0; }
+.ob-list li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--color-border); }
+.ob-list li:first-child { border-top: 0; }
+.ob-check { flex: 0 0 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-border); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; align-self: center; }
+.ob-done .ob-check { background: #1a7f37; border-color: #1a7f37; color: #fff; }
+.ob-done .ob-text { color: var(--color-muted); text-decoration: line-through; }
+.ob-text { flex: 1; }
+.wz-progress { display: flex; gap: 6px; margin-bottom: 16px; }
+.wz-progress span { flex: 1; height: 4px; border-radius: 2px; background: var(--color-border); }
+.wz-progress span.is-on { background: var(--color-primary); }
+.wz-step[hidden] { display: none; }
+.wz-apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.wz-app { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 10px; cursor: pointer; font-weight: 400; margin: 0; }
+.wz-app:has(input:checked) { border-color: var(--color-primary); background: #f3f8fd; }
+.wz-app input { margin-top: 3px; }
+.wz-app strong { display: block; }
+.wz-invites .form-grid { margin-bottom: 0; }

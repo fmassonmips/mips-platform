@@ -3,6 +3,7 @@
  * @var callable $e
  * @var list<array<string,mixed>> $clients
  * @var array<string,string> $profile
+ * @var array{id:int,name:string,role:string} $org
  */
 use App\Facturo\DocText;
 
@@ -34,7 +35,10 @@ $companyLang = DocText::LANGUAGES[$profile['document_language']] ?? 'Français';
 </section>
 
 <section class="card">
-  <h2>Clients</h2>
+  <div class="card-head">
+    <h2>Clients</h2>
+    <div class="actions"><?php if (\App\Suite\Tenant::canManage($org) && \App\Suite\Modules::isEnabled($org['id'], 'facturo')): ?><a class="btn-secondary" href="/import.php?type=clients">Importer depuis Excel</a><?php endif; ?></div>
+  </div>
   <?php if ($clients === []): ?>
     <p class="muted">Aucun client pour l'instant.</p>
   <?php else: ?>

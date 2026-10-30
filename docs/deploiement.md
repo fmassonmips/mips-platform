@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `020`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `021`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 

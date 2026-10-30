@@ -4,6 +4,7 @@
  * @var list<array<string,mixed>> $products
  * @var array<string,string> $profile
  * @var bool $can_manage
+ * @var array{id:int,name:string,role:string} $org
  */
 use App\Facturo\Documents;
 use App\Facturo\Money;
@@ -36,7 +37,10 @@ $defaultCode = $profile['vat_number'] !== '' ? 'TC01' : 'TC03';
 <?php endif; ?>
 
 <section class="card">
-  <h2>Produits</h2>
+  <div class="card-head">
+    <h2>Produits</h2>
+    <div class="actions"><?php if (\App\Suite\Tenant::canManage($org) && \App\Suite\Modules::isEnabled($org['id'], 'shoplokal')): ?><a class="btn-secondary" href="/import.php?type=products">Importer depuis Excel</a><?php endif; ?></div>
+  </div>
   <?php if ($products === []): ?>
     <p class="muted">Aucun produit pour l'instant.</p>
   <?php else: ?>
