@@ -80,14 +80,16 @@ final class LoginController
         if (!empty($user['totp_enabled_at'])) {
             Session::regenerate();
             $_SESSION['2fa_pending'] = ['user_id' => (int) $user['id'], 'email' => (string) $user['email'], 'at' => time()];
-            RateLimiter::clear($ip, $email);
+            // Only this account's counter: signing in to one account must never
+            // reset the failures recorded against other accounts from this IP.
+            RateLimiter::clearKey($email);
             Audit::log('auth.2fa_challenge', 'user', (int) $user['id'], [], $user);
             Response::json(['two_factor_required' => true], 200);
         }
 
         // Success: bind session, clear rate-limit counters, rotate CSRF token.
         Auth::login_user($user);
-        RateLimiter::clear($ip, $email);
+        RateLimiter::clearKey($email);
         unset($_SESSION['csrf_token']); // force new token on next page load
         Audit::log('auth.login', 'user', (int) $user['id']);
 

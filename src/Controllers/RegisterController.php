@@ -61,11 +61,15 @@ final class RegisterController
             Response::json(['error' => $passwdErr], 422);
         }
 
-        $rl = $GLOBALS['config']['rate_limit'];
-        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
-        if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
+        // Quota per IP, never counted as failed sign-ins: a duplicate
+        // registration must not lock the existing account out.
+        $rl    = $GLOBALS['config']['rate_limit'];
+        $ip    = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $quota = 'register-ip:' . $ip;
+        if (RateLimiter::countKey($quota, (int) $rl['window_seconds']) >= (int) ($rl['max_attempts_per_ip'] ?? 50)) {
             Response::json(['error' => 'Too many attempts. Please try again later.'], 429);
         }
+        RateLimiter::hit($ip, $quota);
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -83,14 +87,12 @@ final class RegisterController
             $newId = (int) Database::connection()->lastInsertId();
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
-                RateLimiter::record($ip, $email, false);
                 Response::json(['error' => 'An account with this email already exists.'], 409);
             }
             error_log('[Register] ' . $e->getMessage());
             Response::json(['error' => 'Registration failed. Please try again later.'], 500);
         }
 
-        RateLimiter::record($ip, $email, true);
         Audit::log('auth.register', 'user', $newId, ['email' => $email]);
 
         Response::json([

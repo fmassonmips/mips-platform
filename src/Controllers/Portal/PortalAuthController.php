@@ -251,7 +251,7 @@ final class PortalAuthController
         }
         // Every open session of the account ends (password_changed_at check).
         Database::connection()->prepare(
-            'UPDATE portal_users SET password_hash = :h, password_changed_at = NOW(), email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = :id'
+            'UPDATE portal_users SET password_hash = :h, password_changed_at = NOW(6), email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = :id'
         )->execute([':h' => password_hash($pass, PASSWORD_DEFAULT), ':id' => $userId]);
         Audit::log('portal.password_reset', 'portal_user', $userId, [], $this->actorFor($userId));
         Response::json(['success' => true]);

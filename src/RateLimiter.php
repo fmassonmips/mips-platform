@@ -2,7 +2,13 @@
 /**
  * Simple DB-backed rate limiter for login attempts.
  *
- * Counts attempts matching the current IP OR email within a sliding window.
+ * Failed attempts are counted per account key (email, "2fa:email", ...) and,
+ * with a much higher threshold, per IP address, within a sliding window:
+ *  - 5 failures on one account block that account only, from any address;
+ *  - only a flood from one address (password spraying across accounts)
+ *    blocks the address, so colleagues behind a shared office IP are not
+ *    locked out by one person's typos.
+ * Quota events (hit()) are stored as successes and never count as failures.
  * Not cluster-aware, but good enough for a single-server dashboard and
  * trivial to swap for Redis later.
  */
@@ -12,25 +18,34 @@ namespace App;
 
 final class RateLimiter
 {
+    /**
+     * True when the account key has $max failures in the window, or the IP
+     * address has rate_limit.max_attempts_per_ip failures (all keys together).
+     */
     public static function tooManyAttempts(string $ip, string $email, int $max, int $window): bool
     {
         // Compute the window start in PHP to avoid placeholder issues with
         // MariaDB's INTERVAL clause.
         $since = date('Y-m-d H:i:s', time() - $window);
+        $perIp = (int) ($GLOBALS['config']['rate_limit']['max_attempts_per_ip'] ?? 50);
 
         $stmt = Database::connection()->prepare(
-            'SELECT COUNT(*) FROM login_attempts
+            'SELECT COALESCE(SUM(email = :email1), 0) AS by_key, COALESCE(SUM(ip_address = :ip1), 0) AS by_ip
+             FROM login_attempts
              WHERE success = 0
                AND attempted_at >= :since
-               AND (ip_address = :ip OR email = :email)'
+               AND (ip_address = :ip2 OR email = :email2)'
         );
         $stmt->execute([
-            ':since' => $since,
-            ':ip'    => $ip,
-            ':email' => $email,
+            ':since'  => $since,
+            ':ip1'    => $ip,
+            ':ip2'    => $ip,
+            ':email1' => $email,
+            ':email2' => $email,
         ]);
+        $n = $stmt->fetch();
 
-        return (int) $stmt->fetchColumn() >= $max;
+        return (int) $n['by_key'] >= $max || (int) $n['by_ip'] >= max($max, $perIp);
     }
 
     public static function record(string $ip, string $email, bool $success): void
@@ -44,20 +59,6 @@ final class RateLimiter
             ':email' => $email,
             ':s'     => $success ? 1 : 0,
         ]);
-    }
-
-    /**
-     * Wipe attempts for a given IP/email pair. Called after a successful login.
-     * Namespaced keys ("2fa:...", "reset:...") are left alone: a password
-     * login from the same IP must not reset the second-factor counters.
-     */
-    public static function clear(string $ip, string $email): void
-    {
-        $stmt = Database::connection()->prepare(
-            "DELETE FROM login_attempts
-             WHERE (ip_address = :ip OR email = :email) AND email NOT LIKE '%:%'"
-        );
-        $stmt->execute([':ip' => $ip, ':email' => $email]);
     }
 
     /**

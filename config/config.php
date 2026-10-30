@@ -65,8 +65,9 @@ return [
     ],
 
     'rate_limit' => [
-        'max_attempts'   => 5,     // failed attempts before blocking
-        'window_seconds' => 900,   // sliding window = 15 minutes
+        'max_attempts'        => 5,     // failed attempts before blocking that account
+        'max_attempts_per_ip' => 50,    // failed attempts (all accounts) before blocking an IP address
+        'window_seconds'      => 900,   // sliding window = 15 minutes
     ],
 
     // Roles allowed on each module. 'admin' always passes.

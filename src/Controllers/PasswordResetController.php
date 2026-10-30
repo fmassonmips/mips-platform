@@ -30,14 +30,19 @@ final class PasswordResetController
             Response::json(['error' => 'Enter a valid email address.'], 422);
         }
 
-        // Each request counts as an attempt: caps emails per address and per IP.
-        $rl    = $GLOBALS['config']['rate_limit'];
-        $ip    = Request::ip();
-        $rlKey = 'reset:' . strtolower($email);
-        if (RateLimiter::tooManyAttempts($ip, $rlKey, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
+        // Quotas, not failures: caps emails per address and per IP without
+        // counting towards the sign-in lockout of the account or the IP.
+        $rl      = $GLOBALS['config']['rate_limit'];
+        $ip      = Request::ip();
+        $window  = (int) $rl['window_seconds'];
+        $byEmail = 'reset:' . strtolower($email);
+        $byIp    = 'reset-ip:' . $ip;
+        if (RateLimiter::countKey($byEmail, $window) >= (int) $rl['max_attempts']
+            || RateLimiter::countKey($byIp, $window) >= (int) ($rl['max_attempts_per_ip'] ?? 50)) {
             Response::json(['error' => 'Too many attempts. Please try again later.'], 429);
         }
-        RateLimiter::record($ip, $rlKey, false);
+        RateLimiter::hit($ip, $byEmail);
+        RateLimiter::hit($ip, $byIp);
 
         $stmt = Database::connection()->prepare('SELECT id, email, name FROM users WHERE email = :e AND is_active = 1');
         $stmt->execute([':e' => $email]);

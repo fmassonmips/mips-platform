@@ -3,7 +3,8 @@ administrator safeguards, reset links, forgotten password, password change,
 two-factor authentication (TOTP and recovery codes), admin 2FA reset, audit
 log viewer and sign-in rate limiting.
 
-Run it last: the rate-limit section deliberately locks sign-in from 127.0.0.1.
+Run it last: the rate-limit section deliberately blocks sign-in from 127.0.0.1
+(per-IP flood threshold) before clearing it.
 The test config sets security.require_2fa_roles to [] so test staff can sign in
 without 2FA; the "2FA required for admin and finance" rule is therefore NOT
 exercised here. Same environment as portal_test.py.
@@ -18,8 +19,8 @@ fin = staff('fin@example.com')
 
 
 def clear_attempts():
-    # Every test client comes from 127.0.0.1, and failed attempts are counted per IP:
-    # reset the counter after sections that fail on purpose.
+    # Every test client comes from 127.0.0.1 and failures also count per IP (high
+    # threshold): reset the counters after sections that fail on purpose.
     sql('delete from login_attempts')
 
 
@@ -156,6 +157,10 @@ r = me.post('/api/account/password', {'current_password': PW3, 'new_password': P
 check(r.status_code == 200, 'password changed')
 check(me.get('/api/account/status').status_code == 200, 'current session kept')
 check(other.get('/api/account/status').status_code == 401, 'other sessions signed out')
+third, _ = login(EMAIL, PW4)
+me.post('/api/account/password', {'current_password': PW4, 'new_password': PW4 + 'x'})
+me.post('/api/account/password', {'current_password': PW4 + 'x', 'new_password': PW4})
+check(third.get('/api/account/status').status_code == 401, 'two changes within the same second still sign other sessions out')
 
 print('== two-factor authentication')
 me.refresh('/account.php')
@@ -226,18 +231,45 @@ check(a['total'] == 0, 'date window applied')
 check(adm.get('/api/audit/list?action=auth.login_failed').json()['total'] >= 2, 'failed sign-ins logged')
 p2 = adm.get('/api/audit/list?page=2').json()
 p1 = adm.get('/api/audit/list?page=1').json()
-check(p1['total'] > 50 and len(p1['entries']) == 50 and p2['entries'][0]['id'] < p1['entries'][-1]['id'], 'paged, newest first')
+ids = [e['id'] for e in p1['entries']]
+check(len(ids) == min(50, p1['total']) and ids == sorted(ids, reverse=True)
+      and (p1['total'] <= 50 or p2['entries'][0]['id'] < ids[-1]), 'paged by 50, newest first')
 leak = sql("select count(*) from audit_log where details like '%Staff-Test-Pass%' or details like '%Admin123%'")
 check(leak == '0', 'no password ever written to the audit log')
 
 print('== sign-in rate limiting (keep last)')
+clear_attempts()
 for i in range(5):
     Client('/login.php').post('/api/auth/login', {'email': 'nobody@example.com', 'password': 'Wrong-Pass-123'})
 _, r = login('nobody@example.com', 'Wrong-Pass-123')
-check(r.status_code == 429, 'sixth failed attempt blocked')
+check(r.status_code == 429, 'sixth failed attempt on one account blocked')
 _, r = login('admin@example.com', 'Admin123!')
-check(r.status_code == 429, 'the block is per IP: a valid account from the same address is blocked too (see README)')
-check(adm.get('/api/audit/list?action=auth.rate_limited').json()['total'] >= 2, 'blocked attempts logged')
+check(r.status_code == 200, 'another account from the same address still signs in (shared office IP)')
+_, r = login('nobody@example.com', 'Wrong-Pass-123')
+check(r.status_code == 429, "signing in to one account does not reset another account's counter")
+
+for i in range(5):
+    Client('/login.php').post('/api/auth/login', {'email': 'fin@example.com', 'password': 'Wrong-Pass-123'})
+_, r = login('fin@example.com', 'Admin123!')
+check(r.status_code == 429, 'the targeted account is blocked even with the right password')
+check(adm.get('/api/audit/list?action=auth.rate_limited').json()['total'] >= 3, 'blocked attempts logged')
+clear_attempts()
+
+anon = Client('/forgot-password.php')
+codes = [anon.post('/api/auth/forgot', {'email': EMAIL}).status_code for _ in range(6)]
+check(codes == [200] * 5 + [429], 'forgotten-password emails capped per address', codes)
+_, r = login(EMAIL, PW4)
+check(r.status_code == 200, 'reset requests never lock the account out')
+for _ in range(6):
+    Client('/register.php').post('/api/auth/register', {'email': 'fin@example.com', 'name': 'Someone', 'password': 'Other-Pass-123'})
+_, r = login('fin@example.com', 'Admin123!')
+check(r.status_code == 200, 'duplicate registrations never lock the existing account out')
+clear_attempts()
+
+for i in range(50):
+    Client('/login.php').post('/api/auth/login', {'email': f'spray{i}@example.com', 'password': 'Wrong-Pass-123'})
+_, r = login('admin@example.com', 'Admin123!')
+check(r.status_code == 429, 'a flood of failures from one address (50, all accounts together) blocks that address')
 clear_attempts()
 _, r = login('admin@example.com', 'Admin123!')
 check(r.status_code == 200, 'sign-in open again once the window is cleared')

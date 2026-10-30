@@ -33,7 +33,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS activated_at DATETIME NULL AFTER is_a
 UPDATE users SET activated_at = created_at WHERE is_active = 1 AND activated_at IS NULL;
 
 -- Password changes invalidate every other session (see Auth::current_user).
-ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME NULL AFTER password_hash;
+-- Microsecond precision: two changes within the same second must still differ,
+-- or a session opened between them would survive the second change.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at DATETIME(6) NULL AFTER password_hash;
+ALTER TABLE users MODIFY COLUMN password_changed_at DATETIME(6) NULL;
 
 -- Two-factor authentication (TOTP). The secret is encrypted with the
 -- application key (config security.app_key); totp_last_step blocks code replay.
@@ -545,7 +548,7 @@ CREATE TABLE IF NOT EXISTS portal_users (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     email               VARCHAR(254) NOT NULL,
     password_hash       VARCHAR(255) NOT NULL,
-    password_changed_at DATETIME     NULL,
+    password_changed_at DATETIME(6)  NULL,                   -- microseconds: see users.password_changed_at
     name                VARCHAR(120) NOT NULL,
     phone               VARCHAR(40)  NULL,
     is_active           TINYINT(1)   NOT NULL DEFAULT 1,     -- staff can switch an account off
@@ -559,6 +562,7 @@ CREATE TABLE IF NOT EXISTS portal_users (
     PRIMARY KEY (id),
     UNIQUE KEY uq_portal_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ALTER TABLE portal_users MODIFY COLUMN password_changed_at DATETIME(6) NULL;
 
 CREATE TABLE IF NOT EXISTS portal_recovery_codes (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

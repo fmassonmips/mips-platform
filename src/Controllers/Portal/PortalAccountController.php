@@ -160,7 +160,7 @@ final class PortalAccountController
             Response::json(['error' => $err ?? 'The new password must be different.'], 422);
         }
         $db = Database::connection();
-        $db->prepare('UPDATE portal_users SET password_hash = :h, password_changed_at = NOW() WHERE id = :id')
+        $db->prepare('UPDATE portal_users SET password_hash = :h, password_changed_at = NOW(6) WHERE id = :id')
             ->execute([':h' => password_hash($new, PASSWORD_DEFAULT), ':id' => (int) $user['id']]);
         $at = $db->prepare('SELECT password_changed_at FROM portal_users WHERE id = :id');
         $at->execute([':id' => (int) $user['id']]);
