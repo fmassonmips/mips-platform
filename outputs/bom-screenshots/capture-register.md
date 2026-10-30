@@ -172,7 +172,7 @@
 
 ## Vérification automatique des fonctions montrées (2026-10-30)
 
-Dix suites de tests (`tests/run_tests.sh`, 579 vérifications) pilotent l'application par son API, sur une base
+Onze suites de tests (`tests/run_tests.sh`, 590 vérifications) pilotent l'application par son API, sur une base
 jetable et des données **uniquement fictives**. Elles vérifient le **code du prototype**, pas un système en
 production. Le tableau indique, pour chaque capture, si le comportement montré est vérifié automatiquement.
 
@@ -185,7 +185,7 @@ production. Le tableau indique, pour chaque capture, si le comportement montré 
 | S02c–d | `portal_test.py` | Étape « submitted », jamais présentée comme « approved » ; aucun champ interne (note de risque, blocages) exposé au marchand | Décision finale côté marchand (non capturée non plus) |
 | S03a–b | `portal_test.py` | Validation du formulaire, une préqualification par compte, signaux réservés à l'analyste, acceptation qui ouvre le dossier, refus | — |
 | S04a–b | `staff_onboarding_test.py` | Format vérifié sur le contenu, pièce d'identité rattachée à une personne du dossier, double regard (le déposant ne peut pas valider sa pièce), téléchargement exact | Seuil de 25 % pour les bénéficiaires effectifs |
-| S04c–d | `portal_test.py` | Dépôt par le marchand, PEP déclarable mais jamais retirable, motif de refus visible, isolement entre marchands, antivirus bloquant quand il est requis (scanner de substitution) | Antivirus réel |
+| S04c–d | `portal_test.py`, `antivirus_clamav_test.py` | Dépôt par le marchand, PEP déclarable mais jamais retirable, motif de refus visible, isolement entre marchands, antivirus bloquant quand il est requis ; avec le vrai moteur ClamAV (`clamscan` et démon `clamd`) : pièce infectée refusée, refus si les signatures manquent ou si l'antivirus est arrêté | Signatures officielles (non téléchargeables dans l'environnement de test) ; aucun antivirus installé sur la démo capturée |
 | S05, S05b | toutes | Refus d'accès selon le rôle (compte sans rôle métier refusé sur chaque module), sessions personnel et marchand séparées | — |
 | S06 | `reporting_test.py` | Règles de nettoyage, séries de tendance, mois non importés affichés comme des trous | Données réelles |
 | S07 | `recon_test.py` | Six catégories d'écart bouclées au centime, remaps MID, alertes de périmètre, éléments à réclamer, détail journalier, exports | Fichier MCB réel |

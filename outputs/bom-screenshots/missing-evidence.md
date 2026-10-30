@@ -61,4 +61,7 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
   `onboarding_approval_test.py` (78 vérifications). La suite a révélé un contournement du double regard
   (réassigner le dossier puis le trancher soi-même), corrigé le même jour.
 - ~~2FA obligatoire pour admin et finance~~ : couverte depuis le 2026-10-30 par `staff_2fa_required_test.py` (23 vérifications).
-- Antivirus réel, fichier MCB réel, table BigQuery réelle : uniquement simulés.
+- Antivirus : le vrai moteur ClamAV est testé depuis le 2026-10-30 (`antivirus_clamav_test.py`), mais avec une base de
+  signatures de test ; la base officielle n'a pas pu être téléchargée dans l'environnement de test. La capture S04d
+  reste « not scanned » tant que l'antivirus n'est pas installé sur l'instance capturée.
+- Fichier MCB réel, table BigQuery réelle : uniquement simulés.

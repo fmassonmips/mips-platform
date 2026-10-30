@@ -1,6 +1,6 @@
 # Tests de bout en bout
 
-Dix suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
+Onze suites qui pilotent l'application par son API, comme le ferait un navigateur. Toutes les données sont fictives.
 
 | Suite | Vérifie | Vérifications |
 |---|---|---|
@@ -11,6 +11,7 @@ Dix suites qui pilotent l'application par son API, comme le ferait un navigateur
 | `billing_test.py` | Règles de commission (validation, priorité marchand > rail spécifique > type de rail > canal, dates de validité, désactivation), factures avec TVA 15 %, une par marchand et devise, cycle brouillon → émise → payée / annulée, numérotation sans trou, mois verrouillé contre la réimport, marchand non facturable, export comptable | 47 |
 | `recon_test.py` | Rapprochement MCB / MIPS : correspondances de MID et liste de surveillance, ventilation de l'écart (vérifications de carte, décalage de fin de mois, surveillance, un seul côté, écart réel), règle de signe, avertissements de périmètre (extraction filtrée, marchand témoin, lignes hors mois), vue journalière, éléments à réclamer, exports, recalcul | 55 |
 | `merchants_test.py` | Fiches marchands : validation du profil, responsable de compte, nom d'import verrouillé dès qu'il y a des transactions, historique des modifications (qui, quoi, avant, après), recherche, contacts (un seul principal), identifiants MID/TUI uniques, contrats (validation, PDF contrôlé sur son contenu, stockage hors web, empreinte, téléchargement exact, document remplacé conservé, suppression des brouillons seulement), alertes de préavis | 71 |
+| `antivirus_clamav_test.py` | Antivirus des pièces avec le vrai moteur ClamAV, en `clamscan` et via le démon `clamd` : pièce saine acceptée et marquée analysée, pièce infectée refusée sans rien stocker, refus si ClamAV n'a pas de signatures, si le programme manque ou si le démon est arrêté. **Signatures de test** (une ligne reconnaissant la chaîne EICAR), pas la base officielle. Ignorée avec un message si ClamAV n'est pas installé | 11 |
 | `staff_2fa_required_test.py` | 2FA obligatoire pour admin et finance (règle activée le temps de la suite, comme en production) : mot de passe accepté puis tous les modules fermés, renvoi vers l'enrôlement, ouverture après enrôlement, désactivation refusée, second facteur exigé à la connexion suivante, remise à zéro par un administrateur, promotion d'un compte sans 2FA, rôle `user` non concerné | 23 |
 | `admin_test.py` | Comptes du personnel : demande de compte et activation par un administrateur, rôles appliqués dès la requête suivante, un administrateur ne peut ni se rétrograder ni se désactiver, lien de réinitialisation à usage unique, mot de passe oublié sans révéler les comptes existants, changement de mot de passe qui ferme les autres sessions, 2FA (activation, rejeu refusé, codes de secours à usage unique, régénération, désactivation, remise à zéro par un administrateur), consultation du journal d'audit, limitation des tentatives de connexion par compte et par adresse | 93 |
 | `bigquery_test.py` | Import direct depuis BigQuery via un émulateur local : jeton de compte de service signé, requête paramétrée avec plafond de coût, attente du job et pagination, bornes du mois à l'heure de Maurice, mois vide, clé refusée | 23 |
@@ -40,6 +41,7 @@ Pour n'en lancer qu'une partie : `TESTS="reporting_test.py billing_test.py" test
 
 - PHP 8.3 avec `pdo_mysql`, `sodium`, `fileinfo` ; MariaDB 10.11 en marche ;
 - Python 3 avec `requests` et `cryptography` (émulateur BigQuery), `openssl` ;
+- ClamAV (`apt-get install clamav clamav-daemon`) pour `antivirus_clamav_test.py`, sans base de signatures officielle ;
 - un client `mysql` avec les droits de créer une base et un utilisateur.
 
 | Variable | Rôle | Défaut |
