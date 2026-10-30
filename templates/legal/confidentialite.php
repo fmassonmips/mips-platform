@@ -28,6 +28,9 @@ use App\Suite\Closure;
       <td>Jusqu’à la fermeture du compte, puis <?= Closure::DELAY_DAYS ?> jours</td></tr>
     <tr><td>Date de dernière connexion, version des conditions acceptée</td>
       <td>Suivi du compte, preuve de l’acceptation</td><td>Idem</td></tr>
+    <tr><td>Jours d’utilisation du service (la date seulement, sans le détail des pages ni des actions)</td>
+      <td>Mesurer l’adoption et accompagner votre entreprise ; visible par votre entreprise dans son export et par l’équipe MIPS</td>
+      <td>13 mois</td></tr>
     <tr><td>Adresse IP et adresse e-mail des tentatives de connexion</td>
       <td>Bloquer les tentatives d’intrusion</td><td>90 jours au plus</td></tr>
     <tr><td>Liens envoyés par e-mail (confirmation, mot de passe oublié, invitation)</td>

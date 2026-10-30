@@ -25,6 +25,7 @@ final class DataExport
                                         FROM organization_users ou JOIN users u ON u.id = ou.user_id WHERE ou.organization_id = :o',
         'invitations'               => 'SELECT * FROM organization_invitations WHERE organization_id = :o',
         'apps'                      => 'SELECT * FROM organization_modules WHERE organization_id = :o',
+        'utilisation'               => 'SELECT u.email, a.day FROM user_activity a JOIN users u ON u.id = a.user_id WHERE a.organization_id = :o ORDER BY a.day',
         'facturo_clients'           => 'SELECT * FROM facturo_clients WHERE organization_id = :o',
         'facturo_documents'         => 'SELECT * FROM facturo_documents WHERE organization_id = :o',
         'facturo_document_lines'    => 'SELECT l.* FROM facturo_document_lines l JOIN facturo_documents d ON d.id = l.document_id WHERE d.organization_id = :o',

@@ -1,7 +1,8 @@
 <?php
 /**
  * Delete the companies whose owner asked to close the account, once the
- * 30-day delay is over (App\Suite\Closure). Run daily from cron:
+ * 30-day delay is over (App\Suite\Closure), and usage history older than
+ * 13 months. Run daily from cron:
  *   45 22 * * *  php tools/purge_companies.php
  * Exits 1 when a company could not be deleted, so cron alerts.
  */
@@ -32,6 +33,8 @@ try {
         }
     }
     echo count($due) . " company(ies) due.\n";
+    // Usage history is kept 13 months (privacy policy).
+    $pdo->exec('DELETE FROM user_activity WHERE day < CURDATE() - INTERVAL 13 MONTH');
 } finally {
     $pdo->query("SELECT RELEASE_LOCK('purge_companies')");
 }

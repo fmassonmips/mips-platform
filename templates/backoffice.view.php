@@ -6,6 +6,7 @@
  * @var array<string,mixed>|null $company
  * @var list<array<string,mixed>> $members      (company)
  * @var list<array<string,mixed>> $apps         (company)
+ * @var list<array{day:string,users:int,records:int}> $usage (company)
  * @var array<string,int> $kpis                  (list)
  * @var list<array<string,mixed>> $companies     (list)
  * @var string $filter                           (list)
@@ -79,10 +80,10 @@ $daysLeft = static function (?string $end): string {
       </form>
 
       <div class="table-wrap"><table class="table">
-        <thead><tr><th>Entreprise</th><th>Contact</th><th class="num">Membres</th><th>Apps</th><th>Prochaine fin d'essai</th><th>Dernière connexion</th><th>Créée le</th></tr></thead>
+        <thead><tr><th>Entreprise</th><th>Contact</th><th class="num">Membres</th><th>Apps</th><th>Prochaine fin d'essai</th><th>Dernière connexion</th><th class="num">Jours actifs (30 j)</th><th>Créée le</th></tr></thead>
         <tbody>
           <?php if ($companies === []): ?>
-            <tr><td colspan="7" class="muted">Aucune entreprise.</td></tr>
+            <tr><td colspan="8" class="muted">Aucune entreprise.</td></tr>
           <?php endif; ?>
           <?php foreach ($companies as $c): ?>
             <tr>
@@ -99,6 +100,7 @@ $daysLeft = static function (?string $end): string {
               </td>
               <td><?= $c['next_trial_end'] !== null ? $e(Format::date((string) $c['next_trial_end'])) . ' <span class="muted small">(' . $e($daysLeft((string) $c['next_trial_end'])) . ')</span>' : '—' ?></td>
               <td><?= $e(Format::dateTime($c['last_login_at'], 'jamais')) ?></td>
+              <td class="num"><?= (int) $c['active_days'] ?></td>
               <td><?= $e(Format::date((string) $c['created_at'])) ?></td>
             </tr>
           <?php endforeach; ?>
@@ -138,6 +140,8 @@ $daysLeft = static function (?string $end): string {
         <dt>Créée le</dt><dd><?= $e(Format::date((string) $company['created_at'])) ?></dd>
       </dl>
     </section>
+
+    <?php require __DIR__ . '/backoffice.usage.partial.php'; ?>
 
     <section class="card">
       <h2>Apps</h2>
@@ -180,7 +184,7 @@ $daysLeft = static function (?string $end): string {
     <section class="card">
       <h2>Membres <span class="muted small">(<?= count($members) ?>)</span></h2>
       <div class="table-wrap"><table class="table">
-        <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Dernière connexion</th><th>Depuis le</th></tr></thead>
+        <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Dernière connexion</th><th class="num">Jours actifs (30 j)</th><th>Depuis le</th></tr></thead>
         <tbody>
           <?php foreach ($members as $m): ?>
             <tr>
@@ -188,6 +192,7 @@ $daysLeft = static function (?string $end): string {
               <td><a href="mailto:<?= $e($m['email']) ?>"><?= $e($m['email']) ?></a></td>
               <td><?= $e(Team::ROLES[$m['role']] ?? $m['role']) ?></td>
               <td><?= $e(Format::dateTime($m['last_login_at'], 'jamais')) ?></td>
+              <td class="num"><?= (int) $m['active_days'] ?></td>
               <td><?= $e(Format::date((string) $m['joined_at'])) ?></td>
             </tr>
           <?php endforeach; ?>

@@ -341,6 +341,7 @@ Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `bac
 | Prolonger | 1 à 90 jours sur un essai en cours ; un essai terminé repart d'aujourd'hui (l'app redevient utilisable). Raison facultative, notée au journal. |
 | Suspendre | Raison obligatoire, montrée aux membres à la connexion avec `billing.contact_email`. Les sessions ouvertes se ferment, les pages publiques (réservation, boutique, formulaires, flux iCal) ferment, aucune donnée supprimée. Impossible sur sa propre entreprise. « Réactiver l'accès » rétablit tout. |
 | Journal | Chaque action et chaque note, avec son auteur et l'heure (`backoffice_log`), sur la fiche et sur l'accueil. |
+| Utilisation | Une ligne par membre et par jour d'utilisation (`user_activity`, migration 025 ; la date seulement, écrite à la première requête du jour). Liste : « Jours actifs (30 j) ». Fiche : jours avec au moins une connexion sur 30, membres actifs sur 7 jours, enregistrements créés, deux histogrammes jour par jour (membres connectés, enregistrements toutes apps), jours actifs par membre. Exporté avec les données de l'entreprise ; effacé après 13 mois (`purge_companies.php`). |
 
 ## Ajouter une app
 
@@ -377,6 +378,7 @@ mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
 mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
 mysql -u root -p mips_platform < sql/migrations/023_closure.sql
 mysql -u root -p mips_platform < sql/migrations/024_terms.sql
+mysql -u root -p mips_platform < sql/migrations/025_usage.sql
 ```
 
 Puis dans `config/config.php` :

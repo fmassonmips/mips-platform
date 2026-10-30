@@ -795,3 +795,14 @@ a.btn-primary, a.btn-secondary { text-decoration: none; }
 .legal-accept { font-weight: 400; font-size: 14px; line-height: 1.4; margin: 4px 0 16px; }
 .legal-links { text-align: center; font-size: 13px; color: var(--color-muted); margin-top: 16px; }
 .legal-links a { color: inherit; }
+
+/* -------- Back-office usage charts -------- */
+.bo-usage-kpis { margin-bottom: 12px; }
+.bo-chart-row { margin-bottom: 8px; }
+.bo-chart-label { display: block; font-size: 13px; margin-bottom: 2px; }
+.bo-chart { display: block; width: 100%; height: 86px; }
+.bo-chart .bo-bar { fill: #2b6cb0; }
+.bo-chart--records .bo-bar { fill: #7a8699; }
+.bo-chart .bo-weekend { fill: #f1f2f4; }
+.bo-chart .bo-axis { stroke: var(--color-border); stroke-width: 1; }
+.bo-chart-dates { display: flex; justify-content: space-between; gap: 8px; }

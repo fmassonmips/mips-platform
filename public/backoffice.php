@@ -27,6 +27,7 @@ if ($orgId > 0) {
     }
     $members    = Companies::members($orgId);
     $apps       = Companies::apps($orgId);
+    $usage      = Companies::usage($orgId);
     $log        = Log::recent($orgId, 100);
     $page_title = $company['name'];
 } else {

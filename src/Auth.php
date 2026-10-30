@@ -133,9 +133,27 @@ final class Auth
         }
         if (is_array($user)) {
             unset($user['password_changed_at']);
+            self::recordActiveDay((int) $user['id']);
         }
 
         return is_array($user) ? $user : null;
+    }
+
+    /**
+     * Usage history: one row per member and day (Mauritius date), written on the
+     * first request of the day only (remembered in the session).
+     */
+    private static function recordActiveDay(int $userId): void
+    {
+        $today = \App\RendezVous\Booking::now()->format('Y-m-d');
+        if (($_SESSION['active_day'] ?? '') === $today) {
+            return;
+        }
+        Database::connection()->prepare(
+            'INSERT IGNORE INTO user_activity (organization_id, user_id, day)
+             SELECT ou.organization_id, ou.user_id, :d FROM organization_users ou WHERE ou.user_id = :u'
+        )->execute([':d' => $today, ':u' => $userId]);
+        $_SESSION['active_day'] = $today;
     }
 
     /**

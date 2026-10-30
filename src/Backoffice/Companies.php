@@ -92,6 +92,8 @@ final class Companies
                     (SELECT COUNT(*) FROM organization_users ou WHERE ou.organization_id = o.id) AS members,
                     (SELECT MAX(u.last_login_at) FROM organization_users ou JOIN users u ON u.id = ou.user_id
                       WHERE ou.organization_id = o.id) AS last_login_at,
+                    (SELECT COUNT(DISTINCT a.day) FROM user_activity a
+                      WHERE a.organization_id = o.id AND a.day >= CURDATE() - INTERVAL 29 DAY) AS active_days,
                     COALESCE(SUM(m.status = \'trial\' AND m.trial_ends_at > NOW()), 0) AS trials,
                     COALESCE(SUM(m.status = \'trial\' AND m.trial_ends_at <= NOW()), 0) AS read_only,
                     COALESCE(SUM(m.status = \'active\'), 0) AS subscribed,
@@ -127,13 +129,55 @@ final class Companies
     public static function members(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, ou.role, ou.created_at AS joined_at
+            'SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, ou.role, ou.created_at AS joined_at,
+                    (SELECT COUNT(*) FROM user_activity a WHERE a.organization_id = ou.organization_id AND a.user_id = u.id
+                      AND a.day >= CURDATE() - INTERVAL 29 DAY) AS active_days,
+                    (SELECT COUNT(*) FROM user_activity a WHERE a.organization_id = ou.organization_id AND a.user_id = u.id
+                      AND a.day >= CURDATE() - INTERVAL 6 DAY) AS active_days_7
              FROM organization_users ou JOIN users u ON u.id = ou.user_id
              WHERE ou.organization_id = :o
              ORDER BY FIELD(ou.role, \'owner\', \'admin\', \'member\'), ou.created_at'
         );
         $stmt->execute([':o' => $orgId]);
         return $stmt->fetchAll();
+    }
+
+    /**
+     * The last 30 days, oldest first: members who used the app that day, and
+     * records created that day in all the apps (invoices, orders, bookings…).
+     *
+     * @return list<array{day:string,users:int,records:int}>
+     */
+    public static function usage(int $orgId): array
+    {
+        $pdo   = Database::connection();
+        $today = \App\RendezVous\Booking::now();
+        $from  = $today->modify('-29 days')->format('Y-m-d');
+        $days  = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $days[$today->modify("-$i days")->format('Y-m-d')] = ['users' => 0, 'records' => 0];
+        }
+        $stmt = $pdo->prepare('SELECT day, COUNT(*) FROM user_activity WHERE organization_id = :o AND day >= :f GROUP BY day');
+        $stmt->execute([':o' => $orgId, ':f' => $from]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_NUM) as [$d, $n]) {
+            if (isset($days[$d])) {
+                $days[$d]['users'] = (int) $n;
+            }
+        }
+        foreach (self::USAGE as [$table]) {   // constant table names, never input
+            $stmt = $pdo->prepare("SELECT DATE(created_at), COUNT(*) FROM $table WHERE organization_id = :o AND created_at >= :f GROUP BY DATE(created_at)");
+            $stmt->execute([':o' => $orgId, ':f' => $from]);
+            foreach ($stmt->fetchAll(\PDO::FETCH_NUM) as [$d, $n]) {
+                if (isset($days[$d])) {
+                    $days[$d]['records'] += (int) $n;
+                }
+            }
+        }
+        $out = [];
+        foreach ($days as $d => $v) {
+            $out[] = ['day' => $d] + $v;
+        }
+        return $out;
     }
 
     /**
