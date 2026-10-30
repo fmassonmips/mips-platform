@@ -66,6 +66,13 @@ return [
         'timeout'         => 20,
     ],
 
+    // Bookora: calendars imported from Airbnb / Booking.com (iCal). Private
+    // network addresses and plain http are refused unless allowed (local tests only).
+    'bookora' => [
+        'ical_allow_private' => false,
+        'ical_timeout'       => 10,
+    ],
+
     'rate_limit' => [
         'max_attempts'   => 5,     // failed attempts before blocking
         'window_seconds' => 900,   // sliding window = 15 minutes

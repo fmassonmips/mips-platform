@@ -291,7 +291,7 @@ final class Orders
         if ($o['facturo_invoice_id'] !== null) {
             return [null, 'Une facture existe déjà pour cette commande.'];
         }
-        $clientId = self::facturoClient($orgId, $o);
+        $clientId = Clients::matchOrCreate($orgId, (string) $o['customer_name'], $o['email'], (string) $o['phone'], (string) ($o['address'] ?? ''));
         $lines = [];
         foreach ($o['lines'] as $l) {
             $lines[] = ['description' => $l['name'], 'quantity' => (string) $l['quantity'], 'unit_price' => Money::toInput((int) $l['unit_price_cents']),
@@ -341,31 +341,6 @@ final class Orders
     public static function serviceTaxCode(int $orgId): string
     {
         return Tenant::profile($orgId)['vat_number'] !== '' ? 'TC01' : 'TC03';
-    }
-
-    /**
-     * @param array<string,mixed> $o
-     */
-    private static function facturoClient(int $orgId, array $o): int
-    {
-        $pdo = Database::connection();
-        if ($o['email'] !== null) {
-            $stmt = $pdo->prepare('SELECT id FROM facturo_clients WHERE organization_id = :oid AND email = :e ORDER BY id LIMIT 1');
-            $stmt->execute([':oid' => $orgId, ':e' => $o['email']]);
-            if ($id = $stmt->fetchColumn()) {
-                return (int) $id;
-            }
-        }
-        $stmt = $pdo->prepare('SELECT id, phone FROM facturo_clients WHERE organization_id = :oid AND phone IS NOT NULL');
-        $stmt->execute([':oid' => $orgId]);
-        foreach ($stmt->fetchAll() as $c) {
-            if (Customers::normalizePhone((string) $c['phone']) === $o['phone']) {
-                return (int) $c['id'];
-            }
-        }
-        [$fields] = Clients::validate(['name' => (string) $o['customer_name'], 'email' => (string) ($o['email'] ?? ''),
-            'phone' => (string) $o['phone'], 'address' => (string) ($o['address'] ?? ''), 'brn' => '', 'vat_number' => '']);
-        return (int) Clients::save($orgId, 0, $fields);
     }
 
     /**

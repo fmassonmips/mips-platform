@@ -66,6 +66,7 @@ label {
 
 input[type="email"],
 input[type="password"],
+input[type="url"],
 input[type="text"] {
     width: 100%;
     padding: 10px 12px;
@@ -79,6 +80,7 @@ input[type="text"] {
 
 input[type="email"]:focus,
 input[type="password"]:focus,
+input[type="url"]:focus,
 input[type="text"]:focus {
     outline: none;
     border-color: var(--color-primary);
@@ -698,3 +700,32 @@ input[type="time"] {
 .sz-holidays li { padding: 2px 0; break-inside: avoid; }
 .sz-holiday-btn { align-self: end; }
 [data-half-field][hidden] { display: none; }
+
+/* -------- Bookora -------- */
+.status[class*="status--bk-"] { text-transform: none; }
+.status--bk-new       { background: #fff6e0; color: #8a5a00; }
+.status--bk-confirmed { background: #e5f5ea; color: #1a7f37; }
+.status--bk-cancelled { background: #f1f2f4; color: var(--color-muted); }
+.status--bk-expired   { background: #f1f2f4; color: var(--color-muted); }
+.bk-search { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; align-items: end; margin-bottom: 16px; }
+.bk-search .field { margin-bottom: 0; min-width: 0; }
+.bk-search input, .bk-search select { min-width: 0; max-width: 100%; }
+.bk-search-btn button { width: auto; white-space: nowrap; }
+@media (max-width: 640px) { .bk-search { grid-template-columns: 1fr 1fr; } .bk-search-btn { grid-column: 1 / -1; } .bk-search-btn button { width: 100%; } }
+.bk-units[hidden], .bk-search[hidden] { display: none; }
+.bk-quote { border-top: 1px solid var(--color-border); margin-top: 8px; padding-top: 8px; }
+.bk-quote p { margin: 0 0 6px; }
+.bk-form { max-width: 640px; margin-top: 0; }
+.bk-lines { padding-left: 18px; margin: 0 0 8px; }
+.bk-warning { border-left: 4px solid var(--color-error); background: #fdf3f2; }
+.bk-warning p { margin: 0; }
+.bk-cal th.is-weekend { background: #f7f8fa; }
+.bk-cal td a { display: block; height: 100%; line-height: 30px; color: inherit; text-decoration: none; font-size: 10px; font-weight: 700; overflow: hidden; }
+.bk-cal .bk-booked { background: #2b6cb0; color: #fff; }
+.bk-cal .bk-held { background: repeating-linear-gradient(45deg, #ffe7a8, #ffe7a8 4px, #fff6e0 4px, #fff6e0 8px); color: #8a5a00; }
+.bk-cal .bk-block { background: #c9ced6; }
+.bk-cal .bk-ical { background: repeating-linear-gradient(45deg, #f2b8b5, #f2b8b5 4px, #fbe3e2 4px, #fbe3e2 8px); }
+.sz-key.bk-booked { background: #2b6cb0; }
+.sz-key.bk-held { background: #ffe7a8; }
+.sz-key.bk-block { background: #c9ced6; }
+.sz-key.bk-ical { background: #f2b8b5; }

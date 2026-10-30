@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace App\Facturo;
 
+use App\ClientBloom\Customers;
 use App\Database;
 
 final class Clients
@@ -133,5 +134,30 @@ final class Clients
         $pdo->prepare('DELETE FROM facturo_clients WHERE organization_id = :oid AND id = :id')
             ->execute([':oid' => $orgId, ':id' => $id]);
         return null;
+    }
+
+    /**
+     * The Facturo client for someone who ordered or booked online: matched by
+     * e-mail, then by phone number (8 local digits), otherwise created.
+     */
+    public static function matchOrCreate(int $orgId, string $name, ?string $email, string $phone, string $address = ''): int
+    {
+        $pdo = Database::connection();
+        if ($email !== null && $email !== '') {
+            $stmt = $pdo->prepare('SELECT id FROM facturo_clients WHERE organization_id = :oid AND email = :e ORDER BY id LIMIT 1');
+            $stmt->execute([':oid' => $orgId, ':e' => $email]);
+            if ($id = $stmt->fetchColumn()) {
+                return (int) $id;
+            }
+        }
+        $stmt = $pdo->prepare('SELECT id, phone FROM facturo_clients WHERE organization_id = :oid AND phone IS NOT NULL');
+        $stmt->execute([':oid' => $orgId]);
+        foreach ($stmt->fetchAll() as $c) {
+            if (Customers::normalizePhone((string) $c['phone']) === $phone) {
+                return (int) $c['id'];
+            }
+        }
+        [$fields] = self::validate(['name' => $name, 'email' => (string) $email, 'phone' => $phone, 'address' => $address, 'brn' => '', 'vat_number' => '']);
+        return (int) self::save($orgId, 0, $fields);
     }
 }

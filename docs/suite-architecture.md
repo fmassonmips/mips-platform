@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest**, **ShopLokal** et **StaffZen** sont disponibles. Bookora sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest**, **ShopLokal**, **StaffZen** et **Bookora** sont disponibles : les 10 apps du catalogue sont ouvertes. Bookora est repositionné sur l'hébergement à la nuit (RendezVous couvre les créneaux).
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -203,6 +203,22 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** paie, pointage, report automatique du solde d'une année sur l'autre, acquisition au prorata, pièces jointes (certificat médical), export.
 
+## Bookora (hébergement à la nuit)
+
+Pour guesthouses, villas, bungalows. Un séjour va de la nuit d'arrivée au jour de départ (non compté).
+
+| Élément | Règle |
+|---|---|
+| Logements | Owner/admin. Prix par nuit saisi TTC, stocké HT avec code TVA MRA ; capacité, nuits minimum, photo (réduite dans le navigateur). Saisons à prix propre (sans chevauchement) : chaque nuit prend le prix de sa saison, les nuits consécutives au même prix font une ligne. Un logement réservé ne se supprime pas (désactiver). |
+| Page publique | `/bookora/s.php?o=…`, fermée par défaut. Dates + personnes → chaque logement libre avec son prix total, ou la raison (pris, trop petit, durée minimale). Demande avec nom, téléphone, e-mail ; champ piège, CSRF, 5 demandes/h par connexion. Langue des documents de l'entreprise. |
+| Demande | Bloque les nuits pendant le délai réglé (72 h par défaut) ; acompte demandé (30 % par défaut) par virement ou Juice, instructions sur la page du client. Le propriétaire confirme (à réception), ou la demande expire et libère les nuits ; confirmer une demande expirée re-vérifie les nuits. Le client annule tant que ce n'est pas confirmé. |
+| Disponibilité | Une nuit est prise par une réservation confirmée, une demande dans son délai, une fermeture ou un calendrier importé. Réserver ou confirmer verrouille le logement et revérifie : jamais deux réservations sur la même nuit. Réservations saisies par l'équipe (téléphone) confirmées directement. |
+| Calendriers | Export iCal par logement (`/bookora/ical.php?u=…`) pour Airbnb / Booking.com : nuits occupées, sans noms, sans renvoyer les nuits importées. Import du lien .ics de la plateforme (bouton + `tools/bookora_ical_sync.php` toutes les heures) : ses nuits deviennent fermées ; un chevauchement avec une réservation confirmée est signalé « Double réservation » (planning, BizPilot, e-mail). Plateforme injoignable : les nuits précédentes restent fermées et l'erreur s'affiche. Import limité aux URL https d'adresses publiques, IP figée pour la requête, sans redirection, 1 Mo et 10 s max. |
+| Paiement | Acompte reçu / séjour payé marqués à la main ; facture Facturo (brouillon, identique au centime) depuis une réservation confirmée, une seule. Paiement par carte : attend la passerelle MIPS. |
+| BizPilot | Taux d'occupation et chiffre des nuitées du mois ; demandes à confirmer, arrivées du jour et problèmes de calendrier dans « À faire ». |
+
+**Hors périmètre :** paiement en ligne, prix par personne ou par jour de semaine, plusieurs photos, taxe de séjour, channel manager (API Airbnb/Booking.com : seulement iCal), ménage et check-in.
+
 ## BizPilot (tableau de bord)
 
 Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
@@ -259,9 +275,11 @@ mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
 mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 mysql -u root -p mips_platform < sql/migrations/015_team.sql
 mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
+mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
 ```
 
 Puis dans `config/config.php` :
+- bloc `bookora` : laisser `ical_allow_private` à `false` en production ;
 - `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
 - bloc `mra` : URLs (sandbox par défaut) et clé publique MRA téléchargée sur le portail (`config/mra_public_key.pem`).
@@ -271,10 +289,10 @@ Cron :
 */5 * * * * php tools/mra_retry.php
 15 2 * * *  php tools/clientbloom_expire.php
 0 * * * *   php tools/rendezvous_reminders.php
+20 * * * *  php tools/bookora_ical_sync.php
 ```
 
 ## Reste à décider
 
-- Ordre de construction des apps suivantes ; sort de Bookora face à RendezVous.
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).

@@ -13,12 +13,10 @@ use App\Database;
 use App\Facturo\Documents;
 use App\Facturo\Money;
 use App\RendezVous\Booking;
+use App\Suite\Images;
 
 final class Products
 {
-    /** Largest accepted image, base64 data URL. */
-    private const MAX_IMAGE = 400_000;
-
     /**
      * @return list<array<string,mixed>> with price_ttc_cents
      */
@@ -85,12 +83,8 @@ final class Products
         }
         $imageSql = null;
         if ($image !== '' && $image !== 'remove') {
-            if (strlen($image) > self::MAX_IMAGE || !preg_match('#^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$#', $image, $m)) {
-                return [0, 'Image invalide ou trop lourde.'];
-            }
-            $bin = base64_decode($m[2], true);
-            if ($bin === false || @getimagesizefromstring($bin) === false) {
-                return [0, 'Image illisible.'];
+            if (($err = Images::check($image)) !== null) {
+                return [0, $err];
             }
             $imageSql = $image;
         }
