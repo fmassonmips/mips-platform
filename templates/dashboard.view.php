@@ -8,6 +8,7 @@
 /** @var string $subscribe e-mail to subscribe, may be empty */
 /** @var bool $can_manage */
 /** @var int $team_size */
+/** @var bool $is_staff MIPS team: link to the back-office */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -28,6 +29,7 @@
         Connecté en tant que
         <strong><?= htmlspecialchars((string) $user['email'], ENT_QUOTES, 'UTF-8') ?></strong>
       </span>
+      <?php if ($is_staff): ?><a class="btn-secondary bo-link" href="/backoffice.php">Back-office</a><?php endif; ?>
       <button id="logout-btn" type="button" class="btn-secondary">Déconnexion</button>
     </div>
   </header>

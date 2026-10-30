@@ -284,6 +284,20 @@ mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne
 - `--reset` supprime l'entreprise de démo (celle de ce nom dont le propriétaire a l'e-mail de démo) et les comptes `@lagonbleu.example`, puis la recrée ; rien d'autre n'est touché.
 - À relancer avant une démo pour que « aujourd'hui » et le mois en cours aient des données. Base de démo ou de préproduction uniquement.
 
+## Back-office MIPS
+
+Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
+
+| Élément | Règle |
+|---|---|
+| Accueil | Entreprises (+30 j), actives sur 7 jours (au moins une connexion), apps en essai, essais finissant sous 7 jours, abonnements. Liste filtrable (essai finissant, lecture seule, abonnées, sans connexion depuis 14 jours, suspendues) et recherche par nom, raison sociale, BRN ou e-mail d'un membre. |
+| Fiche entreprise | Profil, chaque app (essai / lecture seule / abonné / éteinte, fin d'essai, activité sur 30 jours et total), membres avec dernière connexion (`users.last_login_at`). |
+| Abonner | App pleinement utilisable, sans date de fin. Remplace `tools/subscribe.php` (toujours disponible en ligne de commande). |
+| Fin d'abonnement | L'app passe en lecture seule tout de suite ; les données restent. |
+| Prolonger | 1 à 90 jours sur un essai en cours ; un essai terminé repart d'aujourd'hui (l'app redevient utilisable). Raison facultative, notée au journal. |
+| Suspendre | Raison obligatoire, montrée aux membres à la connexion avec `billing.contact_email`. Les sessions ouvertes se ferment, les pages publiques (réservation, boutique, formulaires, flux iCal) ferment, aucune donnée supprimée. Impossible sur sa propre entreprise. « Réactiver l'accès » rétablit tout. |
+| Journal | Chaque action et chaque note, avec son auteur et l'heure (`backoffice_log`), sur la fiche et sur l'accueil. |
+
 ## Ajouter une app
 
 1. Passer son `status` à `available` dans `src/Suite/Catalog.php`.
@@ -312,10 +326,13 @@ mysql -u root -p mips_platform < sql/migrations/015_team.sql
 mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
 mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
 mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
+mysql -u root -p mips_platform < sql/migrations/019_account_hardening.sql
+mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
 ```
 
 Puis dans `config/config.php` :
-- bloc `billing` : `contact_email` affiché aux entreprises dont l'essai est terminé ;
+- bloc `billing` : `contact_email` affiché aux entreprises dont l'essai est terminé ou l'accès suspendu ;
+- bloc `backoffice` : `staff`, adresses de l'équipe MIPS autorisées au back-office ;
 - bloc `bookora` : laisser `ical_allow_private` à `false` en production ;
 - `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;

@@ -76,6 +76,7 @@ final class Auth
         // Bind to a hash of the User-Agent to make stolen-cookie replay harder.
         $_SESSION['ua_hash']       = self::userAgentHash();
         unset($_SESSION['csrf_token']);   // new token on the next page load
+        Database::connection()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id')->execute([':id' => (int) $user['id']]);
     }
 
     /**
@@ -116,6 +117,8 @@ final class Auth
             'SELECT id, email, name, role, created_at, password_changed_at
              FROM users
              WHERE id = :id AND is_active = 1
+               AND NOT EXISTS (SELECT 1 FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
+                               WHERE ou.user_id = users.id AND o.suspended_at IS NOT NULL)   -- company suspended by MIPS
              LIMIT 1'
         );
         $stmt->execute([':id' => (int) $_SESSION['user_id']]);
@@ -132,6 +135,20 @@ final class Auth
         }
 
         return is_array($user) ? $user : null;
+    }
+
+    /**
+     * Why the user's company is suspended, or null when it is not.
+     */
+    public static function suspension(int $userId): ?string
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT COALESCE(o.suspended_reason, \'\') FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
+             WHERE ou.user_id = :u AND o.suspended_at IS NOT NULL LIMIT 1'
+        );
+        $stmt->execute([':u' => $userId]);
+        $reason = $stmt->fetchColumn();
+        return $reason === false ? null : (string) $reason;
     }
 
     /**

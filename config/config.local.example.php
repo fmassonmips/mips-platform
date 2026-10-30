@@ -35,4 +35,8 @@ return [
     'billing' => [
         'contact_email' => '',
     ],
+    'backoffice' => [
+        // MIPS team accounts allowed in the back-office (their own MIPS login).
+        'staff' => [/* 'prenom@mips.mu', */],
+    ],
 ];

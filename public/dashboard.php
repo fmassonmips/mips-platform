@@ -16,6 +16,7 @@ $read_only   = \App\Suite\Modules::readOnlyFor($org['id']);
 $subscribe   = trim((string) ($GLOBALS['config']['billing']['contact_email'] ?? ''));
 $can_manage = \App\Suite\Tenant::canManage($org);
 $team_size  = count(\App\Suite\Tenant::members($org['id']));
+$is_staff   = \App\Backoffice\Staff::is($user);
 $csrf_token = \App\Csrf::token();
 $page_title = 'Tableau de bord';
 

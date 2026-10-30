@@ -12,6 +12,9 @@
  *  - Modules::deactivate(orgId, slug)    : switch the module off
  *  - Modules::require(user, slug)        : enforce access to a module page, returns the org or exits
  *
+ * A company suspended by the MIPS team has no module at all: nothing opens,
+ * public pages close (its data is kept).
+ *
  * When a trial ends the module turns read-only, it is not switched off: pages,
  * printing and exports keep working; every write goes through ModuleApi or
  * isEnabled() and is refused; public pages that take orders or bookings close.
@@ -34,6 +37,7 @@ final class Modules
              FROM organization_modules
              WHERE organization_id = :oid
                AND status <> \'disabled\'
+               AND NOT EXISTS (SELECT 1 FROM organizations o WHERE o.id = organization_id AND o.suspended_at IS NOT NULL)
                AND (status = \'active\' OR trial_ends_at IS NULL OR trial_ends_at > NOW())'
         );
         $stmt->execute([':oid' => $orgId]);
@@ -63,7 +67,8 @@ final class Modules
     {
         $stmt = Database::connection()->prepare(
             'SELECT module_slug, trial_ends_at FROM organization_modules
-             WHERE organization_id = :oid AND status = \'trial\' AND trial_ends_at IS NOT NULL AND trial_ends_at <= NOW()'
+             WHERE organization_id = :oid AND status = \'trial\' AND trial_ends_at IS NOT NULL AND trial_ends_at <= NOW()
+               AND NOT EXISTS (SELECT 1 FROM organizations o WHERE o.id = organization_id AND o.suspended_at IS NOT NULL)'
         );
         $stmt->execute([':oid' => $orgId]);
         $out = [];

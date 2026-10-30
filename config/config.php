@@ -77,6 +77,12 @@ return [
         'contact_email' => '',
     ],
 
+    // Back-office (/backoffice.php): e-mail addresses of the MIPS team members allowed in.
+    // Empty: nobody. Anyone else gets a 404. Restrict it by IP at the web server as well.
+    'backoffice' => [
+        'staff' => [],
+    ],
+
     // Bookora: calendars imported from Airbnb / Booking.com (iCal). Private
     // network addresses and plain http are refused unless allowed (local tests only).
     'bookora' => [
