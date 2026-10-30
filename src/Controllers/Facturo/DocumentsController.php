@@ -12,6 +12,7 @@
  *   email   { "id", "to", "subject", "message" }   issued documents only
  *   mra     { "id" }                      retry MRA fiscalisation of a pending/rejected document
  *   delete  { "id" }                      drafts only
+ *   reminders { "enabled": bool }          automatic reminders of overdue invoices (owner/admin)
  *
  * Owner/admin only: issue an invoice or credit note, change an invoice's status
  * (paid / unpaid), create a credit note, retry MRA. Members prepare drafts and
@@ -32,6 +33,7 @@ use App\Facturo\Api;
 use App\Facturo\DocumentMailer;
 use App\Facturo\Documents;
 use App\Facturo\Fiscalisation;
+use App\Facturo\Reminders;
 use App\Request;
 use App\Response;
 use App\Suite\Tenant;
@@ -100,6 +102,13 @@ final class DocumentsController
 
             case 'delete':
                 $this->done($id, Documents::delete($org['id'], $id));
+
+            case 'reminders':
+                if (!Tenant::canManage($org)) {
+                    Response::json(['error' => 'Réservé au propriétaire et aux administrateurs.'], 403);
+                }
+                Reminders::setEnabled($org['id'], ($data['enabled'] ?? false) === true);
+                Response::json(['success' => true]);
 
             default:
                 Response::json(['error' => 'Action invalide.'], 422);

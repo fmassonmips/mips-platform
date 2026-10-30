@@ -298,6 +298,16 @@ mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne
 | Formats | Prix : 250 / 250,00 / 1 250,50 / 1,250 / Rs 1 250 ; TVA : 15 %, 0 %, exonéré (vide = 15 %). Anniversaire jour en premier (14/02/1990). Téléphone : +230 retiré. Consentement aux offres : oui / yes / x / 1, sinon non. |
 | ClientBloom | Les clients importés ne reçoivent pas le bonus de bienvenue ; leur cashback démarre à zéro. |
 
+## E-mails automatiques
+
+Envoyés une fois chacun (`notification_log`, migration 022) par `tools/reminders.php` (cron quotidien, 9 h 05 à Maurice) ; un e-mail qui échoue n'est pas marqué envoyé et repart au passage suivant, le script sort alors avec le code 1. Rien n'est envoyé à une entreprise suspendue, ni sans SMTP.
+
+| E-mail | Règle |
+|---|---|
+| Bienvenue | À la confirmation d'une inscription : les premiers pas et le lien vers l'assistant. Réponses vers `billing.contact_email`. |
+| Fin d'essai | Au propriétaire et aux administrateurs, un e-mail par entreprise et par étape listant les apps concernées : 7 jours avant, la veille, et le jour du passage en lecture seule (ce que cela change, données conservées, contact abonnement). Un essai prolongé depuis le back-office a de nouveau ses rappels pour sa nouvelle date. |
+| Factures en retard (Facturo) | Désactivé par défaut ; case « Relancer automatiquement les factures en retard » (onglet Entreprise, propriétaire/administrateur). Au client, 7 jours puis 30 jours après l'échéance, dans la langue de la facture, au nom de l'entreprise (réponses vers son e-mail), avec le lien vers la facture ; noté « Relance automatique » dans l'historique d'envoi. Seulement : factures émises et impayées, fiscalisées si la MRA est activée, montant restant après avoirs, client avec e-mail, échéance postérieure à l'activation (aucune relance en masse des anciennes factures), Facturo utilisable (pas en lecture seule). Au-delà de 30 jours sans premier rappel, un seul rappel, rédigé comme le premier. |
+
 ## Back-office MIPS
 
 Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
@@ -343,6 +353,7 @@ mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
 mysql -u root -p mips_platform < sql/migrations/019_account_hardening.sql
 mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
 mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
+mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
 ```
 
 Puis dans `config/config.php` :
@@ -359,6 +370,7 @@ Cron :
 15 2 * * *  php tools/clientbloom_expire.php
 0 * * * *   php tools/rendezvous_reminders.php
 20 * * * *  php tools/bookora_ical_sync.php
+5 5 * * *   php tools/reminders.php
 ```
 
 ## Reste à décider

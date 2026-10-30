@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS organizations (
     suspended_reason VARCHAR(300) NULL,
     -- First steps done or hidden: the dashboard no longer shows « Bien démarrer »
     onboarded_at     DATETIME     NULL,
+    -- Facturo: overdue invoices reminded from this date on (NULL = off); older invoices are never reminded
+    facturo_reminders_since DATETIME NULL,
     -- MRA e-invoicing credentials (password encrypted with app.secret_key)
     mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
     mra_username     VARCHAR(100) NULL,
@@ -907,6 +909,22 @@ CREATE TABLE IF NOT EXISTS backoffice_log (
     KEY idx_backoffice_log_time (created_at),
     CONSTRAINT fk_backoffice_log_staff FOREIGN KEY (staff_user_id) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT fk_backoffice_log_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Automatic e-mails
+-- =======================================================================
+
+-- ---- notification_log (each automatic e-mail sent once) ----------------------
+CREATE TABLE IF NOT EXISTS notification_log (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    kind            VARCHAR(20)     NOT NULL,          -- trial_7 | trial_1 | trial_end | welcome | invoice_1 | invoice_2
+    ref             VARCHAR(80)     NOT NULL,          -- app + trial end, user id, document id
+    sent_at         DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_notification (organization_id, kind, ref),
+    CONSTRAINT fk_notification_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

@@ -5,6 +5,7 @@
  * @var callable $e
  * @var array<string,string> $profile
  * @var array{enabled:bool,username:string,ebs_id:string,has_password:bool} $mra
+ * @var ?string $reminders automatic reminders on since (null = off)
  * @var bool $can_manage
  */
 $ro = $can_manage ? '' : ' disabled';
@@ -61,5 +62,22 @@ $ro = $can_manage ? '' : ' disabled';
   </form>
   <?php else: ?>
     <p>Statut : <strong><?= $mra['enabled'] ? 'activée' : 'désactivée' ?></strong></p>
+  <?php endif; ?>
+</section>
+
+<section class="card">
+  <h2>Relances des factures impayées</h2>
+  <p class="muted">Un rappel par e-mail au client, <?= \App\Facturo\Reminders::STAGES[1] ?> jours puis <?= \App\Facturo\Reminders::STAGES[2] ?> jours après l'échéance d'une facture
+    toujours impayée, dans la langue de la facture, envoyé à votre nom (les réponses arrivent à l'e-mail de l'entreprise). Il apparaît dans l'historique d'envoi de la facture.
+    Seules les factures dont l'échéance tombe après l'activation sont relancées ; marquez « payée » une facture réglée pour arrêter ses relances.</p>
+  <?php if ($can_manage): ?>
+  <form id="reminders-form" novalidate>
+    <label class="checkbox"><input type="checkbox" name="enabled"<?= $reminders !== null ? ' checked' : '' ?>> Relancer automatiquement les factures en retard</label>
+    <?php if ($reminders !== null): ?><p class="small muted">Activé le <?= $e(\App\Format::date($reminders)) ?>.</p><?php endif; ?>
+    <div class="actions"><button type="submit" class="btn-primary btn-inline">Enregistrer</button></div>
+    <p id="reminders-result" class="success" role="status" hidden></p>
+  </form>
+  <?php else: ?>
+    <p>Statut : <strong><?= $reminders !== null ? 'activées' : 'désactivées' ?></strong></p>
   <?php endif; ?>
 </section>

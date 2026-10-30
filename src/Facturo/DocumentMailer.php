@@ -51,7 +51,7 @@ final class DocumentMailer
     public static function history(int $orgId, int $documentId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT recipient, status, error, created_at FROM facturo_document_emails
+            'SELECT recipient, status, error, created_at, sent_by IS NULL AS automatic FROM facturo_document_emails
              WHERE organization_id = :oid AND document_id = :id ORDER BY id DESC'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $documentId]);
@@ -60,8 +60,9 @@ final class DocumentMailer
 
     /**
      * Send the document. Returns an error message, or null on success.
+     * $userId null: automatic reminder (Facturo\Reminders).
      */
-    public static function send(int $orgId, int $userId, int $documentId, string $to, string $subject, string $message): ?string
+    public static function send(int $orgId, ?int $userId, int $documentId, string $to, string $subject, string $message): ?string
     {
         $doc = Documents::find($orgId, $documentId);
         if ($doc === null || $doc['status'] === 'draft') {

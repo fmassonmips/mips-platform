@@ -19,6 +19,7 @@ use App\Csrf;
 use App\RateLimiter;
 use App\Request;
 use App\Response;
+use App\Suite\Notifications;
 use App\Validator;
 
 final class AccountController
@@ -40,6 +41,7 @@ final class AccountController
                 }
                 Auth::login_user($user);
                 RateLimiter::record(Request::clientIp(), (string) $user['email'], true);   // this IP is now known
+                Notifications::welcome($user);
                 Response::json(['success' => true]);
 
             case 'forgot':
