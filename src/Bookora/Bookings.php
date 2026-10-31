@@ -17,6 +17,7 @@ use App\Facturo\Clients;
 use App\Facturo\Documents;
 use App\Facturo\Money;
 use App\Format;
+use App\RateLimiter;
 use App\RendezVous\Booking;
 use App\ShopLokal\Products;
 use App\Suite\Tenant;
@@ -224,7 +225,9 @@ final class Bookings
             throw $e;
         }
         $b = self::find($orgId, $id);
-        Notifier::safely(static fn () => $owner ? Notifier::confirmed($orgId, $b) : Notifier::requested($orgId, $b));
+        if ($owner || RateLimiter::allowPublicMail($orgId, $b['email'] ?? null)) {   // public form: capped mails to the typed address
+            Notifier::safely(static fn () => $owner ? Notifier::confirmed($orgId, $b) : Notifier::requested($orgId, $b));
+        }
         return [$b, null];
     }
 

@@ -28,10 +28,22 @@ my.mips.mu
 
 - **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest**, **ShopLokal**, **StaffZen** et **Bookora** sont disponibles : les 10 apps du catalogue sont ouvertes. Bookora est repositionné sur l'hébergement à la nuit (RendezVous couvre les créneaux).
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
-- Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
-  une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
+- Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai.
+- **Fin d'essai : lecture seule** (voir plus bas). L'abonnement se fait pour l'instant par l'équipe MIPS avec `tools/subscribe.php`.
 - Le profil entreprise (raison sociale, BRN, n° TVA, adresse) est partagé par toutes les apps (`/api/suite/organization`).
 - Interface en français, formats mauriciens à l'affichage : montants en roupies « Rs 1,234.50 » (autres devises : code ISO, « EUR 1,234.50 »), dates « 26/10/2026 », heures sur 24 h (`App\Format`, `Money::format`). Stockage, champs de saisie, flux MRA et exports CSV restent en ISO (`2026-10-26`, `1234.50`).
+
+## Comptes : inscription et mot de passe oublié
+
+Code : `src/Accounts.php`, `AccountController` (`/api/auth/account`), pages `/verify.php`, `/forgot.php`, `/reset.php`.
+
+| Élément | Règle |
+|---|---|
+| Inscription | Avec un SMTP configuré : compte inactif + lien de confirmation (48 h) ; le lien ouvre une page avec un bouton (les antivirus de messagerie qui suivent les liens ne le consomment pas) ; confirmer active le compte, connecte et crée l'entreprise. Sans SMTP : activation manuelle comme avant. |
+| Pas d'énumération | Inscription avec une adresse déjà utilisée : même réponse qu'une nouvelle adresse ; le titulaire reçoit « Votre compte MIPS existe déjà » ; son mot de passe ne change pas. « Mot de passe oublié » répond pareil que l'adresse existe ou non. |
+| Connexion avant confirmation | Bon mot de passe : « pas encore confirmée », lien renvoyé. Mauvais : « Identifiants invalides ». |
+| Mot de passe oublié | Lien valable 1 h, une seule fois, seulement pour un compte actif ; une nouvelle demande remplace l'ancien lien. Le nouveau mot de passe connecte et ferme les autres sessions du compte (`users.password_changed_at`). |
+| Limites | 3 e-mails par heure et par adresse ; 10 inscriptions et 10 demandes de réinitialisation par heure et par connexion (compteurs séparés des échecs de connexion). Seule l'empreinte SHA-256 des liens est stockée. |
 
 ## Équipe (invitations)
 
@@ -52,6 +64,7 @@ Page `/team.php`, liée depuis le lanceur. Code : `src/Suite/Team.php`.
 | Élément | Règle |
 |---|---|
 | Clients | Par entreprise ; suppression impossible s'ils ont des documents. |
+| Rôles | Membres : clients, brouillons, devis (émission et suivi), envoi par e-mail des documents émis. Propriétaire et administrateurs seulement : émettre une facture ou un avoir, marquer payée / impayée, créer un avoir, relancer la MRA (contrôlé côté serveur, boutons masqués). |
 | Brouillon | Modifiable et supprimable, sans numéro. |
 | Émission | Numéro séquentiel sans trou par entreprise, type et année : `FAC-2026-0001`, `DEV-2026-0001`. Le document devient non modifiable ; les coordonnées vendeur et client sont figées à cet instant. |
 | Facture | `draft → issued ⇄ paid` ; `issued → credited` quand des avoirs couvrent tout le montant. Émission refusée sans raison sociale et BRN. |
@@ -249,6 +262,28 @@ Code : `src/ClientBloom/FacturoRewards.php`, appelé par `DocumentsController` a
 Le résultat est affiché sur la facture ou l'avoir (`clientbloom_note`) avec un lien vers la fiche client ; la référence du
 mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne bloque jamais la facturation (journalisée).
 
+## Fin d'essai : lecture seule
+
+À J+30 sans abonnement, l'app n'est pas coupée : elle passe en lecture seule (`Modules::readOnlyFor`, `isReadable`).
+
+| Reste possible | S'arrête |
+|---|---|
+| Ouvrir l'app (bandeau « Essai gratuit terminé… lecture seule »), consulter, filtrer, naviguer | Toute écriture : chaque API passe par `ModuleApi::context`, qui répond 403 `read_only` ; champs désactivés et boutons d'action masqués |
+| Imprimer / PDF des factures, exports CSV (ClientBloom, Formelio) : les données restent portables | Pages publiques qui créent des données : réservation en ligne, boutique, formulaires, contact support, réservation Bookora (fermées) |
+| BizPilot affiche toujours les chiffres des apps en lecture seule | Liaisons qui écrivent (cashback sur factures, synchronisation iCal importée) |
+| Flux iCal exporté vers Airbnb / Booking.com (les nuits déjà réservées restent bloquées), factures déjà envoyées aux clients, reprise MRA des documents émis | |
+
+- Lanceur : « Essai terminé le … · lecture seule », bouton « Consulter », lien « Passer à l'abonnement » vers `billing.contact_email` (config ; vide = « Contactez MIPS »). Une app en lecture seule désactivée puis réactivée revient en lecture seule, jamais en nouvel essai.
+- Abonner une entreprise : `php tools/subscribe.php --org=<id> --app=<slug>|all` (l'app redevient utilisable aussitôt) ; `--end` la remet en lecture seule ; sans `--app`, affiche l'état de ses apps.
+
+## Entreprise de démonstration
+
+`php tools/demo_seed.php --yes [--password=…] [--email=…] [--reset]` crée « Le Lagon Bleu » (resort avec spa et boutique à Trou-aux-Biches) et trois mois d'activité dans les 10 apps, datés par rapport au jour du lancement : factures (dont 2 en retard), devis, 40 clients fidélité, ~440 rendez-vous spa, 46 avis, 14 tickets, 2 projets, 22 commandes, congés, ~70 séjours. Tout passe par les classes des apps (numérotation, TVA, cashback, stock, disponibilités) puis est antidaté. Aucun e-mail n'est envoyé.
+
+- Compte propriétaire : `demo@lagonbleu.example` ; mot de passe aléatoire affiché, ou `--password`. Les quatre collègues (`@lagonbleu.example`) ne peuvent pas se connecter.
+- `--reset` supprime l'entreprise de démo (celle de ce nom dont le propriétaire a l'e-mail de démo) et les comptes `@lagonbleu.example`, puis la recrée ; rien d'autre n'est touché.
+- À relancer avant une démo pour que « aujourd'hui » et le mois en cours aient des données. Base de démo ou de préproduction uniquement.
+
 ## Ajouter une app
 
 1. Passer son `status` à `available` dans `src/Suite/Catalog.php`.
@@ -276,9 +311,11 @@ mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 mysql -u root -p mips_platform < sql/migrations/015_team.sql
 mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
 mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
+mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
 ```
 
 Puis dans `config/config.php` :
+- bloc `billing` : `contact_email` affiché aux entreprises dont l'essai est terminé ;
 - bloc `bookora` : laisser `ical_allow_private` à `false` en production ;
 - `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
@@ -295,4 +332,4 @@ Cron :
 ## Reste à décider
 
 - Tarification : prix par app, pack, ou par utilisateur.
-- Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
+- Durée de conservation des données d'une app restée en lecture seule (pas de suppression automatique aujourd'hui).

@@ -4,6 +4,8 @@
 /** @var array<string,array{name:string,domain:string,tagline:string,status:string}> $catalog */
 /** @var array<string,array{status:string,activated_at:string,trial_ends_at:?string}> $enabled */
 /** @var list<string> $trial_ended */
+/** @var array<string,string> $read_only slug => trial end */
+/** @var string $subscribe e-mail to subscribe, may be empty */
 /** @var bool $can_manage */
 /** @var int $team_size */
 /** @var string $csrf_token */
@@ -64,10 +66,20 @@
               <?php if ($can_manage): ?>
                 <button type="button" class="btn-link" data-action="deactivate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Désactiver</button>
               <?php endif; ?>
+            <?php elseif (isset($read_only[$slug])): ?>
+              <span class="app-badge app-badge--ro">Essai terminé le <?= htmlspecialchars(\App\Format::date($read_only[$slug]), ENT_QUOTES, 'UTF-8') ?> · lecture seule</span>
+              <a class="btn-secondary" href="/app.php?m=<?= rawurlencode($slug) ?>">Consulter</a>
+              <?php if ($subscribe !== ''): ?><a class="btn-link" href="mailto:<?= htmlspecialchars($subscribe, ENT_QUOTES, 'UTF-8') ?>?subject=<?= rawurlencode('Abonnement ' . $m['name'] . ' – ' . $org['name']) ?>">Passer à l’abonnement</a><?php endif; ?>
+              <?php if ($can_manage): ?>
+                <button type="button" class="btn-link" data-action="deactivate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Désactiver</button>
+              <?php endif; ?>
             <?php elseif ($m['status'] !== 'available'): ?>
               <span class="app-badge">Bientôt disponible</span>
             <?php elseif (in_array($slug, $trial_ended, true)): ?>
               <span class="app-badge">Essai gratuit terminé</span>
+              <?php if ($can_manage): ?>
+                <button type="button" class="btn-link" data-action="activate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Réactiver en lecture seule</button>
+              <?php endif; ?>
             <?php elseif ($can_manage): ?>
               <button type="button" class="btn-secondary" data-action="activate" data-module="<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>">Démarrer l’essai gratuit</button>
             <?php else: ?>

@@ -22,6 +22,11 @@ define('TEMPLATES_PATH', ROOT_PATH . '/templates');
 
 /** @var array<string,mixed> $config */
 $config = require CONFIG_PATH . '/config.php';
+// Per-server settings and secrets live in config/config.local.php (not versioned):
+// it only lists the keys it changes, merged over config.php.
+if (is_file(CONFIG_PATH . '/config.local.php')) {
+    $config = array_replace_recursive($config, require CONFIG_PATH . '/config.local.php');
+}
 $GLOBALS['config'] = $config;
 
 if (($config['app']['env'] ?? 'production') === 'development') {

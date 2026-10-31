@@ -1,7 +1,9 @@
 <?php
 /**
- * Application configuration.
- * Copy and edit this file per environment. Never commit real credentials.
+ * Application configuration: versioned defaults, no secrets.
+ * Each server puts its own values (database, secret_key, SMTP, MRA…) in
+ * config/config.local.php, which is not versioned and only lists what it
+ * changes; see config/config.local.example.php.
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
         'name'         => 'MIPSSESSID',
         'lifetime'     => 0,        // 0 = until browser closes (cookie is session-scoped)
         'idle_timeout' => 1800,     // 30 min of inactivity = auto logout
+        'max_lifetime' => 43200,    // 12 h after login = log in again, even when active
         'path'         => '/',
         'domain'       => '',
         // MUST be true over HTTPS in production.
@@ -57,13 +60,21 @@ return [
 
     // MRA e-invoicing. Defaults are the SANDBOX endpoints from the MRA Technical
     // Guidelines; take the LIVE URLs from the MRA e-Invoicing Developer Portal
-    // once the EBS has passed its test drive.
+    // once the EBS has passed its test drive. With app.env = production, sandbox /
+    // simulation URLs are refused (documents stay pending): a test IRN must never
+    // be stored as fiscalised.
     'mra' => [
         'auth_url'        => 'https://einvoice-sandbox.mra.mu/einvoice-token-service/token-api/generate-token',
         'transmit_url'    => 'https://einvoice-sandbox.mra.mu/realtime/invoice/transmit-simulation',
         // MRA public key downloaded from the Developer Portal (PEM public key or certificate).
         'public_key_file' => __DIR__ . '/mra_public_key.pem',
         'timeout'         => 20,
+    ],
+
+    // Subscriptions: e-mail shown to companies whose free trial is over ("Passer à l'abonnement").
+    // Empty: they are told to contact MIPS.
+    'billing' => [
+        'contact_email' => '',
     ],
 
     // Bookora: calendars imported from Airbnb / Booking.com (iCal). Private

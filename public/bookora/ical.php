@@ -8,7 +8,8 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
 
 $unit = \App\Bookora\Units::findByIcalToken(is_string($_GET['u'] ?? null) ? $_GET['u'] : '');
-if ($unit === null || !\App\Suite\Modules::isEnabled((int) $unit['organization_id'], 'bookora')) {
+// Still served when the trial is over: platforms must keep blocking the nights already booked here.
+if ($unit === null || !\App\Suite\Modules::isReadable((int) $unit['organization_id'], 'bookora')) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'Not found.';

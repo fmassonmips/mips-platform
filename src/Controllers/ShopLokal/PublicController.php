@@ -54,7 +54,7 @@ final class PublicController
         foreach (['name' => 200, 'phone' => 40, 'email' => 300, 'address' => 600, 'delivery_method' => 10, 'payment_method' => 10, 'note' => 600] as $f => $max) {
             $in[$f] = Request::str($data, $f, $max);
         }
-        [$order, $error] = Orders::place($orgId, $cart, $in, (string) ($_SERVER['REMOTE_ADDR'] ?? ''), $t);
+        [$order, $error] = Orders::place($orgId, $cart, $in, Request::clientIp(), $t);
         if ($error !== null) {
             Response::json(['error' => $error], $error === $t['err_limit'] ? 409 : 422);
         }

@@ -27,7 +27,7 @@ $statuses = array_keys(Tasks::STATUSES);
       <p class="small muted"><?= $project['client_name'] !== null ? 'Client : ' . $e($project['client_name']) : 'Projet interne' ?>
         <?= $project['hourly_rate_cents'] !== null ? ' · ' . $e(Money::format((int) $project['hourly_rate_cents'], 'MUR')) . ' HT / heure' : '' ?></p>
     </div>
-    <?php if ($facturo && $can_manage && (int) $project['unbilled_min'] > 0): ?>
+    <?php if ($facturo && $can_manage && (int) $project['unbilled_min'] > 0 && $project['client_id'] !== null && $project['hourly_rate_cents'] !== null): ?>
       <div class="actions"><button type="button" class="btn-primary btn-inline" id="tn-bill" data-id="<?= $pid ?>">Facturer <?= $e(Tasks::formatMinutes((int) $project['unbilled_min'])) ?></button></div>
     <?php endif; ?>
   </div>

@@ -7,6 +7,7 @@
  * @var array<string,mixed>|null $doc
  * @var list<array<string,mixed>> $clients
  * @var array<string,string> $profile
+ * @var array{id:int,name:string,role:string} $org
  */
 use App\Facturo\Documents;
 use App\Facturo\Money;
@@ -130,10 +131,14 @@ $lineRow = static function (array $l) use ($e): string {
     <div class="actions">
       <button type="submit" class="btn-primary btn-inline">Enregistrer le brouillon</button>
       <?php if ($doc !== null): ?>
-        <button type="button" class="btn-secondary" data-doc-action="issue" data-id="<?= (int) $doc['id'] ?>"
-                data-confirm="<?= $e($issueConfirm[$type]) ?>">
-          <?= $e($issueLabels[$type]) ?>
-        </button>
+        <?php if ($isQuote || \App\Suite\Tenant::canManage($org)): ?>
+          <button type="button" class="btn-secondary" data-doc-action="issue" data-id="<?= (int) $doc['id'] ?>"
+                  data-confirm="<?= $e($issueConfirm[$type]) ?>">
+            <?= $e($issueLabels[$type]) ?>
+          </button>
+        <?php else: ?>
+          <span class="small muted">L’émission est réservée au propriétaire et aux administrateurs.</span>
+        <?php endif; ?>
         <button type="button" class="btn-link" data-doc-action="delete" data-id="<?= (int) $doc['id'] ?>"
                 data-confirm="Supprimer ce brouillon ?" data-redirect="/app.php?m=facturo&amp;p=<?= $isQuote ? 'quotes' : ($isCredit ? 'credit_notes' : 'invoices') ?>">Supprimer le brouillon</button>
       <?php endif; ?>

@@ -50,7 +50,7 @@ final class TeamController
                 }
                 break;
             case 'revoke':
-                $error = Team::revoke($org['id'], Request::int($data, 'id'));
+                $error = Team::revoke($org, Request::int($data, 'id'));
                 break;
             case 'role':
                 $error = Team::setRole($org, (int) $user['id'], Request::int($data, 'user_id'), Request::str($data, 'role', 16));

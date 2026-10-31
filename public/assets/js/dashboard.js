@@ -59,4 +59,27 @@
             }
         });
     });
+
+    // App whose free trial is over: read-only. Form controls are disabled (values stay readable) and
+    // action buttons are hidden by CSS; navigation (GET forms, .ro-ok) keeps working. The server refuses
+    // every write anyway.
+    if (document.body.classList.contains('is-readonly')) {
+        document.querySelectorAll('.app-main input, .app-main select, .app-main textarea, .app-main button').forEach(function (el) {
+            if (!el.closest('form[method="get"], .ro-ok')) {
+                el.disabled = true;
+            }
+        });
+        // Blank forms are for creating (new product, checkout…): useless read-only, hidden with their
+        // card when the card holds nothing else. Filled forms (settings) stay visible, disabled.
+        document.querySelectorAll('.app-main form:not([method="get"]):not(.ro-ok)').forEach(function (form) {
+            const fields = form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], input[type="url"], input:not([type]), textarea');
+            const blank  = fields.length > 0 && Array.prototype.every.call(fields, function (f) { return f.value.trim() === ''; });
+            if (!blank) { return; }
+            const card = form.closest('.card');
+            const rest = card ? Array.prototype.filter.call(card.children, function (c) {
+                return c !== form && !c.contains(form) && !/^(H[1-6]|P)$/.test(c.tagName);
+            }) : [];
+            (card && rest.length === 0 ? card : form).hidden = true;
+        });
+    }
 })();

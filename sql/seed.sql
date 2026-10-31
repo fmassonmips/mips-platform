@@ -22,8 +22,6 @@ VALUES (
     'admin',
     1
 )
-ON DUPLICATE KEY UPDATE
-    password_hash = VALUES(password_hash),
-    name          = VALUES(name),
-    role          = VALUES(role),
-    is_active     = VALUES(is_active);
+-- Development / tests only: never load on a production database. An existing
+-- account is left as it is (its password is never reset by re-running this file).
+ON DUPLICATE KEY UPDATE id = id;

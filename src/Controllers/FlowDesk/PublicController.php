@@ -29,7 +29,7 @@ final class PublicController
             Response::json(['error' => 'Method Not Allowed'], 405);
         }
         $data = Request::json();
-        $ip   = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        $ip   = Request::clientIp();
 
         if (Request::str($data, 'action', 10) === 'reply') {
             $found = Tickets::findByToken(Request::str($data, 't', 60));

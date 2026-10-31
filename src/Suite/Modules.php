@@ -4,11 +4,17 @@
  *
  * Public API:
  *  - Modules::enabledFor(orgId)          : slug => row for every non-expired activation
- *  - Modules::isEnabled(orgId, slug)     : true when the module is usable by the org
+ *  - Modules::isEnabled(orgId, slug)     : true when the module is usable by the org (it can write)
+ *  - Modules::readOnlyFor(orgId)         : slug => trial end, for modules whose trial is over (read-only)
+ *  - Modules::isReadable(orgId, slug)    : enabled or read-only: its pages open, its data can be viewed and exported
  *  - Modules::trialEndedFor(orgId)       : slugs whose free trial is over (cannot be restarted)
- *  - Modules::activate(orgId, slug)      : start a trial (no-op if already enabled)
+ *  - Modules::activate(orgId, slug)      : start a trial; a module whose trial is over comes back read-only
  *  - Modules::deactivate(orgId, slug)    : switch the module off
  *  - Modules::require(user, slug)        : enforce access to a module page, returns the org or exits
+ *
+ * When a trial ends the module turns read-only, it is not switched off: pages,
+ * printing and exports keep working; every write goes through ModuleApi or
+ * isEnabled() and is refused; public pages that take orders or bookings close.
  */
 declare(strict_types=1);
 
@@ -49,6 +55,35 @@ final class Modules
     }
 
     /**
+     * Modules switched on whose trial is over and that are not subscribed.
+     *
+     * @return array<string,string> slug => trial end
+     */
+    public static function readOnlyFor(int $orgId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT module_slug, trial_ends_at FROM organization_modules
+             WHERE organization_id = :oid AND status = \'trial\' AND trial_ends_at IS NOT NULL AND trial_ends_at <= NOW()'
+        );
+        $stmt->execute([':oid' => $orgId]);
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $out[(string) $r['module_slug']] = (string) $r['trial_ends_at'];
+        }
+        return $out;
+    }
+
+    public static function isReadOnly(int $orgId, string $slug): bool
+    {
+        return isset(self::readOnlyFor($orgId)[$slug]);
+    }
+
+    public static function isReadable(int $orgId, string $slug): bool
+    {
+        return self::isEnabled($orgId, $slug) || self::isReadOnly($orgId, $slug);
+    }
+
+    /**
      * @return list<string>
      */
     public static function trialEndedFor(int $orgId): array
@@ -80,7 +115,7 @@ final class Modules
     }
 
     /**
-     * Enforce that the user's organization has the module enabled.
+     * Enforce that the user's organization can open the module (enabled or read-only).
      * Unknown or disabled modules send the user back to the launcher.
      *
      * @param array<string,mixed> $user
@@ -90,7 +125,7 @@ final class Modules
     {
         $org = Tenant::forUser($user);
 
-        if (Catalog::get($slug) === null || !self::isEnabled($org['id'], $slug)) {
+        if (Catalog::get($slug) === null || !self::isReadable($org['id'], $slug)) {
             header('Location: /dashboard.php');
             exit;
         }

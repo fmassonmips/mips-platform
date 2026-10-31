@@ -81,7 +81,7 @@ final class PublicController
             'unit_id' => Request::int($data, 'unit_id'), 'check_in' => $in, 'check_out' => $out, 'guests' => $g,
             'name' => Request::str($data, 'name', 200), 'phone' => Request::str($data, 'phone', 40),
             'email' => Request::str($data, 'email', 300), 'note' => Request::str($data, 'note', 600),
-        ], $t, false, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        ], $t, false, Request::clientIp());
         if ($error !== null) {
             Response::json(['error' => $error], $error === $t['err_limit'] || $error === $t['err_taken'] ? 409 : 422);
         }

@@ -57,7 +57,7 @@ final class PublicController
         }
 
         [$id, $error] = Responses::submit($form, is_array($data['answers'] ?? null) ? $data['answers'] : [],
-            (string) ($_SERVER['REMOTE_ADDR'] ?? ''), $source, $t);
+            Request::clientIp(), $source, $t);
         if ($error !== null) {
             Response::json(['error' => $error], $error === $t['already'] || $error === $t['err_limit'] ? 409 : 422);
         }

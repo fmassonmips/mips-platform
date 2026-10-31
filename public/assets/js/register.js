@@ -1,7 +1,8 @@
 /**
  * Registration page client.
  * Sends name, email, and password to /api/auth/register as JSON,
- * handles errors, and redirects to /login.php?registered=1 on success.
+ * handles errors; on success shows "open the link we e-mailed" (self-service sign-up)
+ * or redirects to /login.php?registered=1 (manual activation, no e-mail).
  */
 (function () {
     'use strict';
@@ -62,6 +63,14 @@
                 return;
             }
 
+            if (data.verify) {
+                // E-mail confirmation: the account opens from the link sent by e-mail.
+                form.hidden = true;
+                const done = document.getElementById('done-message');
+                done.textContent = data.message;
+                done.hidden = false;
+                return;
+            }
             window.location.assign('/login.php?registered=1');
         } catch (err) {
             showError('Erreur réseau. Veuillez réessayer.');

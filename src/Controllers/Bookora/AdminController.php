@@ -84,6 +84,9 @@ final class AdminController
                 if ($unit === null || ($unit['ical_import_url'] ?? null) === null) {
                     Response::json(['error' => 'Aucun calendrier à importer pour ce logement.'], 422);
                 }
+                if ($unit['ical_synced_at'] !== null && strtotime((string) $unit['ical_synced_at']) > strtotime(\App\RendezVous\Booking::now()->format('Y-m-d H:i:s')) - 60) {
+                    Response::json(['error' => 'Synchronisation faite il y a moins d’une minute : réessayez dans un instant.'], 429);
+                }
                 [$events, $warning] = Ical::sync($unit);
                 Response::json(['success' => true, 'events' => $events, 'warning' => $warning]);
             case 'ical_token':

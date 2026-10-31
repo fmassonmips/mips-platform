@@ -28,7 +28,7 @@ $link  = static fn (string $d): string => '/app.php?m=rendezvous&amp;d=' . $d;
       <a class="btn-secondary" href="<?= $link($day->modify('-1 day')->format('Y-m-d')) ?>" aria-label="Jour précédent">‹</a>
       <?php if ($date !== $today): ?><a class="btn-secondary" href="<?= $link($today) ?>">Aujourd'hui</a><?php endif; ?>
       <a class="btn-secondary" href="<?= $link($day->modify('+1 day')->format('Y-m-d')) ?>" aria-label="Jour suivant">›</a>
-      <form id="rv-goto" class="inline-form"><input type="date" name="d" value="<?= $e($date) ?>" aria-label="Aller à la date"></form>
+      <form id="rv-goto" class="inline-form ro-ok"><input type="date" name="d" value="<?= $e($date) ?>" aria-label="Aller à la date"></form>
     </div>
   </div>
 

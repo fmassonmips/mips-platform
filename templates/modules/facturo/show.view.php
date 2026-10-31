@@ -18,7 +18,8 @@ $status    = (string) $doc['status'];
 $cur       = (string) $doc['currency'];
 $mail      = DocumentMailer::defaults($org['id'], $doc);
 $sent      = DocumentMailer::history($org['id'], $id);
-$canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
+$manager   = \App\Suite\Tenant::canManage($org);   // invoices, credit notes, payments, MRA: owner/admin
+$canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], true)
              && Documents::creditableCents($org['id'], $id) > 0;
 ?>
 <section class="card">
@@ -42,10 +43,10 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
         <button type="button" class="btn-secondary" data-doc-action="credit" data-id="<?= $id ?>">Créer un avoir</button>
       <?php endif; ?>
 
-      <?php if ($isInvoice && $status === 'issued'): ?>
+      <?php if ($manager && $isInvoice && $status === 'issued'): ?>
         <button type="button" class="btn-secondary" data-doc-action="status" data-status="paid" data-id="<?= $id ?>">Marquer payée</button>
       <?php endif; ?>
-      <?php if ($isInvoice && $status === 'paid'): ?>
+      <?php if ($manager && $isInvoice && $status === 'paid'): ?>
         <button type="button" class="btn-link" data-doc-action="status" data-status="issued" data-id="<?= $id ?>"
                 data-confirm="Marquer cette facture comme de nouveau impayée ?">Marquer impayée</button>
       <?php endif; ?>
@@ -62,7 +63,9 @@ $canCredit = $isInvoice && in_array($status, ['issued', 'paid'], true)
           <?= $doc['mra_status'] === 'pending' ? 'en attente de fiscalisation (MRA injoignable, nouvel essai automatique).' : 'rejeté.' ?>
           <?php if ($doc['mra_error'] !== null): ?><br><span class="small"><?= $e($doc['mra_error']) ?></span><?php endif; ?>
         </span>
-        <button type="button" class="btn-secondary" data-doc-action="mra" data-id="<?= $id ?>">Envoyer à la MRA maintenant</button>
+        <?php if ($manager): ?>
+          <button type="button" class="btn-secondary" data-doc-action="mra" data-id="<?= $id ?>">Envoyer à la MRA maintenant</button>
+        <?php endif; ?>
       <?php endif; ?>
     </div>
   <?php endif; ?>
