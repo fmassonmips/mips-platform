@@ -58,7 +58,7 @@ export default async function DecisionDetail({ params, searchParams }: { params:
           : <div className="grid gap-4 xl:grid-cols-3">
               <Card><CardHeader title="Outcome" subtitle={`Window ${o.window.from} → ${o.window.to} (${o.window.months} month(s))${o.partial_month ? ' · latest month partial' : ''}`} /><CardBody><dl>
                 {o.type === 'merchant_contribution' ? <>
-                  {field('Baseline monthly contribution', fmtMoney(o.baseline_monthly))}{field('Expected monthly contribution', fmtMoney(o.expected_monthly))}{field('Actual monthly contribution', fmtMoney(o.actual_monthly))}
+                  {field('Baseline monthly contribution', fmtMoney(o.baseline_monthly))}{field('Expected monthly contribution', fmtMoney(o.expected_monthly))}{field('Actual monthly contribution', fmtMoney(o.actual_monthly))}{o.partial_month && field('Run-rate (partial month scaled)', fmtMoney(o.actual_monthly_run_rate))}{o.partial_month && field('Variance vs expected (run-rate)', fmtMoney(o.variance_vs_expected_run_rate))}
                   {field('Variance vs expected', <span className={Number(o.variance_vs_expected) < 0 ? 'text-neg' : 'text-pos'}>{fmtMoney(o.variance_vs_expected)}</span>)}{field('Actual uplift vs baseline', fmtMoney(o.actual_uplift_vs_baseline))}{field('Achievement of expected uplift', o.achievement_ratio ? fmtPct(o.achievement_ratio) : '—')}
                 </> : <>
                   {field('KPI', o.kpi_code)}{field('Baseline (monthly avg)', o.baseline_monthly)}{field('Actual (monthly avg)', o.actual_monthly)}{field('Expected', o.expected_value ?? o.expected_monthly_delta ?? '—')}{field('Variance vs expected', o.variance_vs_expected ?? '—')}

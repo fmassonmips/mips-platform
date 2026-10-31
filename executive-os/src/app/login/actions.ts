@@ -28,9 +28,12 @@ export async function loginAction(_: LoginState, form: FormData): Promise<LoginS
     if (!u || !u.is_active || !ok) return { error: 'Invalid email or password.' };
     const memberships = await q<any>(tx, 'SELECT * FROM auth_user_memberships($1)', [u.id]);
     if (!memberships.length) return { error: 'Your account has no active tenant membership.' };
-    const token = await createSession(tx, u.id, memberships[0].tenant_id, !u.mfa_enabled, ip, ua);
+    // Resume the tenant the user last worked in (if still a member), else the first membership.
+    const last = await one<{ tenant_id: string }>(tx, 'SELECT tenant_id FROM sessions WHERE user_id = $1 AND tenant_id IS NOT NULL ORDER BY last_seen_at DESC LIMIT 1', [u.id]);
+    const tenantId = memberships.find((m) => m.tenant_id === last?.tenant_id)?.tenant_id ?? memberships[0].tenant_id;
+    const token = await createSession(tx, u.id, tenantId, !u.mfa_enabled, ip, ua);
     await tx.query('UPDATE users SET last_login_at = now() WHERE id = $1', [u.id]);
-    return { token, mfa: u.mfa_enabled as boolean, tenantId: memberships[0].tenant_id as string, userId: u.id as string };
+    return { token, mfa: u.mfa_enabled as boolean, tenantId, userId: u.id as string };
   });
   if ('error' in result) return { error: result.error };
   await setSessionCookie(result.token!);

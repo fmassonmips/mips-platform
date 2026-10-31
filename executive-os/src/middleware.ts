@@ -19,6 +19,7 @@ export function middleware(req: NextRequest) {
   }
   const open = pathname === '/login' || pathname === '/mfa' || pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname === '/forbidden' || /\/export(\/|$)/.test(pathname); // route handlers authenticate themselves (401/403 JSON)
   if (!open && !req.cookies.get('mips_eos_session')) return NextResponse.redirect(new URL('/login', req.url));
-  return NextResponse.next();
+  const h = new Headers(req.headers); h.set('x-pathname', pathname);
+  return NextResponse.next({ request: { headers: h } });
 }
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] };

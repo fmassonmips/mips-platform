@@ -107,6 +107,12 @@ export async function getAuth(): Promise<AuthContext | null> {
 export async function requireAuth(perm?: Permission): Promise<AuthContext> {
   const ctx = await getAuth();
   if (!ctx) redirect('/login');
+  // Tenant policy: roles listed in settings.mfa_required_roles must enrol MFA before using the app.
+  const required: string[] = Array.isArray(ctx.settings?.mfa_required_roles) ? ctx.settings.mfa_required_roles : [];
+  if (required.includes(ctx.roleCode) && !ctx.mfaEnabled) {
+    const path = (await headers()).get('x-pathname') ?? '';
+    if (!path.startsWith('/account')) redirect('/account?mfa=required');
+  }
   if (perm && !ctx.permissions.has(perm)) redirect(`/forbidden?p=${encodeURIComponent(perm)}`);
   return ctx;
 }

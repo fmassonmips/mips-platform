@@ -236,11 +236,20 @@ export async function measureOutcome(tx: Tx, a: { tenantId: string; userId: stri
             FROM transactions WHERE merchant_id = $3 AND accounting_date BETWEEN $1 AND $2 GROUP BY 1)
       SELECT t.month::text, (t.cm + coalesce(s.saas,0))::text AS contribution, t.gpv::text, t.mdr::text FROM t LEFT JOIN s USING (month) ORDER BY 1`, [from, to, m.merchant_id]);
     const actualAvg = series.length ? sum(series.map((x) => x.contribution)).div(series.length) : null;
+    // Partial latest month: scale it to a full month (calendar days) to give a comparable run-rate.
+    const partial = monthEnd(to) !== to;
+    let runRate: ReturnType<typeof sum> | null = null;
+    if (partial && series.length) {
+      const lastM = series[series.length - 1]; const dim = Number(monthEnd(to).slice(8, 10)); const covered = Number(to.slice(8, 10));
+      const scaled = series.map((x) => (x === lastM ? dec(x.contribution).times(dim).div(covered) : dec(x.contribution)));
+      runRate = sum(scaled).div(series.length);
+    }
     const expected = dec(m.expected_monthly_contribution ?? 0), baseline = dec(m.baseline_monthly_contribution ?? 0);
     result = { status: 'measured', type: m.type, window: { from, to, months: series.length }, series, baseline_monthly: baseline.toFixed(2), expected_monthly: expected.toFixed(2), actual_monthly: actualAvg?.toFixed(2) ?? null,
       variance_vs_expected: actualAvg ? actualAvg.minus(expected).toFixed(2) : null, actual_uplift_vs_baseline: actualAvg ? actualAvg.minus(baseline).toFixed(2) : null,
       expected_uplift_vs_baseline: expected.minus(baseline).toFixed(2), achievement_ratio: actualAvg ? safeDiv(actualAvg.minus(baseline), expected.minus(baseline))?.toFixed(4) ?? null : null,
-      partial_month: monthEnd(to) !== to };
+      partial_month: partial, actual_monthly_run_rate: runRate?.toFixed(2) ?? null, variance_vs_expected_run_rate: runRate ? runRate.minus(expected).toFixed(2) : null,
+      note: partial ? 'Latest month is partial; compare the run-rate, and re-measure after month end.' : undefined };
   } else if (m.type === 'kpi') {
     const vals = await q<any>(tx, `SELECT r.period_start::text AS month, r.value::text FROM kpi_results r JOIN kpi_definitions k ON k.id = r.kpi_id
       WHERE k.code = $1 AND r.is_current AND r.dimension = 'total' AND r.period_start = ANY($2::date[]) AND r.period_end = (date_trunc('month', r.period_start) + interval '1 month - 1 day')::date ORDER BY 1`, [m.kpi_code, months]);

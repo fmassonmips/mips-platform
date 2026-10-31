@@ -34,10 +34,12 @@ async function createScenario(p, merchantId, name, params) {
     });
     await step('2. Merchant Profitability Intelligence shows transactions, fees and revenue for Lagoon', async () => {
       await ceo.goto(`/merchants/${lagoonId}?range=m:2026-10`);
-      const t = await main(ceo); assert.match(t, /Lagoon Resorts Group/); assert.match(t, /SBM-FS-2026-09/); assert.match(t, /DEMO-2026/);
+      const t = await main(ceo); assert.match(t, /Lagoon Resorts Group/); assert.match(t, /SBM-FS-2026-09/); assert.match(t, /Gross acquiring fees/);
+      await ceo.goto(`/merchants/${lagoonId}/transactions?range=m:2026-10`); assert.match(await main(ceo), /DEMO-2026/);
+      await ceo.goto(`/merchants/${lagoonId}?range=m:2026-10`);
     });
     await step('3. CEO discovers wholesale processing costs increased (fee schedule 160 → 195 bps)', async () => {
-      const t = await main(ceo); assert.match(t, /195/); assert.match(t, /160/);
+      const t = await main(ceo); assert.match(t, /SBM-FS-2026-09-INTL[^]*195\.00/); assert.match(t, /Wholesale rate/);
     });
     const ids = await step('4. CEO creates three pricing scenarios in the Decision Center', async () => [
       await createScenario(ceo, lagoonId, 'A — Pass through +25 bps', { mdrChangeBps: '25', churnProbability: '0.15' }),
@@ -62,6 +64,7 @@ async function createScenario(p, merchantId, name, params) {
       return ceo.url();
     });
     const admin = await login(browser, 'admin@mips.demo');
+    if ((await admin.locator('select[name=tenantId]').count()) > 0) { await admin.selectOption('select[name=tenantId]', { label: 'MIPSIT Digital Ltd (DEMO)' }); await admin.waitForTimeout(2000); }
     await step('8. Decision approved by a second approver (segregation of duties) and appears in Strategy Execution', async () => {
       await admin.goto(decisionUrl); await admin.fill('input[name=note]', 'Approved by Board delegate'); await admin.click('button:has-text("Approve decision")');
       await admin.waitForSelector('text=approved', { timeout: 60000 }); await admin.reload();
@@ -84,7 +87,7 @@ async function createScenario(p, merchantId, name, params) {
       const url = fin.url(); assert.match(await main(fin), /Valid\s*400/);
       await cfo.goto(url); await cfo.click('button:has-text("Approve import")'); await cfo.waitForSelector('button:has-text("Commit (transactional)")', { timeout: 60000 });
       cfo.once('dialog', (d) => d.accept()); await cfo.click('button:has-text("Commit (transactional)")');
-      await cfo.waitForSelector('text=Committed 400 rows', { timeout: 180000 });
+      await cfo.waitForTimeout(5000); await cfo.goto(url); await cfo.waitForSelector('text=400 committed = 400 validated', { timeout: 180000 });
     });
     await step('11. System compares actual performance against the approved scenario', async () => {
       await cfo.goto(decisionUrl); await cfo.click('button:has-text("Measure actual outcome now")'); await cfo.waitForTimeout(3000); await cfo.reload();
@@ -104,4 +107,4 @@ async function createScenario(p, merchantId, name, params) {
     console.log(`\n${steps.length - fails}/${steps.length} acceptance steps passed`);
     process.exitCode = fails || steps.length < 12 ? 1 : 0;
   }
-})();
+})().catch(() => { process.exitCode = 1; });

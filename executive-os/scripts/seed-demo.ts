@@ -23,7 +23,7 @@ export async function seedAll(url: string, opts: { reset: boolean; scale?: numbe
   await c.connect();
   try {
     await c.query('BEGIN');
-    const tenantId = await provisionTenant(c as any, { code: 'mips-demo', name: 'MIPSIT Digital Ltd (DEMO)', legalName: 'MIPSIT Digital Ltd — DEMO DATASET', isDemo: true });
+    const tenantId = await provisionTenant(c as any, { code: 'mips-demo', name: 'MIPSIT Digital Ltd (DEMO)', legalName: 'MIPSIT Digital Ltd — DEMO DATASET', isDemo: true, settings: { mfa_required_roles: [], mfa_policy_note: 'DEMO tenant: MFA optional so demo accounts work; production default requires MFA for admin.' } });
     const users: Record<string, string> = {};
     for (const [email, name, role, dept] of DEMO_USERS) {
       const id = await upsertUser(c as any, email, name, DEMO_PASSWORD);

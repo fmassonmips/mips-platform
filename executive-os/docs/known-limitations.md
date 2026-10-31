@@ -5,7 +5,7 @@ Honest status of this release. Items marked **Risk** should be resolved before p
 | # | Area | Limitation | Impact | Risk | Plan |
 |---|---|---|---|---|---|
 | 1 | Auth | Supabase Auth was not used (no Supabase project/credentials available). Authentication is a self-hosted adapter (bcrypt + hashed sessions + TOTP) on the same PostgreSQL. | Migration to Supabase Auth would need an adapter for `getAuth()` | Low | Adapter swap if Supabase is adopted |
-| 2 | Auth | `mfa_required_roles` is stored but MFA enrolment is not forced at login for those roles. | Admins can operate without MFA | **Risk** | Roadmap #2 |
+| 2 | Auth | MFA is forced (redirect to Account → enrol) for roles in `mfa_required_roles` (production default: admin). Demo tenants set it to empty so demo logins work. No "must change password at first login" flag yet. | One-time passwords may be kept | Medium | Add flag |
 | 3 | Auth | `users` table is global (not RLS-isolated); application code reads users only via tenant memberships. | A code defect could expose names/emails of other tenants' users | **Risk** | RLS on users + SECURITY DEFINER auth lookups |
 | 4 | Secrets | TOTP secrets stored in the DB without application-level encryption | Relies on DB encryption at rest | Medium | KMS envelope encryption |
 | 5 | API | No UI to issue API keys; rate limiting is in-memory per instance | Machine access requires admin script; limits not shared across instances | Medium | Roadmap #1 |
