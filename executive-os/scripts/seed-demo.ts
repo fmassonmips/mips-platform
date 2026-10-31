@@ -14,7 +14,7 @@ loadEnv();
 export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? 'Demo-Passw0rd-2026';
 const DEMO_USERS = [
   ['ceo@mips.demo', 'Demo CEO', 'ceo', 'EXEC'], ['cfo@mips.demo', 'Demo CFO', 'cfo', 'FIN'], ['finance@mips.demo', 'Demo Finance Manager', 'finance_manager', 'FIN'],
-  ['analyst@mips.demo', 'Demo Analyst', 'analyst', 'FIN'], ['auditor@mips.demo', 'Demo Auditor', 'auditor', 'RISK'], ['admin@mips.demo', 'Demo Administrator', 'admin', 'TECH'], ['viewer@mips.demo', 'Demo Viewer', 'viewer', 'OPS'],
+  ['analyst@mips.demo', 'Demo Analyst', 'analyst', 'FIN'], ['auditor@mips.demo', 'Demo Auditor', 'auditor', 'RISK'], ['admin@mips.demo', 'Demo Administrator', 'admin', 'TECH'], ['viewer@mips.demo', 'Demo Viewer', 'viewer', 'OPS'], ['chair@mips.demo', 'Demo Board Chair', 'board_chair', 'EXEC'],
 ] as const;
 
 export async function seedAll(url: string, opts: { reset: boolean; scale?: number; log?: (s: string) => void }) {

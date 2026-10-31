@@ -158,6 +158,7 @@ export async function approveDecision(tx: Tx, a: { tenantId: string; userId: str
   if (!d) throw new Error('Decision not found');
   if (d.status !== 'proposed') throw new Error(`Decision is ${d.status}; only proposed decisions can be approved`);
   if (d.proposed_by === a.userId) throw new Error('Segregation of duties: the proposer cannot approve their own decision');
+  if (d.approver_user_id && d.approver_user_id !== a.userId) throw new Error('Only the designated approver can approve this decision');
   await tx.query(`UPDATE executive_decisions SET status = 'approved', approver_user_id = $2, approved_at = now(), updated_at = now() WHERE id = $1`, [id, a.userId]);
   // Execution trail: initiative + action item for the owner (Strategy Execution module)
   const iniCode = await nextCode(tx, 'initiatives', 'INI-D');
@@ -175,8 +176,9 @@ export async function approveDecision(tx: Tx, a: { tenantId: string; userId: str
 }
 
 export async function rejectDecision(tx: Tx, a: { tenantId: string; userId: string }, id: string, reason: string) {
-  const d = await one<any>(tx, 'SELECT status, code FROM executive_decisions WHERE id = $1', [id]);
+  const d = await one<any>(tx, 'SELECT status, code, approver_user_id FROM executive_decisions WHERE id = $1', [id]);
   if (!d || d.status !== 'proposed') throw new Error('Only proposed decisions can be rejected');
+  if (d.approver_user_id && d.approver_user_id !== a.userId) throw new Error('Only the designated approver can reject this decision');
   await tx.query(`UPDATE executive_decisions SET status = 'rejected', updated_at = now() WHERE id = $1`, [id]);
   await audit(tx, { tenantId: a.tenantId, userId: a.userId, action: 'decision.rejected', entityType: 'executive_decisions', entityId: id, payload: { code: d.code, reason } });
 }

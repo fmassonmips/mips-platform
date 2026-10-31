@@ -27,6 +27,6 @@ MIPS Executive OS answers seven questions: what is happening, why, which custome
 2. The merchant page shows the international wholesale rate moving from 160 to 195 bps (SBM schedule `SBM-FS-2026-09-INTL`) and the transactions it applied to.
 3. Click **Create scenario in CEO Decision Center**; create alternatives (e.g. +25 bps pass-through, migrate 60 % of volume to MCB, +10 bps) in one comparison group, then **Compare**.
 4. Proof Center → *re-perform fee calculation* for the merchant: expect “0 mismatches”.
-5. On the chosen scenario, **Record decision** (owner, approver, deadline, evidence). A different user approves; an initiative and action appear in Strategy Execution.
+5. On the chosen scenario, **Record decision** (owner, approver — the Board Chair —, deadline, evidence). Only the designated approver can approve; an initiative and action appear in Strategy Execution.
 6. Implement (e.g. new pricing agreement), import the next period’s transactions, then **Measure actual outcome**.
 7. Reports → *Decision outcome report* → PDF for the Board.

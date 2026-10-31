@@ -1,7 +1,7 @@
 # Administrator manual
 
 ## Users & roles (Administration → Users / Roles)
-- System roles: `admin`, `ceo`, `cfo`, `finance_manager`, `analyst`, `auditor`, `viewer` (permission matrix in `src/lib/auth/permissions.ts`). Custom roles are cloned from a system role.
+- System roles: `admin`, `ceo`, `cfo`, `finance_manager`, `analyst`, `auditor`, `board_chair`, `viewer` (permission matrix in `src/lib/auth/permissions.ts`). Custom roles are cloned from a system role.
 - Creating a user generates a one-time password shown once; users change it in **Account** and can enrol TOTP MFA there.
 - Segregation of duties is enforced by the database regardless of role (see security architecture). Give approvers and preparers different accounts.
 

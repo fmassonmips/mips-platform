@@ -53,5 +53,9 @@ export const DEFAULT_ROLES: Record<string, { name: string; description: string; 
     name: 'Auditor (read-only)', description: 'Read-only access to evidence and audit trail',
     permissions: ['dashboard.view', 'finance.view', 'merchant.view', 'proof.view', 'proof.export', 'strategy.view', 'admin.audit'],
   },
+  board_chair: {
+    name: 'Board Chair', description: 'Approves executive decisions (independent of the CEO); read access to evidence and reports',
+    permissions: ['dashboard.view', 'finance.view', 'merchant.view', 'proof.view', 'proof.export', 'decision.approve', 'strategy.view', 'report.generate'],
+  },
   viewer: { name: 'Viewer', description: 'Dashboards only', permissions: ['dashboard.view', 'strategy.view'] },
 };

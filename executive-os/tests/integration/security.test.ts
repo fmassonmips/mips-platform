@@ -85,6 +85,8 @@ describe('segregation of duties (database constraints)', () => {
     const { createDecision, approveDecision } = await import('@/lib/services/decisions');
     const d = await as(T['mips-demo'], cfo)((t) => createDecision(t, { tenantId: T['mips-demo'], userId: cfo }, { title: 'SoD test decision', description: 'Integration test decision', rationale: 'Integration test rationale', ownerUserId: fin, approverUserId: ceo, deadline: '2026-12-31', evidence: [] }));
     await expect(as(T['mips-demo'], cfo)((t) => approveDecision(t, { tenantId: T['mips-demo'], userId: cfo }, d.id))).rejects.toThrow(/Segregation of duties/);
+    const chair = await userId('chair@mips.demo');
+    await expect(as(T['mips-demo'], chair)((t) => approveDecision(t, { tenantId: T['mips-demo'], userId: chair }, d.id))).rejects.toThrow(/designated approver/);
     const ok = await as(T['mips-demo'], ceo)((t) => approveDecision(t, { tenantId: T['mips-demo'], userId: ceo }, d.id));
     expect(ok.initiativeId).toBeTruthy();
   });

@@ -14,7 +14,7 @@ cp .env.example .env.local                      # adjust credentials
 npm run db:migrate && npm run db:seed           # ≈45 s: 18 months, ~285k transactions, GL, bank, AR/AP, budgets
 npm run dev                                     # http://localhost:3000
 ```
-Demo logins (password `Demo-Passw0rd-2026`): `ceo@`, `cfo@`, `finance@`, `analyst@`, `auditor@`, `admin@`, `viewer@mips.demo`; `cfo@acme.demo` (second tenant). `admin@mips.demo` can switch tenants.
+Demo logins (password `Demo-Passw0rd-2026`): `ceo@`, `cfo@`, `finance@`, `analyst@`, `auditor@`, `admin@`, `viewer@`, `chair@mips.demo` (Board Chair — approves decisions); `cfo@acme.demo` (second tenant). `admin@mips.demo` can switch tenants.
 
 ## Tests
 | Command | What it covers |

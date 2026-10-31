@@ -9,9 +9,9 @@
 | Sessions | 256-bit random token in HttpOnly SameSite=Lax cookie; only SHA-256 stored; idle timeout 30 min, absolute 12 h; revoked on logout |
 | MFA | RFC 6238 TOTP (`src/lib/auth/totp.ts`), enrolment and verification flows; tenant setting `mfa_required_roles` (enforcement at login for those roles is on the roadmap — see limitations) |
 | Brute force | `login_attempts`: 5 failures / email / 15 min, 30 / IP / 15 min |
-| RBAC | 25 permissions × 7 system roles (`src/lib/auth/permissions.ts`), tenant-configurable roles; every server action and API route checks its permission server-side |
+| RBAC | 25 permissions × 8 system roles (incl. Board Chair) (`src/lib/auth/permissions.ts`), tenant-configurable roles; every server action and API route checks its permission server-side |
 | Least privilege | runtime DB role `mips_app` (NOSUPERUSER, NOBYPASSRLS); owner role only for migrations/scripts; `mips_backup` read-only BYPASSRLS for dumps |
-| Segregation of duties | DB CHECK constraints: supplier invoice submitter ≠ approver; budget submitter ≠ approver; reconciliation preparer ≠ approver; adjustment proposer ≠ approver; collection reminder creator ≠ approver; decision proposer ≠ approver (service + CHECK); import uploader ≠ approver (service) |
+| Segregation of duties | DB CHECK constraints: supplier invoice submitter ≠ approver; budget submitter ≠ approver; reconciliation preparer ≠ approver; adjustment proposer ≠ approver; collection reminder creator ≠ approver; decision proposer ≠ approver (service + CHECK) and only the designated approver (Board Chair by default in the demo) may approve or reject; import uploader ≠ approver (service) |
 
 ## Tenant isolation
 RLS policy `tenant_id = app_tenant()` on every table with `tenant_id`; `FORCE ROW LEVEL SECURITY` on all data tables; pre-tenant lookups only through narrow SECURITY DEFINER functions (`auth_user_memberships`, `auth_api_key_lookup`). Background work (imports, calculation runs, seeding) runs inside the same tenant-bound transaction. File storage (`source_files`) is RLS-isolated. Explicit tests: `tests/integration/security.test.ts` (cross-tenant reads, writes, updates, file storage, role attributes).

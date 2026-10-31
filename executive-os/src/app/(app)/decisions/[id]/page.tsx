@@ -21,7 +21,7 @@ export default async function DecisionDetail({ params, searchParams }: { params:
   });
   if (!d) notFound();
   const e = d.expected_impact ?? {}; const m = d.measurement ?? {}; const o: any = d.actual_outcome ?? d.preview;
-  const canApprove = auth.permissions.has('decision.approve'); const canPropose = auth.permissions.has('decision.propose');
+  const canApprove = auth.permissions.has('decision.approve') && (!d.approver_user_id || d.approver_user_id === auth.userId); const canPropose = auth.permissions.has('decision.propose');
   const chart = o?.series?.map((p: any) => ({ month: monthLabel(p.month), actual: p.contribution ?? p.value, expected: o.expected_monthly ?? null, baseline: o.baseline_monthly ?? null })) ?? [];
   const field = (label: string, value: React.ReactNode) => <div className="flex justify-between gap-3 border-b border-border py-1.5 text-sm last:border-0"><dt className="text-muted">{label}</dt><dd className="text-right">{value}</dd></div>;
   return (

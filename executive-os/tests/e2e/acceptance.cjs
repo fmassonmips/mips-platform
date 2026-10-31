@@ -58,22 +58,17 @@ async function createScenario(p, merchantId, name, params) {
     const decisionUrl = await step('7. CEO selects scenario A, records the decision and assigns the CFO as action owner', async () => {
       await ceo.goto(`/decisions/scenarios/${ids[0]}`);
       const cfoOpt = await ceo.locator('#ownerUserId option', { hasText: 'Demo CFO' }).getAttribute('value'); await ceo.selectOption('#ownerUserId', cfoOpt);
-      const adminOpt = await ceo.locator('#approverUserId option', { hasText: 'Demo Administrator' }).getAttribute('value'); await ceo.selectOption('#approverUserId', adminOpt);
+      const chairOpt = await ceo.locator('#approverUserId option', { hasText: 'Demo Board Chair' }).getAttribute('value'); await ceo.selectOption('#approverUserId', chairOpt);
       await ceo.fill('#deadline', '2026-11-15');
       await Promise.all([ceo.waitForURL(/\/decisions\/[0-9a-f-]{36}$/, { timeout: 180000 }), ceo.click('button:has-text("Record decision for approval")')]);
       return ceo.url();
     });
-    const admin = await login(browser, 'admin@mips.demo');
-    const sel = admin.locator('select[name=tenantId]');
-    if ((await sel.count()) > 0 && (await sel.inputValue()) !== (await sel.locator('option', { hasText: 'MIPSIT Digital Ltd (DEMO)' }).getAttribute('value'))) {
-      await sel.selectOption({ label: 'MIPSIT Digital Ltd (DEMO)' });
-      await admin.waitForFunction(() => document.querySelector('select[name=tenantId]')?.selectedOptions[0]?.textContent?.includes('MIPSIT'), null, { timeout: 60000 });
-    }
-    await step('8. Decision approved by a second approver (segregation of duties) and appears in Strategy Execution', async () => {
-      await admin.goto(decisionUrl); await admin.fill('input[name=note]', 'Approved by Board delegate'); await admin.click('button:has-text("Approve decision")');
-      await admin.waitForSelector('text=approved', { timeout: 60000 }); await admin.reload();
-      const t = await main(admin); assert.match(t, /INI-D/); assert.match(t, /ACT-D/);
-      await admin.goto('/strategy'); assert.match(await main(admin), /Implement DEC-/);
+    const chair = await login(browser, 'chair@mips.demo');
+    await step('8. Board Chair (designated approver, not the proposer) approves; decision appears in Strategy Execution', async () => {
+      await chair.goto(decisionUrl); await chair.fill('input[name=note]', 'Approved by the Board Chair'); await chair.click('button:has-text("Approve decision")');
+      await chair.waitForSelector('text=approved', { timeout: 60000 }); await chair.reload();
+      const t = await main(chair); assert.match(t, /INI-D/); assert.match(t, /ACT-D/);
+      await ceo.goto('/strategy'); assert.match(await main(ceo), /Implement DEC-/);
     });
     const cfo = await login(browser, 'cfo@mips.demo');
     await step('9. Implementation: CFO records the new effective-dated pricing agreement (+25 bps international, from 1 Nov 2026)', async () => {
