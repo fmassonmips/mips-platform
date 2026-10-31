@@ -75,6 +75,27 @@ CREATE TABLE IF NOT EXISTS organization_users (
     CONSTRAINT fk_org_users_user FOREIGN KEY (user_id)         REFERENCES users (id)         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---- organization_invitations ----------------------------------------------
+-- Only the SHA-256 of the link token is stored: a database leak does not
+-- give working invitation links. One pending invitation per e-mail and company.
+CREATE TABLE IF NOT EXISTS organization_invitations (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    email           VARCHAR(254)    NOT NULL,
+    role            VARCHAR(16)     NOT NULL DEFAULT 'member',  -- admin | member
+    token_hash      CHAR(64)        NOT NULL,
+    invited_by      BIGINT UNSIGNED NULL,
+    created_at      DATETIME        NOT NULL,
+    expires_at      DATETIME        NOT NULL,
+    accepted_at     DATETIME        NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_org_inv_token (token_hash),
+    UNIQUE KEY uq_org_inv_email (organization_id, email),
+    KEY idx_org_inv_created (organization_id, created_at),
+    CONSTRAINT fk_org_inv_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_org_inv_by  FOREIGN KEY (invited_by)      REFERENCES users (id)         ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---- organization_modules (which suite apps a tenant has switched on) --
 -- The module catalog itself lives in code (src/Suite/Catalog.php).
 CREATE TABLE IF NOT EXISTS organization_modules (
@@ -642,6 +663,206 @@ CREATE TABLE IF NOT EXISTS shoplokal_order_lines (
     KEY idx_sl_lines_order (order_id),
     CONSTRAINT fk_sl_lines_order   FOREIGN KEY (order_id)   REFERENCES shoplokal_orders (id)   ON DELETE CASCADE,
     CONSTRAINT fk_sl_lines_product FOREIGN KEY (product_id) REFERENCES shoplokal_products (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- StaffZen — leave & absences (counted in half-days)
+-- =======================================================================
+
+-- ---- staffzen_settings (one row per org) ----------------------------------
+CREATE TABLE IF NOT EXISTS staffzen_settings (
+    organization_id BIGINT UNSIGNED NOT NULL,
+    work_days       CHAR(7)         NOT NULL DEFAULT '1111100',   -- Monday … Sunday, 1 = worked
+    PRIMARY KEY (organization_id),
+    CONSTRAINT fk_sz_settings_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- staffzen_leave_types --------------------------------------------------
+CREATE TABLE IF NOT EXISTS staffzen_leave_types (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id     BIGINT UNSIGNED NOT NULL,
+    name                VARCHAR(60)     NOT NULL,
+    allowance_halfdays  INT             NULL,                  -- per person and year; NULL = not counted (unpaid…)
+    active              TINYINT(1)      NOT NULL DEFAULT 1,
+    created_at          DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_sz_types_org (organization_id, active),
+    CONSTRAINT fk_sz_types_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- staffzen_allowances (per-person override of a type's yearly allowance)
+CREATE TABLE IF NOT EXISTS staffzen_allowances (
+    type_id    BIGINT UNSIGNED NOT NULL,
+    user_id    BIGINT UNSIGNED NOT NULL,
+    year       SMALLINT        NOT NULL,
+    halfdays   INT             NOT NULL,
+    PRIMARY KEY (type_id, user_id, year),
+    CONSTRAINT fk_sz_allow_type FOREIGN KEY (type_id) REFERENCES staffzen_leave_types (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sz_allow_user FOREIGN KEY (user_id) REFERENCES users (id)                ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- staffzen_holidays (public holidays, not counted as leave) -------------
+CREATE TABLE IF NOT EXISTS staffzen_holidays (
+    organization_id BIGINT UNSIGNED NOT NULL,
+    day             DATE            NOT NULL,
+    name            VARCHAR(80)     NOT NULL,
+    PRIMARY KEY (organization_id, day),
+    CONSTRAINT fk_sz_holidays_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- staffzen_requests ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS staffzen_requests (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    user_id         BIGINT UNSIGNED NOT NULL,                  -- who is away
+    type_id         BIGINT UNSIGNED NOT NULL,
+    start_date      DATE            NOT NULL,
+    end_date        DATE            NOT NULL,
+    half_day        CHAR(2)         NULL,                      -- am | pm, single-day requests only
+    halfdays        INT             NOT NULL,                  -- counted at request time
+    status          VARCHAR(10)     NOT NULL DEFAULT 'pending', -- pending | approved | refused | cancelled
+    note            VARCHAR(500)    NULL,
+    decision_note   VARCHAR(500)    NULL,
+    decided_by      BIGINT UNSIGNED NULL,
+    decided_at      DATETIME        NULL,
+    created_by      BIGINT UNSIGNED NULL,                      -- a manager can record leave for someone
+    created_at      DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_sz_req_user (organization_id, user_id, start_date),
+    KEY idx_sz_req_status (organization_id, status, start_date),
+    KEY idx_sz_req_dates (organization_id, start_date, end_date),
+    CONSTRAINT fk_sz_req_org     FOREIGN KEY (organization_id) REFERENCES organizations (id)        ON DELETE CASCADE,
+    CONSTRAINT fk_sz_req_user    FOREIGN KEY (user_id)         REFERENCES users (id)                ON DELETE CASCADE,
+    CONSTRAINT fk_sz_req_type    FOREIGN KEY (type_id)         REFERENCES staffzen_leave_types (id),
+    CONSTRAINT fk_sz_req_decider FOREIGN KEY (decided_by)      REFERENCES users (id)                ON DELETE SET NULL,
+    CONSTRAINT fk_sz_req_creator FOREIGN KEY (created_by)      REFERENCES users (id)                ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Bookora — nightly bookings (guesthouses, villas)
+-- =======================================================================
+
+-- ---- bookora_settings (one row per org) ------------------------------------
+CREATE TABLE IF NOT EXISTS bookora_settings (
+    organization_id BIGINT UNSIGNED NOT NULL,
+    public_token    CHAR(32)        NOT NULL,                 -- booking page /bookora/s.php?o=…
+    booking_open    TINYINT(1)      NOT NULL DEFAULT 0,       -- closed until the owner opens it
+    intro           VARCHAR(500)    NULL,
+    checkin_time    CHAR(5)         NOT NULL DEFAULT '14:00',
+    checkout_time   CHAR(5)         NOT NULL DEFAULT '11:00',
+    deposit_percent TINYINT UNSIGNED NOT NULL DEFAULT 30,     -- asked to confirm a booking; 0 = none
+    hold_hours      SMALLINT UNSIGNED NOT NULL DEFAULT 72,    -- an unconfirmed request holds the dates this long
+    bank_details    VARCHAR(300)    NULL,
+    juice_number    VARCHAR(40)     NULL,
+    notify_email    VARCHAR(254)    NULL,
+    last_number     INT UNSIGNED    NOT NULL DEFAULT 0,       -- booking numbering, gap-free
+    PRIMARY KEY (organization_id),
+    UNIQUE KEY uq_bk_settings_token (public_token),
+    CONSTRAINT fk_bk_settings_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- bookora_units (rooms, bungalows, villas) --------------------------------
+CREATE TABLE IF NOT EXISTS bookora_units (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    name            VARCHAR(120)    NOT NULL,
+    description     VARCHAR(2000)   NULL,
+    capacity        TINYINT UNSIGNED NOT NULL DEFAULT 2,
+    price_cents     BIGINT          NOT NULL,                 -- per night, excl. VAT
+    tax_code        VARCHAR(4)      NOT NULL DEFAULT 'TC01',
+    min_nights      TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    image           MEDIUMTEXT      NULL,                     -- data URL, shrunk in the browser
+    active          TINYINT(1)      NOT NULL DEFAULT 1,
+    ical_token      CHAR(32)        NOT NULL,                 -- export feed /bookora/ical.php?u=…
+    ical_import_url VARCHAR(500)    NULL,                     -- Airbnb / Booking.com calendar
+    ical_synced_at  DATETIME        NULL,
+    ical_error      VARCHAR(300)    NULL,
+    created_at      DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_bk_units_ical (ical_token),
+    KEY idx_bk_units_org (organization_id, active, name),
+    CONSTRAINT fk_bk_units_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- bookora_seasons (price per night over a date range) ------------------------
+CREATE TABLE IF NOT EXISTS bookora_seasons (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    unit_id     BIGINT UNSIGNED NOT NULL,
+    label       VARCHAR(60)     NOT NULL,
+    start_date  DATE            NOT NULL,                     -- first night at this price
+    end_date    DATE            NOT NULL,                     -- last night at this price (inclusive)
+    price_cents BIGINT          NOT NULL,                     -- excl. VAT
+    PRIMARY KEY (id),
+    KEY idx_bk_seasons_unit (unit_id, start_date),
+    CONSTRAINT fk_bk_seasons_unit FOREIGN KEY (unit_id) REFERENCES bookora_units (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- bookora_blocks (nights closed by the owner or by an imported calendar) ----
+CREATE TABLE IF NOT EXISTS bookora_blocks (
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    unit_id    BIGINT UNSIGNED NOT NULL,
+    start_date DATE            NOT NULL,                      -- first closed night
+    end_date   DATE            NOT NULL,                      -- day after the last closed night
+    reason     VARCHAR(200)    NULL,
+    source     VARCHAR(8)      NOT NULL DEFAULT 'manual',     -- manual | ical
+    created_at DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_bk_blocks_unit (unit_id, start_date, end_date),
+    CONSTRAINT fk_bk_blocks_unit FOREIGN KEY (unit_id) REFERENCES bookora_units (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- bookora_bookings --------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bookora_bookings (
+    id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id    BIGINT UNSIGNED NOT NULL,
+    unit_id            BIGINT UNSIGNED NOT NULL,
+    number             INT UNSIGNED    NOT NULL,
+    guest_name         VARCHAR(120)    NOT NULL,
+    phone              VARCHAR(40)     NOT NULL,
+    email              VARCHAR(254)    NULL,
+    guests             TINYINT UNSIGNED NOT NULL,
+    check_in           DATE            NOT NULL,
+    check_out          DATE            NOT NULL,
+    nights             SMALLINT UNSIGNED NOT NULL,
+    subtotal_cents     BIGINT          NOT NULL,              -- excl. VAT
+    tax_cents          BIGINT          NOT NULL,
+    total_cents        BIGINT          NOT NULL,
+    deposit_cents      BIGINT          NOT NULL DEFAULT 0,
+    status             VARCHAR(10)     NOT NULL DEFAULT 'new', -- new | confirmed | cancelled
+    source             VARCHAR(8)      NOT NULL DEFAULT 'online', -- online | manual
+    note               VARCHAR(500)    NULL,
+    hold_until         DATETIME        NULL,                  -- a 'new' request blocks the dates until then
+    deposit_paid_at    DATETIME        NULL,
+    paid_at            DATETIME        NULL,                  -- paid in full
+    facturo_invoice_id BIGINT UNSIGNED NULL,
+    token              CHAR(48)        NOT NULL,              -- guest page /bookora/b.php?t=…
+    created_ip         VARCHAR(45)     NULL,
+    created_at         DATETIME        NOT NULL,
+    updated_at         DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_bk_bookings_number (organization_id, number),
+    UNIQUE KEY uq_bk_bookings_token (token),
+    KEY idx_bk_bookings_unit (unit_id, status, check_in, check_out),
+    KEY idx_bk_bookings_org (organization_id, status, check_in),
+    KEY idx_bk_bookings_ip (created_ip, created_at),
+    CONSTRAINT fk_bk_bookings_org     FOREIGN KEY (organization_id)    REFERENCES organizations (id)     ON DELETE CASCADE,
+    CONSTRAINT fk_bk_bookings_unit    FOREIGN KEY (unit_id)            REFERENCES bookora_units (id),
+    CONSTRAINT fk_bk_bookings_invoice FOREIGN KEY (facturo_invoice_id) REFERENCES facturo_documents (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- bookora_booking_lines (nights grouped by price, frozen at booking time) ----
+CREATE TABLE IF NOT EXISTS bookora_booking_lines (
+    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    booking_id       BIGINT UNSIGNED NOT NULL,
+    description      VARCHAR(200)    NOT NULL,
+    nights           SMALLINT UNSIGNED NOT NULL,
+    unit_price_cents BIGINT          NOT NULL,                -- per night, excl. VAT
+    tax_code         VARCHAR(4)      NOT NULL,
+    line_total_cents BIGINT          NOT NULL,
+    line_tax_cents   BIGINT          NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_bk_lines_booking (booking_id),
+    CONSTRAINT fk_bk_lines_booking FOREIGN KEY (booking_id) REFERENCES bookora_bookings (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

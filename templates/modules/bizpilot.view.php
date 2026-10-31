@@ -33,7 +33,7 @@ $label   = static fn (DateTimeImmutable $d): string => $months[(int) $d->format(
 $short   = static fn (string $ym): string => mb_substr($months[(int) substr($ym, 5, 2)], 0, 4) . '.';
 
 $on = [];
-foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal'] as $slug) {
+foreach (['facturo', 'rendezvous', 'clientbloom', 'formelio', 'flowdesk', 'teamnest', 'shoplokal', 'staffzen', 'bookora'] as $slug) {
     $on[$slug] = Modules::isEnabled($org['id'], $slug);
 }
 $rs = static fn (int $c): string => Money::format($c, 'MUR');
@@ -123,6 +123,36 @@ if ($on['shoplokal']) {
     }
     if (($low = \App\ShopLokal\Products::lowStock($org['id'])) !== []) {
         $todo[] = [count($low) . ' produit(s) en stock bas dans la boutique', '/app.php?m=shoplokal&p=products', 'warn'];
+    }
+}
+if ($on['bookora']) {
+    $bk  = \App\Bookora\Bookings::monthStats($org['id'], $from, $to);
+    $bkp = \App\Bookora\Bookings::monthStats($org['id'], $pFrom, $from);
+    $occ  = $bk['available'] > 0 ? (int) round(100 * $bk['nights'] / $bk['available']) : null;
+    $occp = $bkp['available'] > 0 ? (int) round(100 * $bkp['nights'] / $bkp['available']) : null;
+    $tiles['Hébergement'] = [
+        ['Taux d\'occupation', $occ !== null ? $occ . ' %' : '—', $occ !== null && $occp !== null ? $occ - $occp : null, true, $bk['nights'] . ' nuit(s) vendue(s) sur ' . $bk['available'], 'pts'],
+        ['Chiffre des nuitées TTC', $rs($bk['revenue_cents']), D::delta($bk['revenue_cents'], $bkp['revenue_cents']), true, 'séjours confirmés, nuits du mois'],
+    ];
+    $bkc = \App\Bookora\Bookings::counts($org['id']);
+    if ($bkc['todo'] > 0) {
+        $todo[] = [$bkc['todo'] . ' demande(s) de réservation à confirmer', '/app.php?m=bookora&p=bookings&f=todo', 'danger'];
+    }
+    if ($isNow && ($arr = \App\Bookora\Bookings::movements($org['id'], $now->format('Y-m-d'))['arrivals']) !== []) {
+        $todo[] = [count($arr) . ' arrivée(s) aujourd\'hui : ' . implode(', ', array_map(static fn (array $b): string => $b['guest_name'] . ' (' . $b['unit_name'] . ')', $arr)), '/app.php?m=bookora', 'info'];
+    }
+    foreach (\App\Bookora\Units::all($org['id'], false, false) as $u) {
+        if ($u['ical_error'] !== null) {
+            $todo[] = [$u['name'] . ' : ' . $u['ical_error'], '/app.php?m=bookora&p=unit&id=' . (int) $u['id'], 'danger'];
+        }
+    }
+}
+if ($on['staffzen']) {
+    if (($lv = \App\StaffZen\Leaves::pendingCount($org['id'])) > 0) {
+        $todo[] = [$lv . ' demande(s) de congé à valider', '/app.php?m=staffzen&p=approvals', 'warn'];
+    }
+    if ($isNow && ($away = \App\StaffZen\Leaves::awayToday($org['id'])) !== []) {
+        $todo[] = ['Absent(s) aujourd\'hui : ' . implode(', ', array_map(static fn (string $n, string $h): string => $n . ($h !== '' ? ' (' . $h . ')' : ''), array_keys($away), $away)), '/app.php?m=staffzen&p=planning', 'info'];
     }
 }
 if ($on['teamnest'] && ($late = \App\TeamNest\Tasks::overdueCount($org['id'])) > 0) {

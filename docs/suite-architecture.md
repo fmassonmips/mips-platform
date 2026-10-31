@@ -26,12 +26,26 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest** et **ShopLokal** sont disponibles. StaffZen et Bookora sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest**, **ShopLokal**, **StaffZen** et **Bookora** sont disponibles : les 10 apps du catalogue sont ouvertes. Bookora est repositionné sur l'hébergement à la nuit (RendezVous couvre les créneaux).
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
 - Le profil entreprise (raison sociale, BRN, n° TVA, adresse) est partagé par toutes les apps (`/api/suite/organization`).
 - Interface en français, formats mauriciens à l'affichage : montants en roupies « Rs 1,234.50 » (autres devises : code ISO, « EUR 1,234.50 »), dates « 26/10/2026 », heures sur 24 h (`App\Format`, `Money::format`). Stockage, champs de saisie, flux MRA et exports CSV restent en ISO (`2026-10-26`, `1234.50`).
+
+## Équipe (invitations)
+
+Page `/team.php`, liée depuis le lanceur. Code : `src/Suite/Team.php`.
+
+| Élément | Règle |
+|---|---|
+| Rôles | Propriétaire : tout. Administrateur : réglages, catalogue, facturation, invitation de membres. Membre : travail courant. Le propriétaire invite et nomme les administrateurs ; les administrateurs invitent et retirent les membres. |
+| Invitation | Par e-mail, lien personnel valable 7 jours, à usage unique ; le lien est aussi affiché pour l'envoyer par WhatsApp. Seule l'empreinte SHA-256 du jeton est stockée. Renvoyer remplace l'ancien lien (pas avant 10 minutes) ; 20 invitations par jour et par entreprise. |
+| Acceptation | La personne choisit son nom et son mot de passe ; son compte est créé actif (pas de validation manuelle) et elle est connectée. Deux ouvertures simultanées du lien : un seul compte. |
+| Une entreprise par compte | Une adresse dont le compte appartient déjà à une entreprise ne peut pas être invitée (pas encore de changement d'entreprise). Un compte sans entreprise (inscrit non validé, ou retiré d'une équipe) est réactivé avec le nouveau mot de passe. |
+| Retrait | Accès coupé immédiatement (compte désactivé), tâches TeamNest non terminées et tickets FlowDesk ouverts désassignés ; son nom reste sur le travail passé. Le propriétaire ne peut pas être retiré ni changer de rôle. |
+
+**Hors périmètre :** transfert de propriété, appartenance à plusieurs entreprises, connexion par Google, double authentification.
 
 ## Facturo (devis & factures)
 
@@ -172,6 +186,39 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** paiement par carte, variantes (taille, couleur), codes promo, zones de livraison, plusieurs photos, export.
 
+## StaffZen (congés & absences)
+
+| Élément | Règle |
+|---|---|
+| Décompte | En demi-journées, sur les jours travaillés de l'entreprise (lundi–vendredi par défaut), jours fériés exclus ; figé sur la demande (changer les jours travaillés ou les fériés ne recalcule pas l'existant). Une demande tient dans une année civile et 92 jours au plus. |
+| Types | Par défaut : congé annuel 20 j/an, congé maladie 15 j/an, sans solde non décompté. **Valeurs courantes à Maurice, à vérifier** avec les contrats et le Workers' Rights Act. Droit modifiable par personne et par année (arrivée en cours d'année, report). |
+| Fériés | Fêtes à date fixe de Maurice ajoutées en un clic (à vérifier chaque année) ; fêtes mobiles saisies à la main d'après la liste officielle. |
+| Demande | Le membre demande pour lui-même (jusqu'à 30 jours en arrière, pour une maladie) ; refus en cas de chevauchement (sauf matin + après-midi), de solde insuffisant (attente comprise) ou sans jour travaillé. Vérification sous verrou : deux demandes simultanées ne dépassent pas le solde. |
+| Validation | Owner/admin accordent ou refusent avec commentaire ; un admin ne valide pas sa propre demande (le propriétaire, si). « Enregistrer une absence » pour quelqu'un : accordée directement. |
+| Annulation | La personne annule une demande en attente ou un congé pas encore commencé ; un responsable annule tout. Le solde est rendu. |
+| E-mails | Nouvelle demande → responsables ; décision, absence enregistrée ou annulée par un responsable → la personne ; congé accordé annulé par la personne → responsables. |
+| Planning | Mois par personne (accordé / en attente / demi-journée, week-ends et fériés grisés) et « absents aujourd'hui ». Un membre voit « Absent » chez ses collègues, pas le type (maladie) ; les responsables voient le type. |
+| Équipe | Retirer quelqu'un annule ses demandes en attente ; ses absences passées restent. |
+| BizPilot | Demandes à valider et absents du jour dans « À faire ». |
+
+**Hors périmètre :** paie, pointage, report automatique du solde d'une année sur l'autre, acquisition au prorata, pièces jointes (certificat médical), export.
+
+## Bookora (hébergement à la nuit)
+
+Pour guesthouses, villas, bungalows. Un séjour va de la nuit d'arrivée au jour de départ (non compté).
+
+| Élément | Règle |
+|---|---|
+| Logements | Owner/admin. Prix par nuit saisi TTC, stocké HT avec code TVA MRA ; capacité, nuits minimum, photo (réduite dans le navigateur). Saisons à prix propre (sans chevauchement) : chaque nuit prend le prix de sa saison, les nuits consécutives au même prix font une ligne. Un logement réservé ne se supprime pas (désactiver). |
+| Page publique | `/bookora/s.php?o=…`, fermée par défaut. Dates + personnes → chaque logement libre avec son prix total, ou la raison (pris, trop petit, durée minimale). Demande avec nom, téléphone, e-mail ; champ piège, CSRF, 5 demandes/h par connexion. Langue des documents de l'entreprise. |
+| Demande | Bloque les nuits pendant le délai réglé (72 h par défaut) ; acompte demandé (30 % par défaut) par virement ou Juice, instructions sur la page du client. Le propriétaire confirme (à réception), ou la demande expire et libère les nuits ; confirmer une demande expirée re-vérifie les nuits. Le client annule tant que ce n'est pas confirmé. |
+| Disponibilité | Une nuit est prise par une réservation confirmée, une demande dans son délai, une fermeture ou un calendrier importé. Réserver ou confirmer verrouille le logement et revérifie : jamais deux réservations sur la même nuit. Réservations saisies par l'équipe (téléphone) confirmées directement. |
+| Calendriers | Export iCal par logement (`/bookora/ical.php?u=…`) pour Airbnb / Booking.com : nuits occupées, sans noms, sans renvoyer les nuits importées. Import du lien .ics de la plateforme (bouton + `tools/bookora_ical_sync.php` toutes les heures) : ses nuits deviennent fermées ; un chevauchement avec une réservation confirmée est signalé « Double réservation » (planning, BizPilot, e-mail). Plateforme injoignable : les nuits précédentes restent fermées et l'erreur s'affiche. Import limité aux URL https d'adresses publiques, IP figée pour la requête, sans redirection, 1 Mo et 10 s max. |
+| Paiement | Acompte reçu / séjour payé marqués à la main ; facture Facturo (brouillon, identique au centime) depuis une réservation confirmée, une seule. Paiement par carte : attend la passerelle MIPS. |
+| BizPilot | Taux d'occupation et chiffre des nuitées du mois ; demandes à confirmer, arrivées du jour et problèmes de calendrier dans « À faire ». |
+
+**Hors périmètre :** paiement en ligne, prix par personne ou par jour de semaine, plusieurs photos, taxe de séjour, channel manager (API Airbnb/Booking.com : seulement iCal), ménage et check-in.
+
 ## BizPilot (tableau de bord)
 
 Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
@@ -226,9 +273,13 @@ mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
 mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
 mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
+mysql -u root -p mips_platform < sql/migrations/015_team.sql
+mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
+mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
 ```
 
 Puis dans `config/config.php` :
+- bloc `bookora` : laisser `ical_allow_private` à `false` en production ;
 - `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
 - bloc `mra` : URLs (sandbox par défaut) et clé publique MRA téléchargée sur le portail (`config/mra_public_key.pem`).
@@ -238,11 +289,10 @@ Cron :
 */5 * * * * php tools/mra_retry.php
 15 2 * * *  php tools/clientbloom_expire.php
 0 * * * *   php tools/rendezvous_reminders.php
+20 * * * *  php tools/bookora_ical_sync.php
 ```
 
 ## Reste à décider
 
-- Ordre de construction des apps suivantes ; sort de Bookora face à RendezVous.
 - Tarification : prix par app, pack, ou par utilisateur.
 - Fin d'essai : que voit le client à J+30 (blocage, lecture seule, paiement).
-- Invitation de collègues dans une entreprise (pas encore d'écran).

@@ -5,6 +5,7 @@
 /** @var array<string,array{status:string,activated_at:string,trial_ends_at:?string}> $enabled */
 /** @var list<string> $trial_ended */
 /** @var bool $can_manage */
+/** @var int $team_size */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -38,6 +39,7 @@
       <dl class="meta">
         <dt>Entreprise</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Votre rôle</dt><dd><?= htmlspecialchars(['owner' => 'propriétaire', 'admin' => 'administrateur', 'member' => 'membre'][$org['role']] ?? $org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
+        <dt>Équipe</dt><dd><?= $team_size ?> personne<?= $team_size > 1 ? 's' : '' ?> · <a href="/team.php"><?= $can_manage ? 'Gérer l’équipe' : 'Voir l’équipe' ?></a></dd>
       </dl>
     </section>
 

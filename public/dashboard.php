@@ -13,6 +13,7 @@ $catalog    = \App\Suite\Catalog::all();
 $enabled    = \App\Suite\Modules::enabledFor($org['id']);
 $trial_ended = \App\Suite\Modules::trialEndedFor($org['id']);
 $can_manage = \App\Suite\Tenant::canManage($org);
+$team_size  = count(\App\Suite\Tenant::members($org['id']));
 $csrf_token = \App\Csrf::token();
 $page_title = 'Tableau de bord';
 
