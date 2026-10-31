@@ -16,9 +16,11 @@ namespace App\Controllers;
 use App\Accounts;
 use App\Auth;
 use App\Csrf;
+use App\Legal;
 use App\RateLimiter;
 use App\Request;
 use App\Response;
+use App\Suite\Notifications;
 use App\Validator;
 
 final class AccountController
@@ -40,6 +42,8 @@ final class AccountController
                 }
                 Auth::login_user($user);
                 RateLimiter::record(Request::clientIp(), (string) $user['email'], true);   // this IP is now known
+                Legal::accept((int) $user['id']);   // every sign-up form requires accepting the terms
+                Notifications::welcome($user);
                 Response::json(['success' => true]);
 
             case 'forgot':

@@ -8,6 +8,11 @@
 /** @var string $subscribe e-mail to subscribe, may be empty */
 /** @var bool $can_manage */
 /** @var int $team_size */
+/** @var bool $is_staff MIPS team: link to the back-office */
+/** @var list<array{label:string,done:bool,url:string,cta:string}>|null $checklist « Bien démarrer », null when hidden */
+/** @var ?string $closing deletion date when the owner asked to close the account */
+/** @var bool $terms_due the user has not accepted the terms in force */
+/** @var int $digest_off 1 = the Monday summary e-mail is turned off */
 /** @var string $csrf_token */
 /** @var string $page_title */
 ?>
@@ -28,6 +33,7 @@
         Connecté en tant que
         <strong><?= htmlspecialchars((string) $user['email'], ENT_QUOTES, 'UTF-8') ?></strong>
       </span>
+      <?php if ($is_staff): ?><a class="btn-secondary bo-link" href="/backoffice.php">Back-office</a><?php endif; ?>
       <button id="logout-btn" type="button" class="btn-secondary">Déconnexion</button>
     </div>
   </header>
@@ -42,8 +48,44 @@
         <dt>Entreprise</dt><dd><?= htmlspecialchars($org['name'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Votre rôle</dt><dd><?= htmlspecialchars(['owner' => 'propriétaire', 'admin' => 'administrateur', 'member' => 'membre'][$org['role']] ?? $org['role'], ENT_QUOTES, 'UTF-8') ?></dd>
         <dt>Équipe</dt><dd><?= $team_size ?> personne<?= $team_size > 1 ? 's' : '' ?> · <a href="/team.php"><?= $can_manage ? 'Gérer l’équipe' : 'Voir l’équipe' ?></a></dd>
+        <?php if ($org['role'] === 'owner'): ?><dt>Données</dt><dd><a href="/data.php">Télécharger ou fermer le compte</a></dd><?php endif; ?>
+        <?php if ($can_manage): ?><dt>Résumé du lundi</dt><dd><a href="/digest.php"><?= (int) ($digest_off ?? 0) === 1 ? 'désactivé' : 'par e-mail' ?> · changer</a></dd><?php endif; ?>
       </dl>
     </section>
+
+    <?php if ($terms_due): ?>
+      <section class="card ro-banner" id="terms-card">
+        <p><strong>Conditions d’utilisation</strong> : merci de lire et d’accepter les
+          <a href="/cgu.php" target="_blank" rel="noopener">conditions générales d’utilisation</a> et la
+          <a href="/confidentialite.php" target="_blank" rel="noopener">politique de confidentialité</a>
+          (version du <?= htmlspecialchars(\App\Format::date(\App\Legal::VERSION), ENT_QUOTES, 'UTF-8') ?>).</p>
+        <div class="actions"><button type="button" class="btn-primary btn-inline" id="terms-accept">J’accepte</button></div>
+      </section>
+    <?php endif; ?>
+
+    <?php if ($closing !== null): ?>
+      <section class="card bk-warning">
+        <p><strong>Fermeture du compte demandée :</strong> les apps sont fermées et toutes les données seront supprimées le
+          <?= htmlspecialchars(\App\Format::dateTime($closing), ENT_QUOTES, 'UTF-8') ?>.
+          <a href="/data.php">Télécharger les données ou annuler</a></p>
+      </section>
+    <?php endif; ?>
+
+    <?php if ($checklist !== null): $done = count(array_filter(array_column($checklist, 'done'))); ?>
+      <section class="card ob-card" id="ob-card">
+        <h2>Bien démarrer <span class="muted small"><?= $done ?> / <?= count($checklist) ?></span></h2>
+        <ul class="ob-list">
+          <?php foreach ($checklist as $s): ?>
+            <li class="<?= $s['done'] ? 'ob-done' : '' ?>">
+              <span class="ob-check" aria-hidden="true"><?= $s['done'] ? '✓' : '' ?></span>
+              <span class="ob-text"><?= htmlspecialchars($s['label'], ENT_QUOTES, 'UTF-8') ?><?= $s['done'] ? ' <span class="sr-only">(fait)</span>' : '' ?></span>
+              <?php if (!$s['done']): ?><a class="btn-link" href="<?= htmlspecialchars($s['url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($s['cta'], ENT_QUOTES, 'UTF-8') ?></a><?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <p class="small muted"><button type="button" class="btn-link" id="ob-hide">Masquer cette liste</button></p>
+      </section>
+    <?php endif; ?>
 
     <section class="suite" aria-labelledby="suite-title">
       <h2 id="suite-title">Applications</h2>

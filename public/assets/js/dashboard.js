@@ -1,6 +1,7 @@
 /**
  * Dashboard client.
  * - Logout button: POST /api/auth/logout, then back to the login page.
+ * - « Bien démarrer » checklist: « Masquer » posts to /api/suite/onboarding.
  * - App launcher buttons: POST /api/suite/modules to activate/deactivate
  *   a module for the organization, then reload to show the new state.
  */
@@ -26,6 +27,44 @@
         }
         window.location.assign('/login.php');
     });
+
+    // Terms of use / privacy policy in force not yet accepted.
+    const termsAccept = document.getElementById('terms-accept');
+    if (termsAccept) {
+        termsAccept.addEventListener('click', async function () {
+            termsAccept.disabled = true;
+            const res = await fetch('/api/auth/terms', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ action: 'accept' }),
+            }).catch(function () { return null; });
+            if (res && res.ok) {
+                document.getElementById('terms-card').remove();
+            } else {
+                termsAccept.disabled = false;
+            }
+        });
+    }
+
+    // « Bien démarrer »: hide the checklist for good.
+    const obHide = document.getElementById('ob-hide');
+    if (obHide) {
+        obHide.addEventListener('click', async function () {
+            obHide.disabled = true;
+            const res = await fetch('/api/suite/onboarding', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ action: 'done' }),
+            }).catch(function () { return null; });
+            if (res && res.ok) {
+                document.getElementById('ob-card').remove();
+            } else {
+                obHide.disabled = false;
+            }
+        });
+    }
 
     const suiteError = document.getElementById('suite-error');
 

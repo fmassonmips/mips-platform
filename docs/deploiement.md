@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `019`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `026`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -57,12 +57,17 @@ server {
 
     # Les API sont appelées sans « .php » (/api/facturo/documents → documents.php)
     location /api/ {
-        try_files $uri $uri.php =404;
+        rewrite ^(/api/[a-z0-9_/-]+)$ $1.php last;
+        return 404;
+    }
+    # Back-office : réseau du bureau ou VPN seulement (avant le bloc .php général)
+    location ~ ^/(backoffice\.php|api/backoffice/.+\.php)$ {
+        allow <IP du bureau ou du VPN>;
+        deny all;
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
     }
     location ~ \.php$ {
-        try_files $uri =404;
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
     }
@@ -73,6 +78,8 @@ server { listen 80; server_name my.mips.mu; return 301 https://$host$request_uri
 ```
 
 **Derrière un proxy ou un CDN (Cloudflare, répartiteur de charge)** : l'application lit l'adresse du client dans `REMOTE_ADDR`, sur laquelle reposent toutes les limites (connexion, inscription, formulaires publics). Sans réglage, tous les visiteurs auraient l'adresse du proxy et se bloqueraient entre eux. Configurer le serveur web pour réécrire `REMOTE_ADDR` avec la vraie adresse, **uniquement depuis les adresses du proxy** (Nginx : `set_real_ip_from <plages du proxy>; real_ip_header X-Forwarded-For;` — Apache : `mod_remoteip`). Ne jamais faire confiance à `X-Forwarded-For` venant d'Internet.
+
+Ce bloc a été testé avec Nginx 1.24 et PHP-FPM 8.3 (`nginx -t`, puis les parcours inscription, équipe, Facturo et back-office dans un navigateur). `snippets/fastcgi-php.conf` contient déjà son propre `try_files` : ne pas en ajouter un second dans les blocs `.php` (Nginx refuse de démarrer).
 
 Vérifier après installation : `curl -I https://my.mips.mu/login.php` doit renvoyer les en-têtes `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` (posés par l'application).
 
@@ -94,6 +101,8 @@ post_max_size = 2M
 15 2 * * *  php /var/www/mips/tools/clientbloom_expire.php   >> /var/log/mips/cron.log 2>&1
 0 * * * *   php /var/www/mips/tools/rendezvous_reminders.php >> /var/log/mips/cron.log 2>&1
 20 * * * *  php /var/www/mips/tools/bookora_ical_sync.php    >> /var/log/mips/cron.log 2>&1
+5 5 * * *   php /var/www/mips/tools/reminders.php            >> /var/log/mips/cron.log 2>&1   # 9 h 05 à Maurice si le serveur est en UTC (sinon 5 9 * * *) : fins d'essai, factures en retard, résumé du lundi
+45 22 * * * php /var/www/mips/tools/purge_companies.php      >> /var/log/mips/cron.log 2>&1   # comptes fermés depuis 30 jours ; historique d'usage de plus de 13 mois
 ```
 
 Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1. **Alerter sur ce code** (par exemple `MAILTO=ops@mips.mu` en tête de crontab avec `|| echo "échec"`, ou une sonde type Healthchecks.io) : une transmission MRA bloquée ne doit pas passer inaperçue.
@@ -132,9 +141,13 @@ sudo systemctl reload php8.3-fpm
 Sur une instance **séparée** (ex. `demo.my.mips.mu`, base à part, `app.env = demo`) :
 `php tools/demo_seed.php --yes --reset --password='…'` chaque matin de démo (voir `suite-architecture.md`). Jamais sur la base de production.
 
-## 6. Abonnements
+## 6. Back-office et abonnements
 
-En attendant le paiement en ligne : `php tools/subscribe.php --org=<id>` affiche l'état d'une entreprise, `--app=<slug>|all` l'abonne, `--end` la remet en lecture seule.
+En attendant le paiement en ligne, l'équipe MIPS suit les entreprises et gère les abonnements dans `https://my.mips.mu/backoffice.php` : abonner, mettre fin, prolonger un essai, suspendre, noter un appel. Accès : adresses listées dans `backoffice.staff` de `config.local.php`, chacune avec son propre compte MIPS (jamais un compte partagé).
+
+Le back-office agit sur toutes les entreprises : le bloc Nginx ci-dessus le limite au réseau du bureau ou au VPN (403 pour toute autre adresse, en plus du 404 pour qui n'est pas dans `backoffice.staff`).
+
+En ligne de commande, `php tools/subscribe.php --org=<id> [--app=<slug>|all [--end]]` fait la même chose sans journal.
 
 ## 7. Liste à cocher avant le premier pilote
 
@@ -154,6 +167,7 @@ En attendant le paiement en ligne : `php tools/subscribe.php --org=<id>` affiche
 - [ ] Derrière un proxy/CDN : vraie adresse client restaurée (`real_ip`), testée en se trompant 6 fois de mot de passe depuis un téléphone : seul ce téléphone est bloqué
 - [ ] Pare-feu sortant en place ; alerte sur l'échec des cron
 - [ ] `billing.contact_email` renseigné
+- [ ] `backoffice.staff` rempli (comptes nominatifs de l'équipe) ; back-office limité à l'IP du bureau ou au VPN
 - [ ] Cron installés ; première exécution manuelle de chaque script sans erreur
 
 **E-mail**
@@ -166,6 +180,7 @@ En attendant le paiement en ligne : `php tools/subscribe.php --org=<id>` affiche
 
 **Données et légal**
 - [ ] Sauvegarde nocturne en place **et restauration testée**
+- [ ] Bloc `legal` de `config.local.php` rempli (raison sociale, adresse, BRN, e-mails, hébergeur, service d'e-mail) : plus aucun « [… à compléter] » sur /cgu.php et /confidentialite.php ; `draft => false` une fois les textes validés par le juriste
 - [ ] CGU / politique de confidentialité publiées (Data Protection Act 2017 de Maurice : finalités, durée de conservation, sous-traitants — hébergeur, service e-mail) — à valider par un juriste
 - [ ] Enregistrement comme « controller / processor » auprès du Data Protection Office si requis — à vérifier
 - [ ] Règle de conservation des données d'un client qui ne s'abonne pas, écrite dans les CGU

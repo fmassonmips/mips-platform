@@ -20,7 +20,7 @@
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-                body: JSON.stringify({ t: form.dataset.t, name: form.elements.name.value, password: form.elements.password.value }),
+                body: JSON.stringify({ t: form.dataset.t, name: form.elements.name.value, password: form.elements.password.value, accept_terms: document.getElementById('accept-terms').checked }),
             });
             const body = await res.json().catch(function () { return {}; });
             if (!res.ok) {

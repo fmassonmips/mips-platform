@@ -114,8 +114,8 @@ if ((int) $taken->fetchColumn() > 0) {
 /* ---------------------------------------------------------------- company and team */
 
 $pdo->prepare(
-    'INSERT INTO organizations (name, legal_name, address, brn, vat_number, email, phone, document_language)
-     VALUES (:n, \'Lagon Bleu Ltd\', \'Royal Road, Trou-aux-Biches\', \'C18099999\', \'VAT27999999\', :e, \'+230 265 0000\', \'fr\')'
+    'INSERT INTO organizations (name, legal_name, address, brn, vat_number, email, phone, document_language, onboarded_at)
+     VALUES (:n, \'Lagon Bleu Ltd\', \'Royal Road, Trou-aux-Biches\', \'C18099999\', \'VAT27999999\', :e, \'+230 265 0000\', \'fr\', NOW())'
 )->execute([':n' => DEMO_NAME, ':e' => 'contact@' . DEMO_DOMAIN]);
 $orgId = (int) $pdo->lastInsertId();
 $org   = ['id' => $orgId, 'name' => DEMO_NAME, 'role' => 'owner'];

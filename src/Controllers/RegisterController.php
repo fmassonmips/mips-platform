@@ -21,6 +21,7 @@ namespace App\Controllers;
 use App\Accounts;
 use App\Csrf;
 use App\Database;
+use App\Legal;
 use App\Mail\SmtpMailer;
 use App\RateLimiter;
 use App\Request;
@@ -63,6 +64,9 @@ final class RegisterController
         if ($passwdErr !== null) {
             Response::json(['error' => $passwdErr], 422);
         }
+        if (($data['accept_terms'] ?? false) !== true) {
+            Response::json(['error' => 'Pour créer un compte, acceptez les conditions générales d’utilisation et la politique de confidentialité.'], 422);
+        }
 
         $rl = $GLOBALS['config']['rate_limit'];
         $ip = Request::clientIp();
@@ -88,14 +92,15 @@ final class RegisterController
 
         try {
             $stmt = Database::connection()->prepare(
-                'INSERT INTO users (email, password_hash, name, role, is_active, created_at, updated_at)
-                 VALUES (:email, :hash, :name, :role, 0, NOW(), NOW())'
+                'INSERT INTO users (email, password_hash, name, role, is_active, terms_version, terms_accepted_at, created_at, updated_at)
+                 VALUES (:email, :hash, :name, :role, 0, :terms, NOW(), NOW(), NOW())'
             );
             $stmt->execute([
                 ':email' => $email,
                 ':hash'  => $hash,
                 ':name'  => $name,
                 ':role'  => 'user',
+                ':terms' => Legal::VERSION,
             ]);
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {

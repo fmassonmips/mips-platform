@@ -76,6 +76,7 @@ final class Auth
         // Bind to a hash of the User-Agent to make stolen-cookie replay harder.
         $_SESSION['ua_hash']       = self::userAgentHash();
         unset($_SESSION['csrf_token']);   // new token on the next page load
+        Database::connection()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id')->execute([':id' => (int) $user['id']]);
     }
 
     /**
@@ -113,9 +114,12 @@ final class Auth
         }
 
         $stmt = Database::connection()->prepare(
-            'SELECT id, email, name, role, created_at, password_changed_at
+            'SELECT id, email, name, role, created_at, password_changed_at, terms_version
              FROM users
              WHERE id = :id AND is_active = 1
+               AND NOT EXISTS (SELECT 1 FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
+                               WHERE ou.user_id = users.id
+                                 AND (o.suspended_at IS NOT NULL OR (o.deletion_scheduled_at IS NOT NULL AND ou.role <> \'owner\')))   -- suspended by MIPS, or closing (owner only)
              LIMIT 1'
         );
         $stmt->execute([':id' => (int) $_SESSION['user_id']]);
@@ -129,9 +133,43 @@ final class Auth
         }
         if (is_array($user)) {
             unset($user['password_changed_at']);
+            self::recordActiveDay((int) $user['id']);
         }
 
         return is_array($user) ? $user : null;
+    }
+
+    /**
+     * Usage history: one row per member and day (Mauritius date), written on the
+     * first request of the day only (remembered in the session).
+     */
+    private static function recordActiveDay(int $userId): void
+    {
+        $today = \App\RendezVous\Booking::now()->format('Y-m-d');
+        if (($_SESSION['active_day'] ?? '') === $today) {
+            return;
+        }
+        Database::connection()->prepare(
+            'INSERT IGNORE INTO user_activity (organization_id, user_id, day)
+             SELECT ou.organization_id, ou.user_id, :d FROM organization_users ou WHERE ou.user_id = :u'
+        )->execute([':d' => $today, ':u' => $userId]);
+        $_SESSION['active_day'] = $today;
+    }
+
+    /**
+     * Why the user's company is closed to them (suspended by MIPS, or being closed by its
+     * owner: only the owner still gets in), or null when it is not.
+     */
+    public static function suspension(int $userId): ?string
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT IF(o.suspended_at IS NOT NULL, COALESCE(o.suspended_reason, \'\'), \'fermeture du compte demandée par le propriétaire\')
+             FROM organization_users ou JOIN organizations o ON o.id = ou.organization_id
+             WHERE ou.user_id = :u AND (o.suspended_at IS NOT NULL OR (o.deletion_scheduled_at IS NOT NULL AND ou.role <> \'owner\')) LIMIT 1'
+        );
+        $stmt->execute([':u' => $userId]);
+        $reason = $stmt->fetchColumn();
+        return $reason === false ? null : (string) $reason;
     }
 
     /**

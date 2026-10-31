@@ -186,12 +186,13 @@ final class Customers
     }
 
     /**
-     * Insert (id = 0, with the welcome bonus) or update. Returns [id, error|null].
+     * Insert (id = 0, with the welcome bonus unless $welcomeBonus is false, as for an import
+     * of existing customers) or update. Returns [id, error|null].
      *
      * @param array<string,mixed> $f validated by validate()
      * @return array{0:int,1:?string}
      */
-    public static function save(int $orgId, int $userId, int $id, array $f): array
+    public static function save(int $orgId, int $userId, int $id, array $f, bool $welcomeBonus = true): array
     {
         $pdo = Database::connection();
         if ($f['phone'] !== null) {
@@ -214,7 +215,7 @@ final class Customers
             )->execute($params + [':consent2' => $f['marketing_consent']]);
             $id = (int) $pdo->lastInsertId();
 
-            $bonus = Settings::get($orgId)['welcome_bonus_cents'];
+            $bonus = $welcomeBonus ? Settings::get($orgId)['welcome_bonus_cents'] : 0;
             if ($bonus > 0) {
                 Ledger::bonus($orgId, $userId, $id, $bonus, 'Bonus de bienvenue');
             }

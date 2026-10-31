@@ -76,7 +76,14 @@ final class LoginController
             Response::json(['error' => 'Identifiants invalides.'], 401);
         }
 
-        // Success: bind session (rotates the CSRF token), clear this address's failures.
+        // Company suspended by the MIPS team: right password, but no session.
+        if (($why = Auth::suspension((int) $user['id'])) !== null) {
+            $contact = (string) ($GLOBALS['config']['billing']['contact_email'] ?? '');
+            Response::json(['error' => 'L’accès de votre entreprise est suspendu' . ($why !== '' ? ' (' . $why . ')' : '') . '. Contactez MIPS'
+                . ($contact !== '' ? ' : ' . $contact : '') . '.'], 403);
+        }
+
+                // Success: bind session (rotates the CSRF token), clear this address's failures.
         Auth::login_user($user);
         RateLimiter::clear($email);
 

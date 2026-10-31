@@ -284,12 +284,73 @@ mouvement de cashback est le numéro de facture. Une erreur côté fidélité ne
 - `--reset` supprime l'entreprise de démo (celle de ce nom dont le propriétaire a l'e-mail de démo) et les comptes `@lagonbleu.example`, puis la recrée ; rien d'autre n'est touché.
 - À relancer avant une démo pour que « aujourd'hui » et le mois en cours aient des données. Base de démo ou de préproduction uniquement.
 
+## Premiers pas et import depuis Excel
+
+| Élément | Règle |
+|---|---|
+| Assistant | `/welcome.php`, ouvert juste après la confirmation de l'adresse (propriétaire/administrateur) : 1. profil de l'entreprise (raison sociale et BRN, imprimés sur les documents), 2. choix des apps (essai de 30 jours chacune), 3. invitation de collègues. Chaque étape se passe ; « Plus tard » ramène au tableau de bord. Il réutilise les API existantes (`/api/suite/organization`, `/modules`, `/team`). |
+| « Bien démarrer » | Carte du tableau de bord (propriétaire/administrateur) : profil complet, une app activée, équipe invitée, données importées. Chaque étape est lue dans les données, jamais cochée à la main. Disparaît pour de bon quand tout est fait ou avec « Masquer cette liste » (`organizations.onboarded_at`, migration 021 ; les entreprises existantes ne la voient pas). |
+| Import | `/import.php?type=clients` (Facturo), `customers` (ClientBloom), `products` (ShopLokal) ; propriétaire/administrateur, app utilisable (pas en lecture seule). Lien « Importer depuis Excel » sur chaque liste et modèle CSV téléchargeable. |
+| Fichier | CSV d'Excel ou Google Sheets, UTF-8 (avec ou sans BOM) ou Windows-1252, séparateur « ; », « , » ou tabulation ; 1 Mo et 2000 lignes au plus. Un .xlsx est refusé avec la marche à suivre (« Enregistrer sous » → CSV UTF-8). |
+| Colonnes | Associées d'après leurs noms (français ou anglais : « Raison sociale », « Courriel », « Tél. », « Désignation », « Prix TTC »…), corrigeables avant l'import. |
+| Vérification | Chaque ligne passe les mêmes contrôles que la saisie dans l'app ; aperçu sans rien enregistrer : lignes prêtes, déjà présentes, à corriger (numéro de ligne et raison). L'import enregistre les lignes valides en une transaction et ignore les autres ; réimporter le même fichier corrigé n'ajoute que le nouveau. |
+| Doublons | Clients Facturo : même e-mail (ou même nom et téléphone sans e-mail). ClientBloom : même téléphone ou même e-mail. Produits : même nom. Dans le fichier comme dans l'app. |
+| Formats | Prix : 250 / 250,00 / 1 250,50 / 1,250 / Rs 1 250 ; TVA : 15 %, 0 %, exonéré (vide = 15 %). Anniversaire jour en premier (14/02/1990). Téléphone : +230 retiré. Consentement aux offres : oui / yes / x / 1, sinon non. |
+| ClientBloom | Les clients importés ne reçoivent pas le bonus de bienvenue ; leur cashback démarre à zéro. |
+
+## E-mails automatiques
+
+Envoyés une fois chacun (`notification_log`, migration 022) par `tools/reminders.php` (cron quotidien, 9 h 05 à Maurice) ; un e-mail qui échoue n'est pas marqué envoyé et repart au passage suivant, le script sort alors avec le code 1. Rien n'est envoyé à une entreprise suspendue, ni sans SMTP.
+
+| E-mail | Règle |
+|---|---|
+| Bienvenue | À la confirmation d'une inscription : les premiers pas et le lien vers l'assistant. Réponses vers `billing.contact_email`. |
+| Fin d'essai | Au propriétaire et aux administrateurs, un e-mail par entreprise et par étape listant les apps concernées : 7 jours avant, la veille, et le jour du passage en lecture seule (ce que cela change, données conservées, contact abonnement). Un essai prolongé depuis le back-office a de nouveau ses rappels pour sa nouvelle date. |
+| Résumé du lundi | Au propriétaire et aux administrateurs, le lundi : la semaine écoulée (lundi–dimanche) et ce qui attend, pour les apps utilisées, avec les chiffres de BizPilot (`App\BizPilot\Digest`, mêmes fonctions que l'écran) : facturé / encaissé / à encaisser et en retard, commandes, rendez-vous de la semaine passée et à venir, nuitées, ventes à la caisse, tickets, réponses ; « À faire » avec liens (factures en retard, devis à relancer, commandes et réservations à confirmer, tickets sans réponse, congés à valider, tâches en retard). Rien si rien ne s'est passé. Une fois par personne et par semaine. Désactivable par chacun (tableau de bord, ou lien en un clic dans l'e-mail, signé avec `app.secret_key`, confirmé par un bouton pour que les antivirus qui ouvrent les liens ne désabonnent pas ; `users.digest_opt_out`, migration 026). `php tools/reminders.php --digest` l'envoie un autre jour. |
+| Factures en retard (Facturo) | Désactivé par défaut ; case « Relancer automatiquement les factures en retard » (onglet Entreprise, propriétaire/administrateur). Au client, 7 jours puis 30 jours après l'échéance, dans la langue de la facture, au nom de l'entreprise (réponses vers son e-mail), avec le lien vers la facture ; noté « Relance automatique » dans l'historique d'envoi. Seulement : factures émises et impayées, fiscalisées si la MRA est activée, montant restant après avoirs, client avec e-mail, échéance postérieure à l'activation (aucune relance en masse des anciennes factures), Facturo utilisable (pas en lecture seule). Au-delà de 30 jours sans premier rappel, un seul rappel, rédigé comme le premier. |
+
+## Vos données : export et fermeture du compte
+
+Page `/data.php`, réservée au propriétaire (lien « Télécharger ou fermer le compte » sur le tableau de bord).
+
+| Élément | Règle |
+|---|---|
+| Export | ZIP (`/export.php`) : un CSV par table de l'entreprise (UTF-8 avec BOM, virgule ; lignes de facture, de commande, de réservation, messages, temps… rattachés à leur parent), l'équipe, les photos des produits et des logements en fichiers, un LISEZMOI. Sans mots de passe, secrets MRA ni jetons des liens publics ; cellules commençant par = + - @ préfixées d'une apostrophe. L'équipe MIPS l'obtient depuis le back-office (`/export.php?org=…`), noté au journal. |
+| Fermeture | Nom de l'entreprise retapé + mot de passe (échecs comptés comme à la connexion). Tout de suite : apps et pages publiques fermées, membres déconnectés (« fermeture du compte demandée » à la connexion), plus aucun e-mail automatique ; le propriétaire seul peut se connecter, pour exporter ou annuler. E-mail au propriétaire avec la date. |
+| Annulation | Par le propriétaire jusqu'à la date, ou par l'équipe MIPS (back-office, filtre « Fermeture demandée », noté au journal) : tout redevient comme avant. |
+| Suppression | `tools/purge_companies.php` (cron quotidien) après 30 jours (`organizations.deletion_scheduled_at`, migration 023) : toutes les données de l'entreprise (tables filles d'abord, aucun lien RESTRICT ne bloque) et les comptes de l'équipe qui n'appartiennent à aucune autre entreprise. Le journal du back-office garde une ligne « Entreprise supprimée » ; le propriétaire reçoit un e-mail. |
+
+## Conditions d'utilisation et confidentialité
+
+| Élément | Règle |
+|---|---|
+| Pages | `/cgu.php` et `/confidentialite.php`, publiques, liées sous les formulaires de connexion, d'inscription et de compte. Leur texte (`templates/legal/`) décrit les règles réelles du produit (essai, lecture seule, export, suppression, MRA, cookie, durées de conservation) : changer l'un, c'est changer l'autre. |
+| Éditeur | Bloc `legal` de la configuration ; une valeur vide s'affiche « [… à compléter] », jamais inventée. `legal.draft` affiche « Version provisoire » tant que le juriste n'a pas validé. |
+| Acceptation | Case obligatoire à l'inscription et à l'acceptation d'une invitation (refus serveur sinon) ; version (`App\Legal::VERSION`) et date enregistrées sur le compte (migration 024). |
+| Nouvelle version | Monter `Legal::VERSION` : chaque utilisateur qui n'a pas accepté la version en vigueur voit un bandeau « J'accepte » sur son tableau de bord (non bloquant). Les comptes antérieurs à la migration le voient une fois. |
+
+## Back-office MIPS
+
+Page `/backoffice.php`, réservée à l'équipe MIPS : comptes listés dans `backoffice.staff` (configuration du serveur), connectés avec leur propre compte MIPS. Pour tout autre visiteur, la page et l'API (`/api/backoffice/company`) répondent 404 ; un lien « Back-office » n'apparaît sur le tableau de bord que pour l'équipe.
+
+| Élément | Règle |
+|---|---|
+| Accueil | Entreprises (+30 j), actives sur 7 jours (au moins une connexion), apps en essai, essais finissant sous 7 jours, abonnements. Liste filtrable (essai finissant, lecture seule, abonnées, sans connexion depuis 14 jours, suspendues) et recherche par nom, raison sociale, BRN ou e-mail d'un membre. |
+| Fiche entreprise | Profil, chaque app (essai / lecture seule / abonné / éteinte, fin d'essai, activité sur 30 jours et total), membres avec dernière connexion (`users.last_login_at`). |
+| Abonner | App pleinement utilisable, sans date de fin. Remplace `tools/subscribe.php` (toujours disponible en ligne de commande). |
+| Fin d'abonnement | L'app passe en lecture seule tout de suite ; les données restent. |
+| Prolonger | 1 à 90 jours sur un essai en cours ; un essai terminé repart d'aujourd'hui (l'app redevient utilisable). Raison facultative, notée au journal. |
+| Suspendre | Raison obligatoire, montrée aux membres à la connexion avec `billing.contact_email`. Les sessions ouvertes se ferment, les pages publiques (réservation, boutique, formulaires, flux iCal) ferment, aucune donnée supprimée. Impossible sur sa propre entreprise. « Réactiver l'accès » rétablit tout. |
+| Journal | Chaque action et chaque note, avec son auteur et l'heure (`backoffice_log`), sur la fiche et sur l'accueil. |
+| Utilisation | Une ligne par membre et par jour d'utilisation (`user_activity`, migration 025 ; la date seulement, écrite à la première requête du jour). Liste : « Jours actifs (30 j) ». Fiche : jours avec au moins une connexion sur 30, membres actifs sur 7 jours, enregistrements créés, deux histogrammes jour par jour (membres connectés, enregistrements toutes apps), jours actifs par membre. Exporté avec les données de l'entreprise ; effacé après 13 mois (`purge_companies.php`). |
+
 ## Ajouter une app
 
 1. Passer son `status` à `available` dans `src/Suite/Catalog.php`.
 2. Créer `templates/modules/<slug>.view.php` (rendu dans la coquille commune).
 3. Ses tables SQL portent `organization_id` + clé étrangère vers `organizations`.
 4. Ses endpoints commencent par `Modules::require($user, '<slug>')` (pages) ou une vérification équivalente (API).
+5. Ajouter ses tables à `Suite\DataExport::TABLES` (export) et, si une autre table y pointe en `RESTRICT`, à `Suite\Closure::DELETE_ORDER` (suppression) : le test `e2e25` vérifie que chaque table de l'entreprise est exportée.
 
 ## Mise en place sur une base existante
 
@@ -312,10 +373,19 @@ mysql -u root -p mips_platform < sql/migrations/015_team.sql
 mysql -u root -p mips_platform < sql/migrations/016_staffzen.sql
 mysql -u root -p mips_platform < sql/migrations/017_bookora.sql
 mysql -u root -p mips_platform < sql/migrations/018_account_tokens.sql
+mysql -u root -p mips_platform < sql/migrations/019_account_hardening.sql
+mysql -u root -p mips_platform < sql/migrations/020_backoffice.sql
+mysql -u root -p mips_platform < sql/migrations/021_onboarding.sql
+mysql -u root -p mips_platform < sql/migrations/022_reminders.sql
+mysql -u root -p mips_platform < sql/migrations/023_closure.sql
+mysql -u root -p mips_platform < sql/migrations/024_terms.sql
+mysql -u root -p mips_platform < sql/migrations/025_usage.sql
+mysql -u root -p mips_platform < sql/migrations/026_digest.sql
 ```
 
 Puis dans `config/config.php` :
-- bloc `billing` : `contact_email` affiché aux entreprises dont l'essai est terminé ;
+- bloc `billing` : `contact_email` affiché aux entreprises dont l'essai est terminé ou l'accès suspendu ;
+- bloc `backoffice` : `staff`, adresses de l'équipe MIPS autorisées au back-office ;
 - bloc `bookora` : laisser `ical_allow_private` à `false` en production ;
 - `app.url` et le bloc `mail` (serveur SMTP) : sans `mail.host`, l'envoi est désactivé et l'interface l'indique ;
 - `app.secret_key` (32 octets aléatoires en base64) : requis pour stocker les mots de passe MRA ;
@@ -327,6 +397,8 @@ Cron :
 15 2 * * *  php tools/clientbloom_expire.php
 0 * * * *   php tools/rendezvous_reminders.php
 20 * * * *  php tools/bookora_ical_sync.php
+5 5 * * *   php tools/reminders.php
+45 22 * * * php tools/purge_companies.php
 ```
 
 ## Reste à décider

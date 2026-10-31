@@ -114,7 +114,7 @@ $canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], tru
     <ul class="send-log">
       <?php foreach ($sent as $s): ?>
         <li class="<?= $s['status'] === 'sent' ? '' : 'error-text' ?>">
-          <?= $s['status'] === 'sent' ? 'Envoyé à' : 'Échec de l\'envoi à' ?> <?= $e($s['recipient']) ?>
+          <?= (int) $s['automatic'] === 1 ? ($s['status'] === 'sent' ? 'Relance automatique envoyée à' : 'Échec de la relance automatique à') : ($s['status'] === 'sent' ? 'Envoyé à' : 'Échec de l\'envoi à') ?> <?= $e($s['recipient']) ?>
           · <?= $e(\App\Format::dateTime($s['created_at'])) ?>
         </li>
       <?php endforeach; ?>

@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS users (
     is_active       TINYINT(1)   NOT NULL DEFAULT 1,
     password_changed_at DATETIME NULL,                     -- logs out the account's other sessions
     verified_at     DATETIME     NULL,                     -- address confirmed (sign-up link, invitation); NULL = pending or seeded
+    last_login_at   DATETIME     NULL,
+    terms_version   VARCHAR(20)  NULL,                     -- CGU + privacy policy version accepted (App\Legal::VERSION)
+    terms_accepted_at DATETIME   NULL,
+    digest_opt_out  TINYINT(1)   NOT NULL DEFAULT 0,       -- 1 = no Monday summary e-mail
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                     ON UPDATE CURRENT_TIMESTAMP,
@@ -71,6 +75,15 @@ CREATE TABLE IF NOT EXISTS organizations (
     phone           VARCHAR(40)  NULL,
     -- Language of documents sent to clients (quotes, invoices, credit notes, e-mails)
     document_language CHAR(2)    NOT NULL DEFAULT 'fr',
+    -- Suspended by the MIPS team: members cannot log in, public pages close, data kept
+    suspended_at     DATETIME     NULL,
+    suspended_reason VARCHAR(300) NULL,
+    -- First steps done or hidden: the dashboard no longer shows « Bien démarrer »
+    onboarded_at     DATETIME     NULL,
+    -- Facturo: overdue invoices reminded from this date on (NULL = off); older invoices are never reminded
+    facturo_reminders_since DATETIME NULL,
+    -- Deletion requested by the owner: closed at once, data deleted on this date (cancellable until then)
+    deletion_scheduled_at DATETIME NULL,
     -- MRA e-invoicing credentials (password encrypted with app.secret_key)
     mra_enabled      TINYINT(1)   NOT NULL DEFAULT 0,
     mra_username     VARCHAR(100) NULL,
@@ -882,6 +895,56 @@ CREATE TABLE IF NOT EXISTS bookora_booking_lines (
     PRIMARY KEY (id),
     KEY idx_bk_lines_booking (booking_id),
     CONSTRAINT fk_bk_lines_booking FOREIGN KEY (booking_id) REFERENCES bookora_bookings (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- MIPS back-office
+-- =======================================================================
+
+-- ---- backoffice_log (every action of the MIPS team, and their notes) --------
+CREATE TABLE IF NOT EXISTS backoffice_log (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    staff_user_id   BIGINT UNSIGNED NULL,
+    organization_id BIGINT UNSIGNED NULL,
+    action          VARCHAR(32)     NOT NULL,          -- subscribe | end | extend | suspend | unsuspend | note
+    detail          VARCHAR(1000)   NOT NULL DEFAULT '',
+    created_at      DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_backoffice_log_org (organization_id, created_at),
+    KEY idx_backoffice_log_time (created_at),
+    CONSTRAINT fk_backoffice_log_staff FOREIGN KEY (staff_user_id) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_backoffice_log_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Automatic e-mails
+-- =======================================================================
+
+-- ---- notification_log (each automatic e-mail sent once) ----------------------
+CREATE TABLE IF NOT EXISTS notification_log (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    kind            VARCHAR(20)     NOT NULL,          -- trial_7 | trial_1 | trial_end | welcome | invoice_1 | invoice_2
+    ref             VARCHAR(80)     NOT NULL,          -- app + trial end, user id, document id
+    sent_at         DATETIME        NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_notification (organization_id, kind, ref),
+    CONSTRAINT fk_notification_org FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Usage history
+-- =======================================================================
+
+-- ---- user_activity (days a member used my.mips.mu, kept 13 months) --------
+CREATE TABLE IF NOT EXISTS user_activity (
+    organization_id BIGINT UNSIGNED NOT NULL,
+    user_id         BIGINT UNSIGNED NOT NULL,
+    day             DATE            NOT NULL,              -- Mauritius date
+    PRIMARY KEY (organization_id, user_id, day),
+    KEY idx_user_activity_day (organization_id, day),
+    CONSTRAINT fk_user_activity_org  FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_activity_user FOREIGN KEY (user_id)         REFERENCES users (id)         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

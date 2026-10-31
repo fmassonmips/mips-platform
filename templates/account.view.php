@@ -50,6 +50,8 @@ $e = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES, '
       <p><a href="/forgot.php">Demander un nouveau lien</a></p>
     <?php endif; ?>
     <p class="auth-link"><a href="/login.php">Se connecter</a></p>
+
+    <p class="legal-links"><a href="/cgu.php">Conditions d’utilisation</a> · <a href="/confidentialite.php">Confidentialité</a></p>
   </main>
   <script src="/assets/js/account.js"></script>
 </body>

@@ -6,6 +6,7 @@
  * - Company page: save via POST /api/suite/organization.
  * - Send by e-mail: POST /api/facturo/documents { action: 'email' }.
  * - MRA e-invoicing settings: POST /api/suite/mra.
+ * - Automatic reminders of overdue invoices: POST /api/facturo/documents { action: 'reminders' }.
  * The server recomputes every amount; the totals shown here are a preview only.
  */
 (function () {
@@ -227,6 +228,20 @@
             } catch (err) {
                 showError(err.message);
                 submit.disabled = false;
+            }
+        });
+    }
+
+    // ---- Automatic reminders of overdue invoices ----------------------------
+    const remindersForm = document.getElementById('reminders-form');
+    if (remindersForm) {
+        remindersForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            try {
+                await post('/api/facturo/documents', { action: 'reminders', enabled: remindersForm.elements.enabled.checked });
+                window.location.reload();
+            } catch (err) {
+                showError(err.message);
             }
         });
     }
