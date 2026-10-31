@@ -17,6 +17,8 @@ tests/e2e/run.sh e2e22 e2e25  # quelques suites
 
 Prérequis (en tête de `tests/e2e/run.sh`) : PHP 8.3 avec pdo_mysql, mbstring, curl, sodium, zip ; MariaDB démarrée et accessible par la commande `mysql` en administrateur ; Node avec Playwright et Chromium ; Python 3 avec `cryptography` ; rsync et openssl ; ports 8099, 8098, 8097 et 2525 libres. Le script utilise sa propre base `mips_e2e`, recréée avant chaque suite (il refuse `mips_platform`), une copie du code dans `tests/.work/`, un faux serveur SMTP, un faux serveur de l'API MRA et un faux calendrier Airbnb. Captures d'écran et e-mails reçus restent dans `tests/.work/` pour inspection.
 
+**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 27 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
+
 Ce que les tests ne couvrent pas : la vraie API MRA (jamais appelée), un vrai serveur SMTP, Nginx en production (testé une fois à la main, voir `docs/deploiement.md`), la charge, les navigateurs autres que Chromium.
 
 ## 3. Lots de relecture
@@ -64,7 +66,7 @@ Par ordre de gravité si c'est faux. Pour chaque point : quoi vérifier, où.
 ## 6. Limites connues, décidées
 
 - Pas de tests unitaires, seulement des tests de bout en bout (lents mais proches de l'usage réel).
-- Pas d'intégration continue configurée sur le dépôt : `tests/e2e/run.sh` est à lancer à la main ou à brancher sur une CI.
+- Les tests tournent contre MariaDB 10.11 et Chromium seulement.
 - Pas de paiement en ligne (abonnements gérés depuis le back-office ; ShopLokal et Bookora encaissent hors ligne).
 - Un compte utilisateur appartient à une seule entreprise.
 - L'historique d'usage ne garde que la date de passage, pas la fréquence ni le détail.

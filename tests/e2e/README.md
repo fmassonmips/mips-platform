@@ -9,6 +9,8 @@ tests/e2e/run.sh e2e22 e2e25  # quelques suites
 
 Prérequis et variables (`MIPS_E2E_DB`, `MIPS_E2E_WORKDIR`…) : voir l'en-tête de `run.sh`. La base de test est détruite et recréée avant chaque suite ; le script refuse `mips_platform`. Il règle aussi le fuseau global de MariaDB sur `+04:00` (heure de Maurice), comme l'application le fait pour ses propres connexions.
 
+Sur GitHub, `.github/workflows/tests.yml` lance les mêmes suites à chaque pull request, en quatre lots parallèles (`MIPS_E2E_SHARD`).
+
 Une suite reçoit en argument le dossier de travail (`tests/.work/`) : copie du code dans `t/`, e-mails reçus dans `mail/`, captures d'écran à la racine.
 
 | Suite | Couvre |
