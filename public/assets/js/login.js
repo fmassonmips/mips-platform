@@ -35,12 +35,12 @@
         const password = passwordEl.value;
 
         if (!email || !password) {
-            showError('Please enter your email and password.');
+            showError('Saisissez votre e-mail et votre mot de passe.');
             return;
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Signing in…';
+        submitBtn.textContent = 'Connexion…';
 
         try {
             const res = await fetch('/api/auth/login', {
@@ -58,18 +58,18 @@
             try { data = await res.json(); } catch (_) { /* ignore */ }
 
             if (!res.ok) {
-                showError(data.error || 'Login failed. Please try again.');
+                showError(data.error || 'Échec de la connexion. Veuillez réessayer.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign in';
+                submitBtn.textContent = 'Se connecter';
                 return;
             }
 
             // Session cookie is already set. Redirect to the dashboard.
             window.location.assign('/dashboard.php');
         } catch (err) {
-            showError('Network error. Please try again.');
+            showError('Erreur réseau. Veuillez réessayer.');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Sign in';
+            submitBtn.textContent = 'Se connecter';
         }
     });
 })();

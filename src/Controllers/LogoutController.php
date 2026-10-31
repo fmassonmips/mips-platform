@@ -22,11 +22,11 @@ final class LogoutController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
 
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
 
         Auth::logout_user();

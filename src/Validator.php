@@ -14,13 +14,13 @@ final class Validator
     {
         $email = trim($email);
         if ($email === '') {
-            return 'Email is required.';
+            return 'L’e-mail est obligatoire.';
         }
         if (strlen($email) > 254) {
-            return 'Email is too long.';
+            return 'L’e-mail est trop long.';
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return 'Email format is invalid.';
+            return 'Format d’e-mail invalide.';
         }
         return null;
     }
@@ -29,13 +29,13 @@ final class Validator
     public static function password(string $password, int $minLength = 8): ?string
     {
         if ($password === '') {
-            return 'Password is required.';
+            return 'Le mot de passe est obligatoire.';
         }
         if (strlen($password) < $minLength) {
-            return 'Password must be at least ' . $minLength . ' characters.';
+            return 'Le mot de passe doit contenir au moins ' . $minLength . ' caractères.';
         }
         if (strlen($password) > 255) {
-            return 'Password is too long.';
+            return 'Le mot de passe est trop long.';
         }
         return null;
     }
@@ -45,10 +45,10 @@ final class Validator
     {
         $name = trim($name);
         if ($name === '') {
-            return 'Name is required.';
+            return 'Le nom est obligatoire.';
         }
         if (strlen($name) > 120) {
-            return 'Name must be no more than 120 characters.';
+            return 'Le nom ne doit pas dépasser 120 caractères.';
         }
         return null;
     }

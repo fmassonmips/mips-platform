@@ -14,6 +14,6 @@ if (\App\Auth::current_user() !== null) {
 }
 
 $csrf_token = \App\Csrf::token();
-$page_title = 'Sign in';
+$page_title = 'Connexion';
 
 require TEMPLATES_PATH . '/login.view.php';

@@ -14,6 +14,6 @@ if (\App\Auth::current_user() !== null) {
 }
 
 $csrf_token = \App\Csrf::token();
-$page_title = 'Create account';
+$page_title = 'Créer un compte';
 
 require TEMPLATES_PATH . '/register.view.php';

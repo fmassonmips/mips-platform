@@ -27,13 +27,13 @@ final class LoginController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
 
         // CSRF check — the login page put a token in a meta tag and the
         // JS client sends it back via X-CSRF-Token.
         if (!Csrf::verify($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)) {
-            Response::json(['error' => 'Invalid CSRF token.'], 419);
+            Response::json(['error' => 'Jeton de sécurité invalide, rechargez la page.'], 419);
         }
 
         // Parse JSON body; fall back to form-encoded POST for curl testing.
@@ -52,14 +52,14 @@ final class LoginController
         $emailErr  = Validator::email($email);
         $passwdErr = Validator::password($password, $minLen);
         if ($emailErr !== null || $passwdErr !== null) {
-            Response::json(['error' => 'Invalid credentials.'], 422);
+            Response::json(['error' => 'Identifiants invalides.'], 422);
         }
 
         // Rate limit (IP + email).
         $rl  = $GLOBALS['config']['rate_limit'];
         $ip  = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         if (RateLimiter::tooManyAttempts($ip, $email, (int) $rl['max_attempts'], (int) $rl['window_seconds'])) {
-            Response::json(['error' => 'Too many attempts. Please try again later.'], 429);
+            Response::json(['error' => 'Trop de tentatives. Veuillez réessayer plus tard.'], 429);
         }
 
         // Attempt credentials.
@@ -67,7 +67,7 @@ final class LoginController
         RateLimiter::record($ip, $email, $user !== null);
 
         if ($user === null) {
-            Response::json(['error' => 'Invalid credentials.'], 401);
+            Response::json(['error' => 'Identifiants invalides.'], 401);
         }
 
         // Success: bind session, clear rate-limit counters, rotate CSRF token.

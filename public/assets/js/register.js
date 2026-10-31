@@ -33,12 +33,12 @@
         const password = passwordEl.value;
 
         if (!name || !email || !password) {
-            showError('Please fill in all fields.');
+            showError('Veuillez remplir tous les champs.');
             return;
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating account…';
+        submitBtn.textContent = 'Création du compte…';
 
         try {
             const res = await fetch('/api/auth/register', {
@@ -56,17 +56,17 @@
             try { data = await res.json(); } catch (_) { /* ignore */ }
 
             if (!res.ok) {
-                showError(data.error || 'Registration failed. Please try again.');
+                showError(data.error || 'Échec de l’inscription. Veuillez réessayer.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Create account';
+                submitBtn.textContent = 'Créer un compte';
                 return;
             }
 
             window.location.assign('/login.php?registered=1');
         } catch (err) {
-            showError('Network error. Please try again.');
+            showError('Erreur réseau. Veuillez réessayer.');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Create account';
+            submitBtn.textContent = 'Créer un compte';
         }
     });
 })();

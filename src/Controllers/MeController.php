@@ -21,12 +21,12 @@ final class MeController
     public function handle(): void
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
-            Response::json(['error' => 'Method Not Allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée'], 405);
         }
 
         $user = Auth::current_user();
         if ($user === null) {
-            Response::json(['error' => 'Unauthorized'], 401);
+            Response::json(['error' => 'Non autorisé'], 401);
         }
 
         Response::json([
