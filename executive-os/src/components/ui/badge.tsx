@@ -31,6 +31,7 @@ const STATUS_TONE: Record<string, Tone> = {
   approved: 'pos', paid: 'pos', done: 'pos', completed: 'pos', implemented: 'pos', on_track: 'pos', committed: 'pos', confirmed: 'pos', resolved: 'pos', active: 'pos', locked: 'navy', closed: 'navy', verified: 'pos', pass: 'pos',
   draft: 'neutral', open: 'info', received: 'info', proposed: 'info', submitted: 'info', uploaded: 'info', validated: 'info', in_progress: 'info', not_started: 'neutral', scheduled: 'info', shortlisted: 'gold', selected: 'gold', soft_closed: 'warn', in_review: 'warn',
   at_risk: 'warn', on_hold: 'warn', pending: 'warn', partially_paid: 'warn', investigating: 'warn', warn: 'warn', reminded: 'warn', promised: 'info',
+  pending_approval: 'warn', reminder_drafted: 'info', reminder_sent: 'pos', amount_difference: 'warn', duplicate: 'warn', unmatched: 'neg',
   blocked: 'neg', rejected: 'neg', failed: 'neg', overdue: 'neg', disputed: 'neg', escalated: 'neg', churned: 'neg', cancelled: 'neutral', fail: 'neg', superseded: 'neutral', archived: 'neutral', legal: 'neg',
 };
 export function StatusBadge({ status }: { status: string }) {
