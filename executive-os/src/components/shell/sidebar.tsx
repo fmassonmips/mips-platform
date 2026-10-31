@@ -12,7 +12,7 @@ export function Sidebar({ perms }: { perms: string[] }) {
   return (
     <nav className="flex h-full flex-col gap-4 overflow-y-auto px-3 py-4" aria-label="Main navigation">
       {NAV.map((g) => {
-        const items = g.items.filter((i) => can.has(i.perm));
+        const items = g.items.filter((i) => ([] as string[]).concat(i.perm as any).some((p) => can.has(p)));
         if (!items.length) return null;
         return (
           <div key={g.group}>

@@ -30,6 +30,6 @@ export const NAV = [
   ] },
   { group: 'Platform', items: [
     { href: '/integrations', label: 'Data Integrations', icon: 'Plug', perm: 'data.import' },
-    { href: '/admin', label: 'Administration', icon: 'Settings', perm: 'admin.settings' },
+    { href: '/admin', label: 'Administration', icon: 'Settings', perm: ['admin.settings', 'admin.users', 'admin.audit', 'admin.demo_reset', 'finance.lock_period'] },
   ] },
 ] as const;
