@@ -37,7 +37,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT t.id, t.code, t.name, t.is_demo, r.code
   FROM memberships m JOIN tenants t ON t.id = m.tenant_id JOIN roles r ON r.id = m.role_id
   WHERE m.user_id = p_user AND m.is_active AND t.status = 'active'
-  ORDER BY t.is_demo, t.name
+  ORDER BY m.created_at, t.name   -- primary tenant = first joined
 $$;
 
 CREATE OR REPLACE FUNCTION auth_api_key_lookup(p_hash text)

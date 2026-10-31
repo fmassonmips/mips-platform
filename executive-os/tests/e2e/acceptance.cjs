@@ -64,7 +64,11 @@ async function createScenario(p, merchantId, name, params) {
       return ceo.url();
     });
     const admin = await login(browser, 'admin@mips.demo');
-    if ((await admin.locator('select[name=tenantId]').count()) > 0) { await admin.selectOption('select[name=tenantId]', { label: 'MIPSIT Digital Ltd (DEMO)' }); await admin.waitForTimeout(2000); }
+    const sel = admin.locator('select[name=tenantId]');
+    if ((await sel.count()) > 0 && (await sel.inputValue()) !== (await sel.locator('option', { hasText: 'MIPSIT Digital Ltd (DEMO)' }).getAttribute('value'))) {
+      await sel.selectOption({ label: 'MIPSIT Digital Ltd (DEMO)' });
+      await admin.waitForFunction(() => document.querySelector('select[name=tenantId]')?.selectedOptions[0]?.textContent?.includes('MIPSIT'), null, { timeout: 60000 });
+    }
     await step('8. Decision approved by a second approver (segregation of duties) and appears in Strategy Execution', async () => {
       await admin.goto(decisionUrl); await admin.fill('input[name=note]', 'Approved by Board delegate'); await admin.click('button:has-text("Approve decision")');
       await admin.waitForSelector('text=approved', { timeout: 60000 }); await admin.reload();
