@@ -264,7 +264,7 @@ final class Tickets
         if ($priority !== null && !isset(self::PRIORITIES[$priority])) {
             return 'Priorité invalide.';
         }
-        if ($assignee !== null && $assignee > 0 && !isset(self::members($orgId)[$assignee])) {
+        if ($assignee !== null && $assignee > 0 && !isset(\App\Suite\Tenant::members($orgId)[$assignee])) {
             return 'Cette personne ne fait pas partie de l\'entreprise.';
         }
         $status   ??= (string) $ticket['status'];
@@ -315,26 +315,6 @@ final class Tickets
             ->execute([':now' => $now, ':id' => (int) $ticket['id']]);
         Notifier::safely(static fn () => Notifier::customerReplied($orgId, self::find($orgId, (int) $ticket['id']), $body));
         return null;
-    }
-
-    /**
-     * Members of the organization who can be assigned, id => name.
-     *
-     * @return array<int,string>
-     */
-    public static function members(int $orgId): array
-    {
-        $stmt = Database::connection()->prepare(
-            'SELECT u.id, COALESCE(NULLIF(u.name, \'\'), u.email) AS name
-             FROM organization_users ou JOIN users u ON u.id = ou.user_id
-             WHERE ou.organization_id = :oid AND u.is_active = 1 ORDER BY name'
-        );
-        $stmt->execute([':oid' => $orgId]);
-        $out = [];
-        foreach ($stmt->fetchAll() as $r) {
-            $out[(int) $r['id']] = (string) $r['name'];
-        }
-        return $out;
     }
 
     /**

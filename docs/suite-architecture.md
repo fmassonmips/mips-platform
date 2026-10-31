@@ -26,7 +26,7 @@ my.mips.mu
 
 ## État actuel
 
-- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio** et **FlowDesk** sont disponibles. Les 5 autres apps sont listées en **coming_soon**.
+- **Facturo**, **ClientBloom**, **RendezVous**, **Formelio**, **FlowDesk**, **BizPilot**, **TeamNest** et **ShopLokal** sont disponibles. StaffZen et Bookora sont listées en **coming_soon**.
 - Une entreprise est créée automatiquement au premier accès d'un utilisateur, qui en devient owner.
 - Activer une app la passe en `trial` pour 30 jours. Désactiver puis réactiver ne relance jamais l'essai ;
   une fois l'essai terminé, l'app est bloquée (« Free trial ended ») jusqu'à ce que la facturation existe.
@@ -144,6 +144,49 @@ non confirmées. À vérifier sur https://www.mra.mu/index.php/e-invoicing.
 
 **Hors périmètre :** réception des e-mails (boîte support), réponses types, délais contractuels (SLA) avec alertes, pièces jointes, satisfaction après résolution.
 
+## TeamNest (projets & tâches)
+
+| Élément | Règle |
+|---|---|
+| Projets | Nom, description, client Facturo facultatif et taux horaire HT ; avancement, tâches en retard et temps non facturé sur chaque carte ; archivage. |
+| Tâches | Tableau À faire / En cours / Fait (boutons pour changer de colonne), assignation à un membre (e-mail quand quelqu'un d'autre l'assigne), échéance, priorité, description ; « Mes tâches » par échéance. |
+| Temps passé | Saisie « 45 », « 1h30 », « 1.5 » par jour (jamais dans le futur) ; supprimable tant qu'il n'est pas facturé. |
+| Facturation | « Facturer » (owner/admin, Facturo actif) crée un brouillon de facture : une ligne par tâche en heures au taux du projet, TVA 15 % si l'entreprise a un n° TVA. Le temps est marqué facturé ; deux clics simultanés ne facturent qu'une fois ; supprimer le brouillon libère le temps. Une tâche dont du temps est facturé ne se supprime pas. |
+| FlowDesk | Depuis un ticket : « Créer la tâche » dans un projet (priorité haute si le ticket l'est), lien dans les deux sens. |
+| BizPilot | Tâches en retard dans « À faire ». |
+
+**Hors périmètre :** glisser-déposer, sous-tâches et commentaires, chronomètre, diagramme de Gantt, budget du projet.
+
+## ShopLokal (boutique en ligne, sans paiement en ligne)
+
+| Élément | Règle |
+|---|---|
+| Catalogue | Owner/admin. Prix saisi TTC, stocké HT avec un code TVA MRA (15 % par défaut si l'entreprise a un n° TVA). Stock facultatif (vide = non suivi), alerte à 3 ou moins. Photo réduite à 800 px en JPEG dans le navigateur, 400 Ko max., vérifiée côté serveur. |
+| Boutique | Lien public `/shoplokal/s.php?o=…` (fermée par défaut, nouveau lien = l'ancien renvoie 404). Panier sur le téléphone du client, livraison (frais HT, offerte dès un montant TTC d'articles) ou retrait. Page et e-mails dans la langue des documents de l'entreprise. |
+| Paiement | À la livraison, virement ou Juice, avec les instructions sur la page de commande. L'entreprise marque la commande payée. Le paiement par carte attend la passerelle MIPS. |
+| Commande | Numérotation sans trou ; produits verrouillés pendant la commande, stock revérifié puis réservé (deux clients pour le dernier article : un seul passe). Annuler remet le stock. Statuts : nouvelle → confirmée → expédiée / prête → terminée, ou annulée (définitif). E-mails au client (réception, confirmation, expédition, annulation) et à l'entreprise. |
+| Montants | TVA arrondie par ligne comme Facturo : la commande et sa facture sont identiques au centime. Conséquence : 2 × Rs 750,00 TTC peut faire Rs 1 499,99. |
+| Facturo | « Créer la facture » (owner/admin) : brouillon, client Facturo retrouvé par e-mail puis téléphone, sinon créé ; une facture par commande. |
+| Anti-abus | CSRF, champ piège, 5 commandes par heure et par connexion. |
+| BizPilot | Commandes et ventes TTC du mois ; nouvelles commandes et stock bas dans « À faire ». |
+
+**Hors périmètre :** paiement par carte, variantes (taille, couleur), codes promo, zones de livraison, plusieurs photos, export.
+
+## BizPilot (tableau de bord)
+
+Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Aucune table : lecture des autres apps actives (`src/BizPilot/Dashboard.php`).
+
+| Bloc | Contenu (mois choisi, comparé au précédent) |
+|---|---|
+| À faire | Factures en retard (montant), devis envoyés depuis plus de 14 jours, documents non fiscalisés MRA, rendez-vous du jour, tickets sans réponse. |
+| Facturation | Facturé TTC et HT (avoirs déduits), factures marquées payées, impayés et retard (nets des avoirs), devis en attente et taux d'acceptation, graphique 6 mois facturé / payé, meilleurs clients. Montants en MUR ; documents en devise étrangère signalés à part. |
+| Rendez-vous | Nombre, part en ligne, annulations, taux d'absence, valeur des prestations honorées (prix affiché). |
+| Fidélité | Ventes via le programme, nouveaux clients, cashback émis / utilisé / en circulation. |
+| Satisfaction | Score NPS et note moyenne sur toutes les réponses du mois, nombre de réponses. |
+| Support | Tickets reçus et résolus, délai moyen de première réponse, file à traiter. |
+
+« Factures payées » se fonde sur la date à laquelle la facture est marquée payée (pas de suivi des paiements partiels ni des encaissements bancaires).
+
 ## Lien Facturo → ClientBloom
 
 Option « Reward paid Facturo invoices » du programme ClientBloom (désactivée par défaut ; les deux apps doivent être actives).
@@ -181,6 +224,8 @@ mysql -u root -p mips_platform < sql/migrations/009_client_document_language.sql
 mysql -u root -p mips_platform < sql/migrations/010_rendezvous.sql
 mysql -u root -p mips_platform < sql/migrations/011_formelio.sql
 mysql -u root -p mips_platform < sql/migrations/012_flowdesk.sql
+mysql -u root -p mips_platform < sql/migrations/013_teamnest.sql
+mysql -u root -p mips_platform < sql/migrations/014_shoplokal.sql
 ```
 
 Puis dans `config/config.php` :

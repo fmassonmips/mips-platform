@@ -7,6 +7,7 @@
  * @var list<array<string,mixed>> $messages
  * @var array<int,string> $members
  * @var array<string,mixed>|null $loyalty
+ * @var array{tasks:list<array<string,mixed>>,projects:list<array<string,mixed>>}|null $teamnest  null when TeamNest is off
  */
 use App\Facturo\Money;
 use App\FlowDesk\Notifier;
@@ -75,5 +76,23 @@ $id = (int) $ticket['id'];
         </select></div>
     </form>
     <p class="muted small">Première réponse : <?= $ticket['first_response_at'] !== null ? $e(Format::dateTime((string) $ticket['first_response_at'])) : 'pas encore' ?></p>
+
+    <?php if ($teamnest !== null): ?>
+      <h3>Tâches (TeamNest)</h3>
+      <?php foreach ($teamnest['tasks'] as $tk): ?>
+        <p class="small"><a href="/app.php?m=teamnest&amp;p=task&amp;id=<?= (int) $tk['id'] ?>"><?= $e($tk['title']) ?></a>
+          · <?= $e(\App\TeamNest\Tasks::STATUSES[$tk['status']]) ?></p>
+      <?php endforeach; ?>
+      <?php if ($teamnest['projects'] === []): ?>
+        <p class="muted small">Créez un projet dans TeamNest pour transformer ce ticket en tâche.</p>
+      <?php else: ?>
+        <form id="fd-task" novalidate data-ticket="<?= $id ?>">
+          <div class="field"><label for="fd-task-project">Créer une tâche dans</label>
+            <select id="fd-task-project" name="project_id"><?php foreach ($teamnest['projects'] as $p): ?><option value="<?= (int) $p['id'] ?>"><?= $e($p['name']) ?></option><?php endforeach; ?></select></div>
+          <div class="field"><label for="fd-task-title">Tâche</label><input type="text" id="fd-task-title" name="title" maxlength="200" value="<?= $e($ticket['subject']) ?>"></div>
+          <button type="submit" class="btn-secondary">Créer la tâche</button>
+        </form>
+      <?php endif; ?>
+    <?php endif; ?>
   </aside>
 </div>

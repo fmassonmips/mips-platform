@@ -20,11 +20,11 @@ final class Catalog
 {
     /** @var array<string,array{name:string,domain:string,tagline:string,status:string}> */
     private const MODULES = [
-        'bizpilot'    => ['name' => 'BizPilot',    'domain' => 'bizpilot.mu',     'tagline' => 'Gestion des PME',         'status' => 'coming_soon'],
+        'bizpilot'    => ['name' => 'BizPilot',    'domain' => 'bizpilot.mu',     'tagline' => 'Tableau de bord',         'status' => 'available'],
         'bookora'     => ['name' => 'Bookora',     'domain' => 'bookora.com',     'tagline' => 'Réservations en ligne',   'status' => 'coming_soon'],
         'facturo'     => ['name' => 'Facturo',     'domain' => 'facturo.mu',      'tagline' => 'Devis & factures',        'status' => 'available'],
-        'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'coming_soon'],
-        'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'coming_soon'],
+        'teamnest'    => ['name' => 'TeamNest',    'domain' => 'teamnest.com',    'tagline' => 'Équipes & projets',       'status' => 'available'],
+        'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'available'],
         'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'available'],
         'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'coming_soon'],
         'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'available'],

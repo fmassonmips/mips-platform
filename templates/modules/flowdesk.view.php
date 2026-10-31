@@ -34,8 +34,10 @@ switch ($page) {
         $ticket = Tickets::find($org['id'], $id);
         if ($ticket !== null) {
             $messages = Tickets::messages($id);
-            $members  = Tickets::members($org['id']);
+            $members  = Tenant::members($org['id']);
             $loyalty  = Modules::isEnabled($org['id'], 'clientbloom') ? Tickets::loyaltyCustomer($org['id'], $ticket) : null;
+            $teamnest = Modules::isEnabled($org['id'], 'teamnest')
+                ? ['tasks' => \App\TeamNest\Tasks::forTicket($org['id'], $id), 'projects' => \App\TeamNest\Projects::all($org['id'])] : null;
             $view     = 'ticket';
             $page     = 'inbox';
         }

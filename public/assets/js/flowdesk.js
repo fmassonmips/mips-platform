@@ -85,6 +85,23 @@
         update.addEventListener('submit', function (ev) { ev.preventDefault(); });
     }
 
+    const taskForm = document.getElementById('fd-task');
+    if (taskForm) {
+        guard(taskForm, async function (f) {
+            const res = await fetch('/api/teamnest/tasks', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ action: 'from_ticket', ticket_id: Number(taskForm.dataset.ticket), project_id: Number(f.project_id.value), title: f.title.value }),
+            });
+            const body = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                throw new Error(body.error || 'La requête a échoué.');
+            }
+            window.location.reload();
+        });
+    }
+
     const settings = document.getElementById('fd-settings');
     if (settings && settings.querySelector('[type="submit"]')) {
         guard(settings, async function (f) {
