@@ -1,0 +1,447 @@
+<title>Écosystème MIPS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field guide read top to bottom — one overview map of who touches money, data and documents, then three close-ups (time, data, merchant lifecycle), then owners and open points. */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --ink: #13243a;
+  --muted: #5b6b7f;
+  --line: #d3dbe5;
+  --money: #0c7a6a;
+  --money-soft: #dff1ec;
+  --data: #2c5ea8;
+  --data-soft: #e4ecf8;
+  --doc: #9a5a12;
+  --doc-soft: #f7ecdc;
+  --warn: #b3261e;
+  --warn-soft: #fbe6e3;
+  --proto: #6b4fa0;
+  --proto-soft: #eee8f7;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1622; --surface: #152234; --ink: #e4ebf3; --muted: #9aabbf; --line: #2b3b52;
+    --money: #4fc7b2; --money-soft: #12352f; --data: #8db3ee; --data-soft: #1a2b45;
+    --doc: #e3a964; --doc-soft: #3a2a15; --warn: #f08a82; --warn-soft: #3d1a18;
+    --proto: #b9a3e6; --proto-soft: #2a2140; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1622; --surface: #152234; --ink: #e4ebf3; --muted: #9aabbf; --line: #2b3b52;
+  --money: #4fc7b2; --money-soft: #12352f; --data: #8db3ee; --data-soft: #1a2b45;
+  --doc: #e3a964; --doc-soft: #3a2a15; --warn: #f08a82; --warn-soft: #3d1a18;
+  --proto: #b9a3e6; --proto-soft: #2a2140; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1160px; margin: 0 auto; padding-block: 36px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 52px; }
+h1, h2 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; letter-spacing: -0.5px; }
+h2 { font-size: 23px; font-weight: 700; }
+p { margin: 0; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--money); }
+.lede { color: var(--muted); max-width: 70ch; }
+header { display: flex; flex-direction: column; gap: 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { font: 500 12.5px var(--f-mono); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
+.fact.ok { border-color: var(--money); color: var(--money); }
+.fact.warn { border-color: var(--warn); color: var(--warn); }
+.fact.proto { border-color: var(--proto); color: var(--proto); }
+section { display: flex; flex-direction: column; gap: 14px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { display: inline-block; width: 28px; height: 0; border-top: 2px solid var(--c); }
+.legend i.thick { border-top-width: 4px; }
+.legend i.dash { border-top-style: dashed; }
+.legend i.dot { border-top-style: dotted; border-top-width: 3px; }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.scroll { overflow-x: auto; }
+.scroll svg { display: block; width: 100%; height: auto; min-width: 760px; }
+figcaption { font-size: 13.5px; color: var(--muted); max-width: 90ch; }
+figcaption b { color: var(--ink); }
+
+/* SVG vocabulary, all from tokens */
+svg text { font-family: var(--f-body); font-size: 13px; fill: var(--ink); }
+svg .t-title { font-weight: 600; font-size: 14px; }
+svg .t-small { font-size: 11.5px; fill: var(--muted); }
+svg .t-lab { font-size: 12px; fill: var(--muted); }
+svg .t-money { fill: var(--money); font-weight: 600; font-size: 12.5px; }
+svg .t-data { fill: var(--data); font-size: 12px; }
+svg .t-doc { fill: var(--doc); font-size: 12px; }
+svg .t-warn { fill: var(--warn); font-weight: 600; font-size: 12px; }
+svg .t-proto { fill: var(--proto); font: 500 11px var(--f-mono); letter-spacing: 0.4px; }
+svg .t-lane { font: 500 11.5px var(--f-mono); fill: var(--muted); letter-spacing: 0.6px; }
+svg .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.3; }
+svg .box-money { fill: var(--money-soft); stroke: var(--money); stroke-width: 1.3; }
+svg .box-data { fill: var(--data-soft); stroke: var(--data); stroke-width: 1.3; }
+svg .box-doc { fill: var(--doc-soft); stroke: var(--doc); stroke-width: 1.3; }
+svg .box-warn { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.3; }
+svg .box-proto { fill: var(--proto-soft); stroke: var(--proto); stroke-width: 1.3; stroke-dasharray: 6 4; }
+svg .box-gate { fill: var(--money-soft); stroke: var(--money); stroke-width: 2; }
+svg .ln { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+svg .ln-money { fill: none; stroke: var(--money); stroke-width: 4; }
+svg .ln-data { fill: none; stroke: var(--data); stroke-width: 1.8; stroke-dasharray: 7 5; }
+svg .ln-doc { fill: none; stroke: var(--doc); stroke-width: 2.2; stroke-dasharray: 2 4; stroke-linecap: round; }
+svg .ln-warn { fill: none; stroke: var(--warn); stroke-width: 2; stroke-dasharray: 7 5; }
+svg .ln-life { fill: none; stroke: var(--line); stroke-width: 1.3; stroke-dasharray: 3 4; }
+svg .ln-loop { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+svg .ah { fill: var(--ink); } svg .ah-money { fill: var(--money); } svg .ah-data { fill: var(--data); }
+svg .ah-doc { fill: var(--doc); } svg .ah-warn { fill: var(--warn); } svg .ah-loop { fill: var(--muted); }
+svg .band { fill: var(--bg); }
+
+/* Owners and open points */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 18px; }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 11.5px var(--f-mono); text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td b { font-weight: 600; }
+.open { display: flex; flex-direction: column; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; }
+.chip { grid-row: span 2; font: 600 11px var(--f-mono); text-transform: uppercase; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.chip.block { background: var(--warn-soft); color: var(--warn); }
+.chip.todo { background: var(--data-soft); color: var(--data); }
+.item small { color: var(--muted); font-size: 13px; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+:focus-visible { outline: 2px solid var(--money); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">MIPS · Maurice · 31 octobre 2026</p>
+    <h1>Écosystème MIPS</h1>
+    <p class="lede">Qui intervient autour de MIPS, et ce qui circule entre eux : l'argent des ventes, les données de transaction, les documents. Le modèle de flux de fonds retenu le 31 octobre est la passerelle : MIPS ne détient pas l'argent des marchands, sous réserve de deux vérifications.</p>
+    <div class="facts">
+      <span class="fact ok">Modèle A retenu : aucun fonds de marchand détenu</span>
+      <span class="fact warn">À confirmer : licence demandée et flux des wallets</span>
+      <span class="fact proto">Back-office et portail : prototype non déployé</span>
+    </div>
+  </header>
+
+  <!-- 1. Overview -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Vue d'ensemble</p>
+      <h2>Trois flux, trois natures différentes</h2>
+      <div class="legend">
+        <span style="--c: var(--money)"><i class="thick"></i>Argent</span>
+        <span style="--c: var(--ink)"><i></i>Technique (autorisation)</span>
+        <span style="--c: var(--data)"><i class="dash"></i>Données</span>
+        <span style="--c: var(--doc)"><i class="dot"></i>Documents</span>
+        <span style="--c: var(--warn)"><i class="dash"></i>À confirmer</span>
+      </div>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg viewBox="0 0 1120 640" role="img" aria-label="Le payeur paie via la passerelle MIPS, la banque acquéreuse autorise puis règle directement le marchand ; MIPS reçoit seulement les données de transaction, qui alimentent le reporting, la facturation et le rapprochement ; les marchands envoient leurs pièces KYC par le portail et reçoivent une facture mensuelle ; le flux des wallets reste à confirmer.">
+          <defs>
+            <marker id="a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="a-money" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path class="ah-money" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="a-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-data" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="a-doc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-doc" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="a-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-warn" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+
+          <!-- Payers -->
+          <rect class="box" x="20" y="70" width="170" height="84" rx="8"/>
+          <text class="t-title" x="105" y="102" text-anchor="middle">Payeurs</text>
+          <text class="t-small" x="105" y="122" text-anchor="middle">clients des marchands</text>
+          <text class="t-small" x="105" y="139" text-anchor="middle">carte · QR · wallet</text>
+
+          <!-- MIPS gateway -->
+          <rect class="box-data" x="280" y="70" width="200" height="84" rx="8"/>
+          <text class="t-title" x="380" y="102" text-anchor="middle">Passerelle MIPS</text>
+          <text class="t-small" x="380" y="122" text-anchor="middle">en ligne, QR, TPE</text>
+          <text class="t-small" x="380" y="139" text-anchor="middle">route le paiement</text>
+
+          <!-- Acquirers -->
+          <rect class="box-money" x="570" y="40" width="200" height="132" rx="8"/>
+          <text class="t-title" x="670" y="66" text-anchor="middle">Banques acquéreuses</text>
+          <text x="670" y="92" text-anchor="middle">MCB · 6 moyens</text>
+          <text x="670" y="112" text-anchor="middle">SBM · ABSA · BNI</text>
+          <text class="t-small" x="670" y="136" text-anchor="middle">un contrat</text>
+          <text class="t-small" x="670" y="152" text-anchor="middle">par marchand</text>
+
+          <!-- Merchants -->
+          <rect class="box-doc" x="880" y="70" width="200" height="84" rx="8"/>
+          <text class="t-title" x="980" y="102" text-anchor="middle">Marchands</text>
+          <text class="t-small" x="980" y="122" text-anchor="middle">leur propre compte</text>
+          <text class="t-small" x="980" y="139" text-anchor="middle">bancaire</text>
+
+          <!-- Wallets -->
+          <rect class="box-warn" x="570" y="214" width="200" height="66" rx="8"/>
+          <text class="t-title" x="670" y="240" text-anchor="middle">Wallets et virement</text>
+          <text class="t-small" x="670" y="262" text-anchor="middle">MyT Money · Juice · BankXfer</text>
+
+          <!-- Export -->
+          <rect class="box-data" x="280" y="330" width="200" height="70" rx="8"/>
+          <text class="t-title" x="380" y="358" text-anchor="middle">Commission_Data</text>
+          <text class="t-small" x="380" y="380" text-anchor="middle">export mensuel ou BigQuery</text>
+
+          <!-- Platform container -->
+          <rect class="box-proto" x="280" y="440" width="800" height="120" rx="10"/>
+          <text class="t-proto" x="1064" y="555" text-anchor="end">PLATEFORME MIPS · PROTOTYPE DE RÉFÉRENCE, NON DÉPLOYÉ</text>
+          <rect class="box" x="300" y="476" width="175" height="66" rx="7"/>
+          <text class="t-title" x="387" y="503" text-anchor="middle">Reporting</text>
+          <text class="t-small" x="387" y="524" text-anchor="middle">rapport, tendances</text>
+          <rect class="box" x="495" y="476" width="175" height="66" rx="7"/>
+          <text class="t-title" x="582" y="503" text-anchor="middle">Facturation</text>
+          <text class="t-small" x="582" y="524" text-anchor="middle">commission + TVA 15 %</text>
+          <rect class="box" x="690" y="476" width="175" height="66" rx="7"/>
+          <text class="t-title" x="777" y="503" text-anchor="middle">Rapprochement</text>
+          <text class="t-small" x="777" y="524" text-anchor="middle">MCB ↔ MIPS, volumes</text>
+          <rect class="box" x="885" y="476" width="175" height="66" rx="7"/>
+          <text class="t-title" x="972" y="503" text-anchor="middle">Portail et KYC</text>
+          <text class="t-small" x="972" y="524" text-anchor="middle">entrée en relation</text>
+
+          <!-- Technical flows -->
+          <line class="ln" x1="190" y1="112" x2="276" y2="112" marker-end="url(#a-ink)"/>
+          <text class="t-lab" x="233" y="103" text-anchor="middle">paie</text>
+          <line class="ln" x1="480" y1="112" x2="566" y2="112" marker-end="url(#a-ink)"/>
+          <text class="t-lab" x="523" y="103" text-anchor="middle">autorisation</text>
+
+          <!-- Money -->
+          <line class="ln-money" x1="770" y1="96" x2="872" y2="96" marker-end="url(#a-money)"/>
+          <text class="t-money" x="825" y="84" text-anchor="middle">règlement</text>
+          <text class="t-money" x="825" y="122" text-anchor="middle">direct</text>
+
+          <!-- Wallet flow to confirm -->
+          <path class="ln-warn" d="M105 154 V247 H566" marker-end="url(#a-warn)"/>
+          <text class="t-lab" x="240" y="239" text-anchor="middle">paie par wallet ou virement</text>
+          <path class="ln-warn" d="M770 247 H1045 V158" marker-end="url(#a-warn)"/>
+          <text class="t-warn" x="868" y="239" text-anchor="middle">? via un compte MIPS</text>
+
+          <!-- Data flows -->
+          <line class="ln-data" x1="380" y1="154" x2="380" y2="326" marker-end="url(#a-data)"/>
+          <text class="t-data" x="388" y="300">transactions</text>
+          <line class="ln-data" x1="380" y1="400" x2="380" y2="472" marker-end="url(#a-data)"/>
+          <text class="t-data" x="388" y="430">import, règles figées</text>
+          <line class="ln-data" x1="475" y1="509" x2="491" y2="509" marker-end="url(#a-data)"/>
+          <path class="ln-data" d="M760 172 V196 H800 V472" marker-end="url(#a-data)"/>
+          <text class="t-data" x="808" y="380">fichier MCB</text>
+          <text class="t-data" x="808" y="396">mensuel</text>
+
+          <!-- Documents -->
+          <line class="ln-doc" x1="935" y1="158" x2="935" y2="472" marker-end="url(#a-doc)"/>
+          <text class="t-doc" x="943" y="330">pièces KYC,</text>
+          <text class="t-doc" x="943" y="346">préqualification</text>
+          <path class="ln-doc" d="M582 542 V600 H1100 V112 H1084" marker-end="url(#a-doc)"/>
+          <text class="t-doc" x="840" y="618" text-anchor="middle">facture mensuelle de commission</text>
+        </svg>
+      </div>
+      <figcaption><b>L'argent ne passe pas par MIPS :</b> la banque acquéreuse règle chaque marchand sur son propre compte. MIPS reçoit les données des transactions et facture sa commission chaque mois. Deux points restent à confirmer : le circuit des wallets et des virements, en rouge, et le fait que la licence demandée par SPIN DIGITAL n'impose pas de détenir les fonds.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 2. Transaction over time -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Une vente, du paiement à la facture</p>
+      <h2>Qui fait quoi, et quand</h2>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg viewBox="0 0 1000 430" role="img" aria-label="Le jour de la vente, le payeur paie via la passerelle MIPS, qui obtient l'autorisation de la banque acquéreuse et confirme la vente au marchand ; ensuite la banque règle le marchand selon son contrat ; en fin de mois, MIPS reçoit les données et facture sa commission.">
+          <defs>
+            <marker id="b-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="b-money" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path class="ah-money" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="b-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-data" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="b-doc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-doc" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <!-- time bands -->
+          <rect class="band" x="0" y="80" width="1000" height="150"/>
+          <rect class="band" x="0" y="320" width="1000" height="90"/>
+          <text class="t-lane" x="12" y="100">JOUR DE LA VENTE</text>
+          <text class="t-lane" x="12" y="250">RÈGLEMENT</text>
+          <text class="t-lane" x="12" y="340">FIN DE MOIS</text>
+
+          <!-- lanes -->
+          <rect class="box" x="170" y="18" width="130" height="40" rx="7"/><text class="t-title" x="235" y="43" text-anchor="middle">Payeur</text>
+          <rect class="box-data" x="345" y="18" width="130" height="40" rx="7"/><text class="t-title" x="410" y="43" text-anchor="middle">Passerelle MIPS</text>
+          <rect class="box-money" x="520" y="18" width="130" height="40" rx="7"/><text class="t-title" x="585" y="43" text-anchor="middle">Acquéreur</text>
+          <rect class="box-doc" x="695" y="18" width="130" height="40" rx="7"/><text class="t-title" x="760" y="43" text-anchor="middle">Marchand</text>
+          <rect class="box-proto" x="850" y="18" width="130" height="40" rx="7"/><text class="t-title" x="915" y="43" text-anchor="middle">Plateforme</text>
+          <line class="ln-life" x1="235" y1="58" x2="235" y2="410"/>
+          <line class="ln-life" x1="410" y1="58" x2="410" y2="410"/>
+          <line class="ln-life" x1="585" y1="58" x2="585" y2="410"/>
+          <line class="ln-life" x1="760" y1="58" x2="760" y2="410"/>
+          <line class="ln-life" x1="915" y1="58" x2="915" y2="410"/>
+
+          <!-- messages -->
+          <line class="ln" x1="235" y1="120" x2="406" y2="120" marker-end="url(#b-ink)"/>
+          <text class="t-lab" x="322" y="112" text-anchor="middle">paiement (carte, QR)</text>
+          <line class="ln" x1="410" y1="155" x2="581" y2="155" marker-end="url(#b-ink)"/>
+          <text class="t-lab" x="497" y="147" text-anchor="middle">demande d'autorisation</text>
+          <line class="ln" x1="585" y1="185" x2="414" y2="185" marker-end="url(#b-ink)"/>
+          <text class="t-lab" x="497" y="177" text-anchor="middle">accord</text>
+          <line class="ln" x1="410" y1="215" x2="756" y2="215" marker-end="url(#b-ink)"/>
+          <text class="t-lab" x="672" y="207" text-anchor="middle">vente confirmée</text>
+
+          <line class="ln-money" x1="585" y1="275" x2="752" y2="275" marker-end="url(#b-money)"/>
+          <text class="t-money" x="672" y="265" text-anchor="middle">argent des ventes</text>
+          <text class="t-lab" x="672" y="296" text-anchor="middle">délai selon le contrat acquéreur</text>
+
+          <line class="ln-data" x1="410" y1="350" x2="911" y2="350" marker-end="url(#b-data)"/>
+          <text class="t-data" x="540" y="342" text-anchor="middle">transactions du mois (Commission_Data)</text>
+          <line class="ln-doc" x1="915" y1="390" x2="764" y2="390" marker-end="url(#b-doc)"/>
+          <text class="t-doc" x="840" y="382" text-anchor="middle">facture de commission</text>
+        </svg>
+      </div>
+      <figcaption><b>La seule flèche d'argent va de la banque au marchand.</b> MIPS intervient techniquement le jour de la vente, puis comptablement en fin de mois. Dans le modèle B, écarté, cette flèche passerait par un compte trust SPIN et il faudrait la rapprocher chaque jour.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 3. Data chains -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">À l'intérieur de la plateforme</p>
+      <h2>Deux chaînes de données : facturer, puis contrôler la banque</h2>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg viewBox="0 0 1000 300" role="img" aria-label="Chaîne 1 : l'export Commission_Data est importé selon des règles figées, produit le rapport mensuel puis les factures. Chaîne 2 : le fichier MCB et l'extraction MIPS passent par des contrôles de périmètre, l'écart est ventilé en six catégories jusqu'à zéro et produit des réclamations.">
+          <defs>
+            <marker id="c-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-data" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <text class="t-lane" x="10" y="22">REPORTING ET FACTURATION</text>
+          <rect class="box-data" x="10" y="36" width="200" height="62" rx="7"/>
+          <text class="t-title" x="110" y="62" text-anchor="middle">Commission_Data</text>
+          <text class="t-small" x="110" y="82" text-anchor="middle">fichier ou BigQuery</text>
+          <rect class="box" x="270" y="36" width="200" height="62" rx="7"/>
+          <text class="t-title" x="370" y="62" text-anchor="middle">Import</text>
+          <text class="t-small" x="370" y="82" text-anchor="middle">règles figées</text>
+          <rect class="box" x="530" y="36" width="200" height="62" rx="7"/>
+          <text class="t-title" x="630" y="62" text-anchor="middle">Rapport mensuel</text>
+          <text class="t-small" x="630" y="82" text-anchor="middle">tendances 12 mois, Excel</text>
+          <rect class="box-doc" x="790" y="36" width="200" height="62" rx="7"/>
+          <text class="t-title" x="890" y="62" text-anchor="middle">Factures</text>
+          <text class="t-small" x="890" y="82" text-anchor="middle">brouillon → émise → payée</text>
+          <line class="ln-data" x1="210" y1="67" x2="266" y2="67" marker-end="url(#c-data)"/>
+          <line class="ln-data" x1="470" y1="67" x2="526" y2="67" marker-end="url(#c-data)"/>
+          <line class="ln-data" x1="730" y1="67" x2="786" y2="67" marker-end="url(#c-data)"/>
+          <text class="t-small" x="270" y="118">SUCCESS seul · tests exclus</text>
+          <text class="t-small" x="270" y="134">remboursements comptés à part</text>
+          <text class="t-small" x="790" y="118">un mois facturé ne se</text>
+          <text class="t-small" x="790" y="134">réimporte plus</text>
+
+          <text class="t-lane" x="10" y="182">CONTRÔLE DE LA BANQUE</text>
+          <rect class="box-money" x="10" y="196" width="200" height="62" rx="7"/>
+          <text class="t-title" x="110" y="222" text-anchor="middle">Fichier MCB</text>
+          <text class="t-small" x="110" y="242" text-anchor="middle">+ extraction MIPS</text>
+          <rect class="box" x="270" y="196" width="200" height="62" rx="7"/>
+          <text class="t-title" x="370" y="222" text-anchor="middle">Contrôles</text>
+          <text class="t-small" x="370" y="242" text-anchor="middle">périmètre, remaps MID</text>
+          <rect class="box" x="530" y="196" width="200" height="62" rx="7"/>
+          <text class="t-title" x="630" y="222" text-anchor="middle">Écart ventilé</text>
+          <text class="t-small" x="630" y="242" text-anchor="middle">6 catégories, reste = 0</text>
+          <rect class="box" x="790" y="196" width="200" height="62" rx="7"/>
+          <text class="t-title" x="890" y="222" text-anchor="middle">Réclamations MCB</text>
+          <text class="t-small" x="890" y="242" text-anchor="middle">transactions manquantes</text>
+          <line class="ln-data" x1="210" y1="227" x2="266" y2="227" marker-end="url(#c-data)"/>
+          <line class="ln-data" x1="470" y1="227" x2="526" y2="227" marker-end="url(#c-data)"/>
+          <line class="ln-data" x1="730" y1="227" x2="786" y2="227" marker-end="url(#c-data)"/>
+          <text class="t-small" x="530" y="280">compare des volumes, pas des fonds</text>
+        </svg>
+      </div>
+      <figcaption><b>Le rapprochement contrôle ce que la banque déclare, pas un compte de fonds.</b> Il compare les volumes du fichier MCB aux transactions de la plateforme. Ce n'est pas une réconciliation trust, qui n'a pas lieu d'être en modèle A.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4. Merchant lifecycle -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Cycle de vie d'un marchand</p>
+      <h2>Du prospect au marchand actif, puis en revue</h2>
+      <div class="legend">
+        <span style="--c: var(--doc)"><i></i>Fait par le marchand, sur le portail</span>
+        <span style="--c: var(--data)"><i></i>Fait par MIPS</span>
+        <span style="--c: var(--money)"><i class="thick"></i>Garde : rien ne passe sans elle</span>
+      </div>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg viewBox="0 0 1000 300" role="img" aria-label="Le marchand crée son compte avec double authentification, accepte les conditions et remplit une préqualification ; un analyste MIPS l'accepte ; le marchand déclare ses personnes et dépose ses pièces ; une autre personne de MIPS les vérifie ; le marchand envoie son dossier ; un approbateur qui n'est jamais intervenu l'approuve ; le marchand devient actif ; à chaque revue périodique, selon son risque, ses personnes et ses pièces sont revérifiées.">
+          <defs>
+            <marker id="d-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="d-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-loop" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <text class="t-lane" x="10" y="30">MARCHAND</text>
+          <text class="t-lane" x="10" y="160">MIPS</text>
+
+          <!-- merchant lane boxes (y 44-112) -->
+          <rect class="box-gate" x="90" y="44" width="104" height="68" rx="7"/>
+          <text class="t-title" x="142" y="72" text-anchor="middle">Compte</text><text class="t-small" x="142" y="92" text-anchor="middle">+ 2FA obligatoire</text>
+          <rect class="box-gate" x="210" y="44" width="104" height="68" rx="7"/>
+          <text class="t-title" x="262" y="72" text-anchor="middle">Conditions</text><text class="t-small" x="262" y="92" text-anchor="middle">version courante</text>
+          <rect class="box-doc" x="330" y="44" width="104" height="68" rx="7"/>
+          <text class="t-title" x="382" y="72" text-anchor="middle">Préqualif.</text><text class="t-small" x="382" y="92" text-anchor="middle">société, volumes</text>
+          <rect class="box-doc" x="570" y="44" width="104" height="68" rx="7"/>
+          <text class="t-title" x="622" y="72" text-anchor="middle">Pièces</text><text class="t-small" x="622" y="92" text-anchor="middle">personnes, PEP</text>
+          <rect class="box-doc" x="810" y="44" width="104" height="68" rx="7"/>
+          <text class="t-title" x="862" y="72" text-anchor="middle">Dossier</text><text class="t-small" x="862" y="92" text-anchor="middle">envoyé</text>
+
+          <!-- MIPS lane boxes (y 174-242) -->
+          <rect class="box-data" x="450" y="174" width="104" height="68" rx="7"/>
+          <text class="t-title" x="502" y="202" text-anchor="middle">Acceptation</text><text class="t-small" x="502" y="222" text-anchor="middle">analyste</text>
+          <rect class="box-data" x="690" y="174" width="104" height="68" rx="7"/>
+          <text class="t-title" x="742" y="202" text-anchor="middle">Vérification</text><text class="t-small" x="742" y="222" text-anchor="middle">pas le déposant</text>
+          <rect class="box-gate" x="880" y="174" width="110" height="68" rx="7"/>
+          <text class="t-title" x="935" y="202" text-anchor="middle">Approbation</text><text class="t-small" x="935" y="222" text-anchor="middle">jamais intervenu</text>
+
+          <!-- arrows -->
+          <line class="ln" x1="194" y1="78" x2="206" y2="78" marker-end="url(#d-ink)"/>
+          <line class="ln" x1="314" y1="78" x2="326" y2="78" marker-end="url(#d-ink)"/>
+          <path class="ln" d="M434 78 H502 V170" marker-end="url(#d-ink)"/>
+          <path class="ln" d="M554 208 H622 V116" marker-end="url(#d-ink)"/>
+          <path class="ln" d="M674 78 H742 V170" marker-end="url(#d-ink)"/>
+          <path class="ln" d="M794 208 H830 V116" marker-end="url(#d-ink)"/>
+          <path class="ln" d="M914 78 H935 V170" marker-end="url(#d-ink)"/>
+
+          <!-- outcome and loop -->
+          <text class="t-money" x="935" y="268" text-anchor="middle">marchand actif</text>
+          <path class="ln-loop" d="M880 262 H660 V116" marker-end="url(#d-loop)"/>
+          <text class="t-lab" x="860" y="286" text-anchor="end">revue périodique (1, 2 ou 3 ans selon le risque) : personnes et pièces revérifiées</text>
+        </svg>
+      </div>
+      <figcaption><b>Trois gardes, deux doubles regards.</b> Sans double authentification et conditions acceptées, le marchand ne fait rien. Les pièces sont vérifiées par une autre personne que celle qui les a déposées. L'approbation exige zéro blocage et un approbateur qui n'a jamais eu la main sur le dossier.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 5. Owners and open points -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Qui tient quoi</p>
+      <h2>Responsables et points ouverts</h2>
+    </div>
+    <div class="grid2">
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Acteur</th><th>Rôle dans l'écosystème</th></tr></thead>
+          <tbody>
+            <tr><td><b>SPIN DIGITAL</b></td><td>Demande la licence à la Banque de Maurice, en modèle passerelle.</td></tr>
+            <tr><td><b>Banque de Maurice</b></td><td>Instruit le dossier ; ses textes sur le cantonnement restent à lire à la source.</td></tr>
+            <tr><td><b>MIPS</b></td><td>Opère la passerelle, facture les commissions, rapproche les volumes, gère l'entrée en relation.</td></tr>
+            <tr><td><b>MCB, SBM, ABSA, BNI</b></td><td>Autorisent et règlent les marchands, chacun sous son propre contrat.</td></tr>
+            <tr><td><b>Équipe my.mips.mu</b></td><td>Construit la plateforme réelle à partir du prototype, de ses specs et de ses 590 vérifications.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="open">
+        <div class="item"><span class="chip block">Bloquant</span><b>Licence compatible avec le modèle A</b><small>Conformité : la licence demandée ne doit pas exiger de détenir les fonds.</small></div>
+        <div class="item"><span class="chip block">Bloquant</span><b>Circuit des wallets et virements</b><small>Finance : MyT Money, Juice, BankXfer passent-ils par un compte MIPS ?</small></div>
+        <div class="item"><span class="chip todo">À fournir</span><b>Texte des conditions du portail</b><small>Juridique : le portail reste fermé tant qu'aucune version n'est publiée.</small></div>
+        <div class="item"><span class="chip todo">À valider</span><b>Données réelles</b><small>Un mois MCB déjà rapproché ; la vraie table BigQuery.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Sources : prototype mips-platform (PR #10, non déployé), décision du 31 octobre 2026 sur le modèle de flux de fonds, export Commission_Data d'octobre 2026 pour les couples moyen de paiement / banque. Aucun chiffre de transaction n'est montré.</footer>
+</div>
