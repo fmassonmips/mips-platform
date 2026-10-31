@@ -1,0 +1,91 @@
+# Lint and end-to-end tests (tests/e2e/run.sh) on every pull request.
+# The 27 suites run in four parallel jobs of about 8 minutes each; a failed
+# job keeps its screenshots and received e-mails as an artifact.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [claude/api-login-system-pahfz]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          errors=$(find src public templates tools config -name '*.php' -print0 | xargs -0 -n1 php -l 2>&1 | grep -v '^No syntax errors' || true)
+          [ -z "$errors" ] || { echo "$errors"; exit 1; }
+      - name: JavaScript syntax
+        run: for f in public/assets/js/*.js tests/e2e/*.js; do node --check "$f" || exit 1; done
+      - name: Shell syntax
+        run: bash -n tests/e2e/run.sh
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root   # throwaway container, no data
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      MIPS_E2E_SHARD: ${{ matrix.shard }}/4
+      MIPS_E2E_DB_GRANT_HOST: '%'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, curl, sodium, zip
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Test tools
+        run: |
+          pip install cryptography
+          cd tests/e2e && npm ci && npx playwright install --with-deps chromium
+      - name: MariaDB client access
+        run: |
+          printf '[client]\nhost=127.0.0.1\nport=3306\nuser=root\npassword=ci-root\n' > ~/.my.cnf
+          chmod 600 ~/.my.cnf
+          mysql -e 'SELECT VERSION()'
+      - name: End-to-end suites (shard ${{ matrix.shard }}/4)
+        run: tests/e2e/run.sh
+      - name: Keep screenshots and e-mails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shard-${{ matrix.shard }}
+          path: |
+            tests/.work
+            !tests/.work/t
+          retention-days: 7

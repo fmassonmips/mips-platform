@@ -445,10 +445,11 @@ $types = [];
 foreach (SzSettings::types($orgId) as $t) {
     $types[$t['name']] = $t['id'];
 }
-// Leave starts and ends on working days (Monday–Friday), whatever today is.
-$workday = static function (int $offset) use ($day): string {
+// Leave starts and ends on working days (Monday–Friday, not a public holiday), whatever today is.
+$holidays = SzSettings::holidays($orgId);
+$workday = static function (int $offset) use ($day, $holidays): string {
     $d = new DateTimeImmutable($day($offset));
-    while ((int) $d->format('N') >= 6) {
+    while ((int) $d->format('N') >= 6 || isset($holidays[$d->format('Y-m-d')])) {
         $d = $d->modify('+1 day');
     }
     return $d->format('Y-m-d');

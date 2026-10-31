@@ -12,6 +12,9 @@
 #
 # Uses its own database (MIPS_E2E_DB, default mips_e2e), dropped and
 # recreated before each suite: never point it at a real database.
+# MIPS_E2E_DB_GRANT_HOST also lets the test account in from that host (CI: '%',
+# MariaDB in a container sees the runner's address, not 127.0.0.1).
+# MIPS_E2E_SHARD=2/4 runs the 2nd quarter of the suites (CI runs four in parallel).
 # Work files (copy of the code, e-mails, screenshots): tests/.work/.
 set -u
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -20,13 +23,14 @@ W="${MIPS_E2E_WORKDIR:-$ROOT/tests/.work}"
 DB="${MIPS_E2E_DB:-mips_e2e}"
 DB_USER="${MIPS_E2E_DB_USER:-mips_e2e}"
 DB_PASS="${MIPS_E2E_DB_PASS:-mips_e2e_pass}"
+GRANT_HOST="${MIPS_E2E_DB_GRANT_HOST:-}"
 export MIPS_E2E_DB="$DB"
 
 case "$DB" in mips_platform|*prod*) echo "Refusing to use database '$DB' (it is dropped before each suite)." >&2; exit 2;; esac
 mkdir -p "$W/mail" "$W/fakemra/received" "$W/ical"
 
 # Copy of the code with a test configuration (config.local.php overrides config.php).
-rsync -a --delete --exclude .git --exclude tests/.work --exclude config/config.local.php "$ROOT/" "$W/t/"
+rsync -a --delete --exclude .git --exclude tests/.work --exclude tests/e2e/node_modules --exclude config/config.local.php "$ROOT/" "$W/t/"
 cat > "$W/t/config/config.local.php" <<PHP
 <?php
 return [
@@ -47,6 +51,10 @@ mysql -e "SET GLOBAL time_zone = '+04:00';" || exit 2   # tests insert dates wit
 mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
           CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
           GRANT ALL ON \`$DB\`.* TO '$DB_USER'@'127.0.0.1'; GRANT ALL ON \`$DB\`.* TO '$DB_USER'@'localhost';" || exit 2
+if [ -n "$GRANT_HOST" ]; then
+    mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'$GRANT_HOST' IDENTIFIED BY '$DB_PASS';
+              GRANT ALL ON \`$DB\`.* TO '$DB_USER'@'$GRANT_HOST';" || exit 2
+fi
 
 # Services (started once; up.sh restarts any that stopped, e2e24 uses it after cutting the SMTP).
 cat > "$W/up.sh" <<SH
@@ -73,6 +81,11 @@ reset() {
 suites=("$@")
 if [ ${#suites[@]} -eq 0 ]; then
     suites=($(ls "$E2E" | grep -E '^e2e[0-9]*\.js$' | sed 's/\.js$//' | sort -V))
+fi
+if [ -n "${MIPS_E2E_SHARD:-}" ]; then
+    shard=${MIPS_E2E_SHARD%/*}; of=${MIPS_E2E_SHARD#*/}; picked=()
+    for i in "${!suites[@]}"; do [ $((i % of)) -eq $((shard - 1)) ] && picked+=("${suites[$i]}"); done
+    suites=("${picked[@]}")
 fi
 pass=0; fail=0; failed=()
 for t in "${suites[@]}"; do
