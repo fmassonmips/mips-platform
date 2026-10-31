@@ -38,7 +38,7 @@ export async function seedAll(url: string, opts: { reset: boolean; scale?: numbe
     const r = await seedDemoTenant(c as any, tenantId, users, { scale: opts.scale });
     log(`seeded mips-demo: ${r.transactions} transactions, ${r.merchants} merchants in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
     // Secondary tenant — demonstrates multi-tenant isolation
-    const t2 = await provisionTenant(c as any, { code: 'acme-pay-demo', name: 'Acme Pay PSP (DEMO)', isDemo: true, baseCurrency: 'MUR', fyStartMonth: 1 });
+    const t2 = await provisionTenant(c as any, { code: 'acme-pay-demo', name: 'Acme Pay PSP (DEMO)', isDemo: true, baseCurrency: 'MUR', fyStartMonth: 1, settings: { mfa_required_roles: [] } });
     const u2 = await upsertUser(c as any, 'cfo@acme.demo', 'Acme Demo CFO', DEMO_PASSWORD);
     await addMembership(c as any, t2, u2, 'cfo');
     await addMembership(c as any, t2, users.admin, 'admin');
