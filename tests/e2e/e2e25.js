@@ -135,7 +135,8 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
   step('nothing deleted before the date; after it, tools/purge_companies.php deletes the company, its data and its team\'s accounts (other accounts kept), e-mails the owner « Votre compte MIPS est supprimé », and the back-office log keeps « Entreprise supprimée — Boutique Zen » (Automatique); the owner can no longer log in');
 
   // every company table is exported (a new app must add its tables)
-  const internal = ['backoffice_log', 'login_attempts', 'mra_tokens', 'notification_log', 'facturo_sequences', 'users', 'user_tokens', 'organization_users', 'organizations', 'organization_modules', 'organization_invitations'];
+  const internal = ['backoffice_log', 'login_attempts', 'mra_tokens', 'notification_log', 'facturo_sequences', 'users', 'user_tokens', 'organization_users', 'organizations', 'organization_modules', 'organization_invitations',
+                    'ops_jobs', 'ops_alerts'];   // platform supervision, no company data
   const tables = sql("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '" + (process.env.MIPS_E2E_DB || 'mips_platform') + "'").split(/\n/).filter(t => !internal.includes(t));
   const exported = php("echo implode(' ', (new ReflectionClassConstant(App\\Suite\\DataExport::class, 'TABLES'))->getValue());");
   const missing = tables.filter(t => !exported.includes(' ' + t + ' '));

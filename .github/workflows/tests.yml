@@ -89,4 +89,5 @@ jobs:
           path: |
             tests/.work
             !tests/.work/t
+          include-hidden-files: true   # tests/.work starts with a dot
           retention-days: 7
