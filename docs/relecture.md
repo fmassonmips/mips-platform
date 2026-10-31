@@ -23,6 +23,24 @@ Ce que les tests ne couvrent pas : la vraie API MRA (jamais appelée), un vrai s
 
 ## 3. Lots de relecture
 
+### Pile de pull requests
+
+La PR est découpée en sept PR empilées. Chacune vise la branche de la précédente et ne montre que ses propres commits, inchangés (aucune réécriture d'historique). Relire et fusionner dans l'ordre.
+
+| PR | Contenu | Commits | ~Lignes |
+|---|---|---|---|
+| #11 [1/7] | Socle, Facturo + MRA, ClientBloom, interface en français | 1–15 | 7 000 |
+| #12 [2/7] | RendezVous, Formelio, FlowDesk | 16–18 | 5 600 |
+| #13 [3/7] | BizPilot, TeamNest, ShopLokal | 19–21 | 4 000 |
+| #14 [4/7] | Invitations d'équipe, StaffZen, Bookora | 22–24 | 5 800 |
+| #15 [5/7] | Démo, fin d'essai, inscription, déploiement, sécurité, rôles Facturo | 25–32 | 2 000 |
+| #16 [6/7] | Back-office, premiers pas, e-mails, export et fermeture, CGU, usage, résumé du lundi | 33–39 | 4 300 |
+| #9 [7/7] | Heure de Maurice, tests dans le dépôt, CI, guide de relecture, sauvegardes et surveillance | 40–47 | 5 000 |
+
+Les tests et la CI n'arrivent que dans #9 : les PR 1 à 6 n'ont pas de vérification automatique. À chaque point de coupe, la syntaxe PHP est propre et `schema.sql` + `seed.sql` se chargent ; les suites de bout en bout, elles, ne valent que pour l'état final (#9). Un défaut trouvé dans une tranche se corrige en haut de la pile (#9), pas en réécrivant la tranche.
+
+### Lots par thème
+
 Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle). Volumes approximatifs en lignes ajoutées.
 
 | # | Lot | Fichiers principaux | ~Lignes | Commits | Tests |
