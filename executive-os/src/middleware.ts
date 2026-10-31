@@ -17,7 +17,7 @@ export function middleware(req: NextRequest) {
     if (buckets.size > 10000) buckets.clear();
     return NextResponse.next();
   }
-  const open = pathname === '/login' || pathname === '/mfa' || pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname === '/forbidden';
+  const open = pathname === '/login' || pathname === '/mfa' || pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname === '/forbidden' || /\/export(\/|$)/.test(pathname); // route handlers authenticate themselves (401/403 JSON)
   if (!open && !req.cookies.get('mips_eos_session')) return NextResponse.redirect(new URL('/login', req.url));
   return NextResponse.next();
 }

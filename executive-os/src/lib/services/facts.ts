@@ -24,7 +24,8 @@ export const SAAS_CTE = `
     FROM pricing_agreements pa
     JOIN merchants mm ON mm.id = pa.merchant_id
     CROSS JOIN LATERAL (SELECT generate_series(date_trunc('month', $1::date), date_trunc('month', $2::date), interval '1 month')::date AS month) m
-    WHERE pa.monthly_saas_fee > 0 AND pa.payment_method_id IS NULL AND pa.card_region = 'any'
+    WHERE pa.monthly_saas_fee > 0 AND m.month <= greatest(date_trunc('month', current_date), (SELECT date_trunc('month', max(accounting_date)) FROM transactions))::date  -- SaaS recognised only for elapsed months
+      AND pa.payment_method_id IS NULL AND pa.card_region = 'any'
       AND pa.effective_from <= (m.month + interval '1 month - 1 day')::date AND (pa.effective_to IS NULL OR pa.effective_to >= m.month)
       AND (mm.activated_at IS NULL OR mm.activated_at <= (m.month + interval '1 month - 1 day')::date)
       AND (mm.churned_at IS NULL OR mm.churned_at >= m.month)

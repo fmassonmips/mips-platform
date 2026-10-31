@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { pageContext, tx, spGet, type SP } from '@/lib/page';
 import { ensureRun } from '@/lib/services/kpi';
 import { proofCatalogue } from '@/lib/services/proof';
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProofCenter({ searchParams }: { searchParams: SP }) {
   const { auth, period, sp, months, fyears } = await pageContext(searchParams, 'proof.view');
+  const batch = spGet(sp, 'batch'); if (batch && /^[0-9a-f-]{36}$/.test(batch)) redirect(`/integrations/batches/${batch}`);
   const decisionId = spGet(sp, 'decision');
   const data = await tx(auth, async (t) => {
     const { runId } = await ensureRun(t, { tenantId: auth.tenantId, userId: auth.userId, start: period.start, end: period.end, reason: 'proof center catalogue' });

@@ -65,7 +65,8 @@ export async function runChecks(tx: Tx, start: string, end: string): Promise<Che
   // C07 Reconciliation: GL revenue vs transaction-engine revenue, per month
   const policy = policyOf(t);
   const tol = dec(t.settings?.revenue_recon_tolerance ?? '1');
-  const months = monthsInRange(start, end);
+  const curMonth = new Date().toISOString().slice(0, 7) + '-01';
+  const months = monthsInRange(start, end).filter((m) => m <= curMonth);
   const recon = await q<any>(tx, `WITH ${SAAS_CTE},
       tx AS (SELECT date_trunc('month', accounting_date)::date AS month, sum(mdr_fee_base) AS mdr, sum(wholesale_fee_base) AS wh FROM transactions WHERE accounting_date BETWEEN $1 AND $2 GROUP BY 1),
       s AS (SELECT month, sum(fee) AS saas FROM saas GROUP BY 1),

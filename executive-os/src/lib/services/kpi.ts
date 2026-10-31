@@ -35,6 +35,14 @@ export async function syncKpiRegistry(tx: Tx, tenantId: string, userId: string |
   return { created };
 }
 
+/** Prior comparison window: month-aligned when the range is whole months, else same number of days. */
+export function priorRange(start: string, end: string): { start: string; end: string } {
+  const wholeMonths = start.endsWith('-01') && addDays(end, 1).endsWith('-01');
+  if (wholeMonths) { const n = monthsInRange(start, end).length; const ps = monthsInRange(start, start)[0]; const pStart = addMonthsISO(ps, -n); return { start: pStart, end: addDays(start, -1) }; }
+  const days = daysBetween(start, end); const pe = addDays(start, -1); return { start: addDays(pe, -days), end: pe };
+}
+function addMonthsISO(d: string, n: number) { const x = new Date(`${d}T00:00:00Z`); x.setUTCMonth(x.getUTCMonth() + n); return x.toISOString().slice(0, 10); }
+
 function hashInputs(v: unknown): string { return createHash('sha256').update(JSON.stringify(v)).digest('hex'); }
 
 async function periodLockState(tx: Tx, start: string, end: string): Promise<boolean> {
@@ -62,10 +70,9 @@ export async function runCalculation(tx: Tx, o: RunOptions): Promise<string> {
   const run = await one<{ id: string }>(tx,
     `INSERT INTO calc_runs (tenant_id, engine_version, period_start, period_end, triggered_by, trigger_reason, input_fingerprint) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
     [o.tenantId, KPI_ENGINE_VERSION, o.start, o.end, o.userId, o.reason, fingerprint]);
-  const days = daysBetween(o.start, o.end);
-  const priorEnd = addDays(o.start, -1); const priorStart = addDays(priorEnd, -days);
+  const pr = priorRange(o.start, o.end);
   const facts = await loadPeriodFacts(tx, o.start, o.end);
-  const prior = await loadPeriodFacts(tx, priorStart, priorEnd);
+  const prior = await loadPeriodFacts(tx, pr.start, pr.end);
   const checks = await runChecks(tx, o.start, o.end);
   const locked = await periodLockState(tx, o.start, o.end);
   const values = computeKpis(facts, prior);
@@ -114,7 +121,7 @@ export async function kpiDashboard(tx: Tx, o: RunOptions, compare: 'prior' | 'yo
   const days = daysBetween(o.start, o.end);
   let cs: string, ce: string;
   if (compare === 'yoy') { cs = `${Number(o.start.slice(0, 4)) - 1}${o.start.slice(4)}`; ce = `${Number(o.end.slice(0, 4)) - 1}${o.end.slice(4)}`; if (ce.endsWith('-02-29')) ce = ce.replace('-02-29', '-02-28'); }
-  else { ce = addDays(o.start, -1); cs = addDays(ce, -days); }
+  else { const pr = priorRange(o.start, o.end); cs = pr.start; ce = pr.end; }
   const cmp = await ensureRun(tx, { ...o, start: cs, end: ce, reason: `comparison for ${o.start}..${o.end}` });
   const [current, comparison] = await Promise.all([resultsForRun(tx, cur.runId), resultsForRun(tx, cmp.runId)]);
   const run = await one<any>(tx, 'SELECT id, checks, started_at, finished_at, input_fingerprint, engine_version FROM calc_runs WHERE id = $1', [cur.runId]);

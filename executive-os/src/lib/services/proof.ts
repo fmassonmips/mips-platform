@@ -11,7 +11,7 @@ import { dec, sum, ZERO } from '../money';
 import { KPI_BY_CODE, computeKpis, formulaHash, type Source } from '../engine/kpis';
 import { computeTxnEconomics, type PricingRule, type FeeRule, type ProcessingRule } from '../engine/fees';
 import { loadPeriodFacts } from './facts';
-import { ensureRun } from './kpi';
+import { ensureRun, priorRange } from './kpi';
 import { addDays, daysBetween, monthsInRange } from '../dates';
 
 export async function kpiProof(tx: Tx, ctx: { tenantId: string; userId: string }, code: string, start: string, end: string) {
@@ -85,10 +85,9 @@ const canon = (o: any) => JSON.stringify(Object.keys(o ?? {}).sort().map((k) => 
 
 /** Re-compute the KPI from freshly loaded facts and compare with the stored result. */
 export async function reproduce(tx: Tx, code: string, start: string, end: string, stored: { value: string | null; inputs: any }) {
-  const days = daysBetween(start, end);
-  const priorEnd = addDays(start, -1);
+  const pr = priorRange(start, end);
   const facts = await loadPeriodFacts(tx, start, end);
-  const prior = await loadPeriodFacts(tx, addDays(priorEnd, -days), priorEnd);
+  const prior = await loadPeriodFacts(tx, pr.start, pr.end);
   const v = computeKpis(facts, prior).find((x) => x.code === code && x.dimension === 'total');
   const same = (v?.value ?? null) === (stored.value === null ? null : dec(stored.value).toDecimalPlaces(8).toString()) && canon(v?.inputs) === canon(stored.inputs);
   return { recomputed: v?.value ?? null, inputs: v?.inputs, identical: same };

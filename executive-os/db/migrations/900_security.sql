@@ -66,3 +66,12 @@ REVOKE INSERT, DELETE ON tenants FROM mips_app;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO mips_app;
 -- Demo purge needs DELETE on audit rows for demo tenants only (trigger enforces is_demo)
 GRANT DELETE ON audit_events TO mips_app;
+
+-- Read-only backup role (created by db/bootstrap.sql with BYPASSRLS)
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mips_backup') THEN
+    GRANT USAGE ON SCHEMA public TO mips_backup;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO mips_backup;
+    GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO mips_backup;
+  END IF;
+END $$;

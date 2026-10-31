@@ -1,0 +1,33 @@
+name: executive-os
+on:
+  push: { paths: ['executive-os/**', '.github/workflows/executive-os.yml'] }
+  pull_request: { paths: ['executive-os/**'] }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: executive-os } }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      DATABASE_URL: postgres://mips_app:app_dev_pw@localhost:5432/mips_eos
+      DATABASE_OWNER_URL: postgres://mips_owner:owner_dev_pw@localhost:5432/mips_eos
+      APP_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: executive-os/package-lock.json }
+      - run: npm ci
+      - run: psql -h localhost -U postgres -f db/bootstrap.sql
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run db:migrate
+      - run: npm run test:integration
+      - run: npm run build
+      - run: npm run db:seed
+      - name: E2E acceptance scenario
+        run: npx playwright install --with-deps chromium && npm run test:e2e
