@@ -44,6 +44,7 @@ return [
     'bookora'    => ['ical_allow_private' => true, 'ical_timeout' => 5],
     'backoffice' => ['staff' => ['Staff@MIPS.mu']],
     'billing'    => ['contact_email' => 'abonnement@mips.mu'],
+    'ops'        => ['alert_email' => 'ops@mips.mu'],
 ];
 PHP
 

@@ -69,5 +69,7 @@ if ($isHttps) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
-// Start the secure session.
-App\Session::start($config['session']);
+// Start the secure session (not for /health.php: a monitor polling it would leave a session per call).
+if (!defined('MIPS_NO_SESSION')) {
+    App\Session::start($config['session']);
+}

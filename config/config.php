@@ -103,6 +103,14 @@ return [
         'ical_timeout'       => 10,
     ],
 
+    // Supervision (tools/ops.php watchdog, /health.php). alert_email receives an e-mail
+    // when a scheduled job fails or stops running, or the disk fills up; empty: no e-mail.
+    // skip_jobs: jobs this server does not run (e.g. 'backup' on a demo instance).
+    'ops' => [
+        'alert_email' => '',
+        'skip_jobs'   => [],
+    ],
+
     'rate_limit' => [
         'max_attempts'   => 5,     // failed attempts before blocking
         'window_seconds' => 900,   // sliding window = 15 minutes

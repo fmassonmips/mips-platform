@@ -30,4 +30,5 @@ Une suite reçoit en argument le dossier de travail (`tests/.work/`) : copie du 
 | e2e23 | Premiers pas, import Excel |
 | e2e24, e2e28 | E-mails automatiques, résumé du lundi |
 | e2e25 | Export et fermeture du compte |
+| e2e29 | Surveillance (/health.php, alertes), sauvegarde chiffrée et restauration |
 | e2e26 | CGU et confidentialité |

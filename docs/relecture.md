@@ -11,13 +11,13 @@ La PR ajoute environ 28 600 lignes (315 fichiers, 40 commits) sur la branche `cl
 ## 2. Relancer les tests
 
 ```bash
-tests/e2e/run.sh              # les 27 suites, ~30 min
+tests/e2e/run.sh              # les 28 suites, ~30 min
 tests/e2e/run.sh e2e22 e2e25  # quelques suites
 ```
 
 Prérequis (en tête de `tests/e2e/run.sh`) : PHP 8.3 avec pdo_mysql, mbstring, curl, sodium, zip ; MariaDB démarrée et accessible par la commande `mysql` en administrateur ; Node avec Playwright et Chromium ; Python 3 avec `cryptography` ; rsync et openssl ; ports 8099, 8098, 8097 et 2525 libres. Le script utilise sa propre base `mips_e2e`, recréée avant chaque suite (il refuse `mips_platform`), une copie du code dans `tests/.work/`, un faux serveur SMTP, un faux serveur de l'API MRA et un faux calendrier Airbnb. Captures d'écran et e-mails reçus restent dans `tests/.work/` pour inspection.
 
-**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 27 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
+**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 28 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
 
 Ce que les tests ne couvrent pas : la vraie API MRA (jamais appelée), un vrai serveur SMTP, Nginx en production (testé une fois à la main, voir `docs/deploiement.md`), la charge, les navigateurs autres que Chromium.
 
@@ -39,7 +39,8 @@ Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle).
 | 10 | BizPilot + résumé du lundi | `src/BizPilot/*` | 750 | 41ed4b4, daedf93 | e2e11, e2e28 |
 | 11 | Back-office MIPS + historique d'usage | `src/Backoffice/*`, `public/backoffice.php`, `public/export.php` | 850 | 5903699, b8dc80e | e2e22, e2e27 |
 | 12 | Premiers pas, import, e-mails, export, fermeture | `src/Suite/{Onboarding,Import,Notifications,DataExport,Closure}.php`, `src/Facturo/Reminders.php`, `tools/*` | 1 900 | 08cc84d, f0feba2, ea5a3d9 | e2e23, e2e24, e2e25 |
-| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `026` | 1 900 | tous | contrôle § 5 |
+| 12 bis | Sauvegardes et surveillance | `tools/{backup,restore,cron}.sh`, `tools/ops.php`, `src/Ops/*`, `public/health.php` | 500 | (ce commit) | e2e29 |
+| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `027` | 1 900 | tous | contrôle § 5 |
 | 14 | JavaScript et gabarits | `public/assets/js/*`, `templates/**` | 5 000 | tous | toutes |
 
 Les gabarits et le JavaScript (lot 14) sont volumineux mais peu risqués : la revue de sécurité a vérifié l'échappement de chaque sortie et l'absence d'`innerHTML`. On peut les parcourir plus vite.
@@ -55,12 +56,13 @@ Par ordre de gravité si c'est faux. Pour chaque point : quoi vérifier, où.
 5. **Authentification (lot 2).** Limitation des tentatives (`RateLimiter`), liens à usage unique dont seule l'empreinte SHA-256 est stockée, confirmation d'inscription qui redemande le mot de passe (prise de compte avant inscription), invitation d'un compte existant, sessions (durée absolue 12 h, jeton CSRF renouvelé).
 6. **Tâches planifiées (lot 12).** Idempotence : chaque e-mail est réservé dans `notification_log` (`INSERT IGNORE`) avant l'envoi et libéré en cas d'échec ; verrous `GET_LOCK` pour éviter deux exécutions en parallèle ; une entreprise en erreur n'arrête pas les autres ; code de sortie 1 en cas d'échec.
 7. **Pages publiques (lots 5, 7, 9).** Réservation, boutique, formulaires, tickets : jetons aléatoires, pot de miel, limites par IP (IPv6 par /64) et par destinataire d'e-mail, transactions sous verrou contre les doubles réservations.
-8. **Back-office (lot 11).** Accès par liste d'adresses (`backoffice.staff`) et 404 pour tout autre visiteur ; la restriction par IP se fait dans Nginx. Chaque action est journalisée.
+8. **Sauvegardes (lot 12 bis).** Une sauvegarde illisible ou incomplète ne se voit que le jour où on en a besoin. Vérifier que `backup.sh` échoue (code ≠ 0) dès qu'une étape échoue (`set -o pipefail`), qu'aucun fichier en clair ne touche le disque, que la clé privée n'est jamais requise sur le serveur, et que `restore.sh` ne peut pas écraser une base sans `--replace`. Le test `e2e29` restaure et compare chaque table.
+9. **Back-office (lot 11).** Accès par liste d'adresses (`backoffice.staff`) et 404 pour tout autre visiteur ; la restriction par IP se fait dans Nginx. Chaque action est journalisée.
 
 ## 5. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
-- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 026), à refaire au moins une fois de 001 à 026.
+- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 027), à refaire au moins une fois de 001 à 027.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
 ## 6. Limites connues, décidées

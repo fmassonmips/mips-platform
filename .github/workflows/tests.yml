@@ -1,6 +1,6 @@
 # Lint and end-to-end tests (tests/e2e/run.sh) on every pull request.
-# The 27 suites run in four parallel jobs of about 8 minutes each; a failed
-# job keeps its screenshots and received e-mails as an artifact.
+# The suites run in four parallel jobs; a failed job keeps its screenshots
+# and received e-mails as an artifact.
 name: Tests
 
 on:
@@ -71,6 +71,7 @@ jobs:
           cache-dependency-path: tests/e2e/package-lock.json
       - name: Test tools
         run: |
+          sudo apt-get update -q && sudo apt-get install -y -q mariadb-client gnupg rsync   # mariadb-dump for tools/backup.sh
           pip install cryptography
           cd tests/e2e && npm ci && npx playwright install --with-deps chromium
       - name: MariaDB client access
