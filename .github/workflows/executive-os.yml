@@ -30,4 +30,10 @@ jobs:
       - run: npm run build
       - run: npm run db:seed
       - name: E2E acceptance scenario
-        run: npx playwright install --with-deps chromium && npm run test:e2e
+        env: { BASE_URL: 'http://localhost:3000' }
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          (npm start > server.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/api/v1/health && break; sleep 2; done
+          npm run test:e2e || (tail -50 server.log; exit 1)
