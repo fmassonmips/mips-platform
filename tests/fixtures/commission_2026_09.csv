@@ -1,0 +1,15 @@
+date_transaction,form_name,form_nickname,sof_proc_nickname,somme_totale,symbole_monnaie,is_for_till_id,fi_name,last_transaction_status,est_test,is_test_order,refund_total_refunded
+2026-09-01,Alpha Test Shop,,MPGS,1000.00,MUR,,MCB,SUCCESS,0,0,0
+2026-09-02,Alpha Test Shop,,MPGS,500.50,MUR,,MCB,SUCCESS,0,0,0
+2026-09-03,Alpha Test Shop,,MPGS_SBM,250.00,MUR,,SBM,SUCCESS,0,0,0
+2026-09-04,Beta Test Hotel,,PowerCardCIM,2000.00,MUR,T01,MCB,SUCCESS,0,0,0
+2026-09-05,Beta Test Hotel,,MyT_money_v2,300.00,MUR,T02,MCB,SUCCESS,0,0,0
+2026-09-06,Beta Test Hotel,,JUICE_auto,150.00,MUR,,MCB,SUCCESS,0,0,0
+2026-09-07,,Gamma Test Kiosk,IDP_API_JUICE,75.25,MUR,,MCB,SUCCESS,0,0,0
+2026-09-08,Alpha Test Shop,,Cybersource,100.00,USD,,ABSA,SUCCESS,0,0,0
+2026-09-09,Alpha Test Shop,,MPGS,999.00,MUR,,MCB,FAILED,0,0,0
+2026-09-10,Alpha Test Shop,,MPGS,888.00,MUR,,MCB,SUCCESS,1,0,0
+2026-09-11,Beta Test Hotel,,MPGS,0,MUR,,MCB,SUCCESS,0,0,120.00
+2026-09-12,Beta Test Hotel,,MPGS,400.00,MUR,,MCB,SUCCESS,0,0,50.00
+2026-09-13,Alpha Test Shop,,BankXfer,60.00,MUR,,MCB,SUCCESS,0,0,0
+not-a-date,Alpha Test Shop,,MPGS,10.00,MUR,,MCB,SUCCESS,0,0,0

@@ -1,0 +1,68 @@
+# Preuves manquantes — dossier SPIN DIGITAL / BoM
+
+Constat établi le 2026-10-27 sur le dépôt `mips-platform` (commit `590d8d8`, prototype non déployé),
+**mis à jour le 2026-10-28** après l'ajout du portail marchand (commit `d91d250`, toujours non déployé).
+**Revu le 2026-10-30** : aucun nouvel écran ; corrections côté serveur et tests automatiques ajoutés
+(voir la fin du registre des captures). Le constat ci-dessous est inchangé, sauf la section 5.
+Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS de production. Ces écrans doivent
+être recherchés dans le système réel (back-office V3, portail marchand) avant de conclure qu'ils n'existent pas.
+
+## 1. Les 7 vues demandées
+
+| Vue | État dans le prototype | À fournir |
+|---|---|---|
+| S01 Connexion + T&Cs | **Présent dans le prototype** (S01c–f) : compte marchand, double authentification obligatoire, acceptation des conditions par version, journal du consentement. **Texte des conditions = remplissage.** | Le **texte réel** des conditions, validé par le juridique, puis une nouvelle capture. Si le dossier doit montrer le système en service : captures de la plateforme réelle. |
+| S02 Parcours d'onboarding | **Présent** : vue interne (S02a–b) et vue du prospect (S02c–d). Étape « décision » non illustrée côté marchand. | Rien d'obligatoire. Option : capture d'un dossier approuvé vu par le marchand. |
+| S03 Préqualification | **Présent dans le prototype** (S03a–b). Signaux pour l'analyste seulement ; pas de notation de risque automatique. | Validation par la conformité des secteurs sensibles et de la tranche de volume signalée ; règles d'éligibilité à formaliser. |
+| S04 Collecte KYB | **Présent** : vue interne (S04a–b) et dépôt par le marchand (S04c–d). S04d recapturée le 2026-10-30 avec ClamAV actif et les signatures officielles : pièces « antivirus OK ». | Installer, superviser et rendre obligatoire l'antivirus sur la plateforme réelle avant toute mise en service ; procédure en cas de détection. |
+| S05 Portail général | **Partiel** : portail marchand limité à l'entrée en relation (S05b) ; navigation du back-office (S05). | Espace d'un **marchand actif** (transactions, relevés, règlements) : n'existe pas dans le prototype. |
+| S06 Dashboard marchand | **Absent** ; seul un rapport interne agrégé existe. | Capture 1 (back-office V3) ou dashboard marchand réel, en distinguant volume traité, fonds encaissés, fonds reçus et montants réglés. |
+| S07 Règlement | Rapprochement acquéreur ↔ plateforme présent ; **pas de rapprochement trust, pas de validation de règlement**. | **Modèle A retenu le 2026-10-31** (`outputs/decisions/`) : aucun fonds de marchand détenu, donc pas de compte trust à rapprocher ; le règlement va de l'acquéreur au marchand. À présenter comme tel, schéma des flux à l'appui, **sous réserve** que la licence demandée n'exige pas de détenir les fonds et qu'aucun flux (wallets, virement) ne transite par un compte MIPS. |
+
+## 2. Contrôles complémentaires (attendus par la BoM, sections 10, 11 et 13 du formulaire)
+
+| Contrôle | État dans le prototype |
+|---|---|
+| Screening AML (sanctions, PEP, adverse media) | **Partiel** : résultat et référence de contrôle sanctions/PEP **saisis à la main** par personne (S04b). Le prospect peut déclarer une personne PEP sur le portail (il ne peut pas retirer ce statut), et toute modification d'identité remet le contrôle à faire. Aucun outil de filtrage connecté, **pas d'adverse media**, aucun filtrage continu ni re-screening automatique. |
+| Surveillance des transactions / antifraude | **Absent** : aucune règle, aucune alerte, aucun score. Le reporting signale seulement des anomalies de volume (« spike » d'un marchand), ce qui n'est pas un dispositif AML. |
+| Trust, droits des marchands, contrôle des règlements | **Sans objet dans le modèle A retenu le 2026-10-31** (aucun fonds de marchand détenu), sous réserve des deux vérifications de la décision. Rien n'est construit : à prévoir seulement en cas de passage au modèle B. |
+| Remboursements et chargebacks | **Absent** : les remboursements sont seulement comptés dans le reporting. Aucun traitement, aucune gestion de litige. |
+| Réclamations et suivi des échéances | **Absent** : pas de registre de réclamations ni de délais de traitement. Le seul suivi d'échéances existant porte sur les dossiers KYC et les préavis de contrats. |
+| Rôles, permissions, séparation préparateur/approbateur | **Présent** (C01, C03, C04, C05) : 3 rôles pour le personnel ; comptes marchands séparés, chacun limité à son propre dossier ; accès par module ; publication des conditions réservée aux administrateurs ; double regard sur l'acceptation des pièces KYC et sur l'approbation des dossiers. Pas de séparation préparateur/approbateur sur la facturation ni sur le rapprochement. |
+| Journal d'audit | **Présent** (C02 ; actions du marchand visibles dans l'historique du dossier, S04d) : en ajout seul, avec filtres. Inaltérabilité dépendant des droits de la base de données. |
+
+## 3. Spécifications à rédiger séparément (non implémentées ici)
+
+Les points 1 à 3 de la version du 2026-10-27 (acceptation des conditions, portail marchand pour l'entrée en
+relation, préqualification) ont été **implémentés dans le prototype** le 2026-10-28, à la demande expresse
+du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10). Restent à spécifier,
+**sans implémentation dans le cadre de cette demande** :
+
+1. **Espace du marchand actif** : transactions, relevés, règlements, remboursements, gestion des utilisateurs du marchand.
+2. **Texte des conditions d'utilisation** (juridique) et règles d'éligibilité de la préqualification (conformité).
+3. **Antivirus** des pièces déposées : installation, supervision, procédure en cas de détection.
+4. ~~**Trust et règlement**~~ : sans objet tant que le modèle A est retenu (décision du 2026-10-31) ; spécification disponible pour un éventuel modèle B.
+5. **Surveillance des transactions** : règles et seuils, file d'alertes, investigation, déclaration de soupçon.
+6. **Remboursements, chargebacks, réclamations** : registres, statuts, délais, escalade.
+7. **Screening AML** : intégration d'un fournisseur (sanctions, PEP, adverse media), avec re-screening périodique.
+
+## 4. Points à vérifier avant insertion dans B01 / G01
+
+- Légendes : utiliser les **légendes exactes** du registre, pas les légendes génériques demandées, partout où elles surestiment la fonction (S01, S05, S06, S07).
+- Bandeau DEMO : il doit rester visible sur toute image insérée. Les captures du portail portent la build `d91d250`, les autres la build `590d8d8` : ne pas les présenter comme une seule et même version.
+- S01f et C05 montrent un **texte de conditions de remplissage** : à remplacer par une capture du texte réel avant tout dépôt, ou à légender comme tel.
+- Le portail marchand **n'est pas déployé** : ne pas le présenter comme opérationnel ni comme un service SPIN.
+- Références MIPS INTERNATIONAL / FSC dans B01 et G01 : **non vérifiées**, je n'ai pas eu ces documents.
+- Toute capture d'un système réel doit masquer les données personnelles et bancaires, les clés API, les tokens et les certificats.
+
+## 5. Tests automatiques : ce qui reste à couvrir
+
+- ~~Blocages d'approbation et approbation en double regard~~ : couverts depuis le 2026-10-30 par
+  `onboarding_approval_test.py` (78 vérifications). La suite a révélé un contournement du double regard
+  (réassigner le dossier puis le trancher soi-même), corrigé le même jour.
+- ~~2FA obligatoire pour admin et finance~~ : couverte depuis le 2026-10-30 par `staff_2fa_required_test.py` (23 vérifications).
+- Antivirus : le vrai moteur ClamAV est testé depuis le 2026-10-30 (`antivirus_clamav_test.py`) avec une signature de
+  test. S04d a été recapturée le même jour avec ClamAV et les **signatures officielles** (miroir Microsoft). Reste non
+  montré à l'écran : le refus d'une pièce infectée avec la base officielle (la chaîne EICAR dans un PDF n'est pas
+  détectée par cette base ; seul un fichier EICAR pur l'est, et il est refusé avant l'antivirus par le contrôle de format).
+- Fichier MCB réel, table BigQuery réelle : uniquement simulés.
