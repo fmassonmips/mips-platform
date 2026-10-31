@@ -18,6 +18,11 @@ BEGIN
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', r.table_name);
     EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', r.table_name);
     EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = app_tenant()) WITH CHECK (tenant_id = app_tenant())', r.table_name);
+    -- Defence in depth: data tables are isolated even for the owner role (seeding, scripts).
+    -- Identity tables stay unforced so the narrow SECURITY DEFINER auth lookups work.
+    IF r.table_name NOT IN ('memberships','roles','role_permissions','api_keys') THEN
+      EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', r.table_name);
+    END IF;
   END LOOP;
 END $$;
 

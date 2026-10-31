@@ -69,7 +69,7 @@ export async function runCalculation(tx: Tx, o: RunOptions): Promise<string> {
   const checks = await runChecks(tx, o.start, o.end);
   const locked = await periodLockState(tx, o.start, o.end);
   const values = computeKpis(facts, prior);
-  const defs = await q<{ id: string; code: string; fv: string }>(tx, `SELECT d.id, d.code, (SELECT id FROM formula_versions WHERE kpi_id = d.id ORDER BY version DESC LIMIT 1) AS fv FROM kpi_definitions d`);
+  const defs = await q<{ id: string; code: string; fv: string }>(tx, `SELECT d.id, d.code, (SELECT id FROM formula_versions WHERE kpi_id = d.id ORDER BY version DESC LIMIT 1) AS fv FROM kpi_definitions d WHERE d.tenant_id = app_tenant()`);
   const defMap = new Map(defs.map((d) => [d.code, d]));
   const manual = await q<any>(tx, `SELECT DISTINCT ON (v.kpi_id) d.code, v.status, r.input_hash FROM kpi_verifications v JOIN kpi_definitions d ON d.id = v.kpi_id
     LEFT JOIN kpi_results r ON r.id = v.kpi_result_id WHERE v.period_start = $1 ORDER BY v.kpi_id, v.created_at DESC`, [o.start]);
