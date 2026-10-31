@@ -17,7 +17,7 @@ Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS 
 | S04 Collecte KYB | **Présent** : vue interne (S04a–b) et dépôt par le marchand (S04c–d). S04d recapturée le 2026-10-30 avec ClamAV actif et les signatures officielles : pièces « antivirus OK ». | Installer, superviser et rendre obligatoire l'antivirus sur la plateforme réelle avant toute mise en service ; procédure en cas de détection. |
 | S05 Portail général | **Partiel** : portail marchand limité à l'entrée en relation (S05b) ; navigation du back-office (S05). | Espace d'un **marchand actif** (transactions, relevés, règlements) : n'existe pas dans le prototype. |
 | S06 Dashboard marchand | **Absent** ; seul un rapport interne agrégé existe. | Capture 1 (back-office V3) ou dashboard marchand réel, en distinguant volume traité, fonds encaissés, fonds reçus et montants réglés. |
-| S07 Règlement | Rapprochement acquéreur ↔ plateforme présent ; **pas de rapprochement trust, pas de validation de règlement**. | Rapprochement du compte trust (fonds reçus vs droits des marchands) et circuit de validation des règlements. |
+| S07 Règlement | Rapprochement acquéreur ↔ plateforme présent ; **pas de rapprochement trust, pas de validation de règlement**. | **Modèle A retenu le 2026-10-31** (`outputs/decisions/`) : aucun fonds de marchand détenu, donc pas de compte trust à rapprocher ; le règlement va de l'acquéreur au marchand. À présenter comme tel, schéma des flux à l'appui, **sous réserve** que la licence demandée n'exige pas de détenir les fonds et qu'aucun flux (wallets, virement) ne transite par un compte MIPS. |
 
 ## 2. Contrôles complémentaires (attendus par la BoM, sections 10, 11 et 13 du formulaire)
 
@@ -25,7 +25,7 @@ Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS 
 |---|---|
 | Screening AML (sanctions, PEP, adverse media) | **Partiel** : résultat et référence de contrôle sanctions/PEP **saisis à la main** par personne (S04b). Le prospect peut déclarer une personne PEP sur le portail (il ne peut pas retirer ce statut), et toute modification d'identité remet le contrôle à faire. Aucun outil de filtrage connecté, **pas d'adverse media**, aucun filtrage continu ni re-screening automatique. |
 | Surveillance des transactions / antifraude | **Absent** : aucune règle, aucune alerte, aucun score. Le reporting signale seulement des anomalies de volume (« spike » d'un marchand), ce qui n'est pas un dispositif AML. |
-| Trust, droits des marchands, contrôle des règlements | **Absent** : pas de grand livre des droits des marchands, pas de rapprochement du compte trust, pas de circuit de validation des paiements aux marchands. |
+| Trust, droits des marchands, contrôle des règlements | **Sans objet dans le modèle A retenu le 2026-10-31** (aucun fonds de marchand détenu), sous réserve des deux vérifications de la décision. Rien n'est construit : à prévoir seulement en cas de passage au modèle B. |
 | Remboursements et chargebacks | **Absent** : les remboursements sont seulement comptés dans le reporting. Aucun traitement, aucune gestion de litige. |
 | Réclamations et suivi des échéances | **Absent** : pas de registre de réclamations ni de délais de traitement. Le seul suivi d'échéances existant porte sur les dossiers KYC et les préavis de contrats. |
 | Rôles, permissions, séparation préparateur/approbateur | **Présent** (C01, C03, C04, C05) : 3 rôles pour le personnel ; comptes marchands séparés, chacun limité à son propre dossier ; accès par module ; publication des conditions réservée aux administrateurs ; double regard sur l'acceptation des pièces KYC et sur l'approbation des dossiers. Pas de séparation préparateur/approbateur sur la facturation ni sur le rapprochement. |
@@ -41,7 +41,7 @@ du CEO (spécification : `outputs/dev-handover/my-mips-onboarding-kyc.md`, § 10
 1. **Espace du marchand actif** : transactions, relevés, règlements, remboursements, gestion des utilisateurs du marchand.
 2. **Texte des conditions d'utilisation** (juridique) et règles d'éligibilité de la préqualification (conformité).
 3. **Antivirus** des pièces déposées : installation, supervision, procédure en cas de détection.
-4. **Trust et règlement** : grand livre des droits des marchands, rapprochement quotidien du compte trust, circuit de validation des règlements en double regard.
+4. ~~**Trust et règlement**~~ : sans objet tant que le modèle A est retenu (décision du 2026-10-31) ; spécification disponible pour un éventuel modèle B.
 5. **Surveillance des transactions** : règles et seuils, file d'alertes, investigation, déclaration de soupçon.
 6. **Remboursements, chargebacks, réclamations** : registres, statuts, délais, escalade.
 7. **Screening AML** : intégration d'un fournisseur (sanctions, PEP, adverse media), avec re-screening périodique.

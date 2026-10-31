@@ -1,5 +1,9 @@
 # my.mips.mu — Réconciliation du compte trust (fonds des marchands)
 
+> **Statut au 31 octobre 2026 : NE PAS DÉVELOPPER.** Le modèle A (passerelle, aucun fonds de marchand détenu) est
+> retenu pour le dossier SPIN (`outputs/decisions/2026-10-31-modele-flux-de-fonds.md`). Cette spécification ne sert
+> que si MIPS décide un jour d'encaisser pour le compte des marchands (modèle B).
+
 **Pour :** le développeur de my.mips.mu
 **De :** Florent Masson (MIPS)
 **Implémentation de référence :** **aucune.** Ce module n'existe ni dans le prototype `mips-platform` ni, à ma connaissance,

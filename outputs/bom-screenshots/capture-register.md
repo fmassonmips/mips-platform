@@ -157,7 +157,7 @@
 | Écran / parcours | Menu Recon → rapprochement 2026-09 → ligne « Specimen Cafe Ltd » → détail journalier |
 | Rôle | `demo.analyst@example.com` (finance) |
 | Fonction démontrée | Rapprochement d'un **fichier acquéreur** (format MCB e-commerce) avec l'**extraction transactionnelle de la plateforme**, par MID et devise ; écarts ventilés par catégorie (vérifications de carte, décalage de clearing, présent d'un seul côté, écart réel) et bouclés à zéro ; % d'écart ; détail journalier ; liste de transactions candidates à réclamer avec références ; exports CSV ; avertissements de périmètre |
-| Limites | **Pas de rapprochement du compte trust** ni des fonds sur un compte bancaire : il s'agit de **volumes déclarés** par l'acquéreur, comparés aux transactions de la plateforme. **Aucune étape de validation ni d'approbation du règlement**, aucun suivi de paiement aux marchands. Fichiers d'entrée synthétiques. Le libellé « MCB » désigne le format de fichier ; les chiffres ne proviennent pas de la MCB. |
+| Limites | **Pas de rapprochement du compte trust** — sans objet dans le modèle A retenu le 2026-10-31, où aucun fonds de marchand n'est détenu — ni des fonds sur un compte bancaire : il s'agit de **volumes déclarés** par l'acquéreur, comparés aux transactions de la plateforme. **Aucune étape de validation ni d'approbation du règlement**, aucun suivi de paiement aux marchands. Fichiers d'entrée synthétiques. Le libellé « MCB » désigne le format de fichier ; les chiffres ne proviennent pas de la MCB. |
 | Légende | *Payment reconciliation and settlement tracking* → **ne pas utiliser**. Légende exacte : *Acquirer-to-platform transaction reconciliation with exception analysis (not trust or settlement reconciliation)* |
 
 ---
