@@ -38,6 +38,9 @@ final class Database
                 PDO::ATTR_EMULATE_PREPARES   => false,
                 PDO::ATTR_PERSISTENT         => false,
             ]);
+            // Mauritius time for NOW(), CURDATE() and DATETIME columns, whatever the server's zone,
+            // so SQL dates agree with PHP's (Mauritius has had no daylight saving since 2009).
+            self::$pdo->exec("SET time_zone = '+04:00'");
         } catch (PDOException $e) {
             // Never leak DB errors to the client.
             error_log('[DB] ' . $e->getMessage());

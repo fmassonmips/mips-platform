@@ -1,6 +1,6 @@
 # Mise en ligne de my.mips.mu
 
-Guide pour installer la suite sur un serveur de production (ou de démonstration), puis la liste à cocher avant d'y mettre les données d'un client.
+Guide pour installer la suite sur un serveur de production (ou de démonstration), puis la liste à cocher avant d'y mettre les données d'un client. Avant la première mise en production, le code doit avoir été relu : voir `docs/relecture.md` et `tests/e2e/run.sh`.
 
 ## 1. Ce qu'il faut
 
@@ -12,7 +12,7 @@ Guide pour installer la suite sur un serveur de production (ou de démonstration
 | Serveur web | Nginx (exemple ci-dessous) ou Apache, **racine web = `public/`** |
 | HTTPS | Certificat valide (Let's Encrypt) ; les cookies de session sont `Secure` |
 | E-mail | Un service d'envoi SMTP (Brevo, Postmark, Amazon SES…) avec SPF, DKIM et DMARC sur le domaine d'envoi |
-| Horloge | Fuseau du serveur indifférent : l'application écrit l'heure de Maurice elle-même |
+| Horloge | Fuseau du serveur indifférent : l'application se met à l'heure de Maurice (PHP et chaque connexion à la base). Garder l'horloge synchronisée (NTP) ; les sauvegardes et requêtes SQL lancées à la main avec `mysql` sont en heure du serveur, sauf `SET time_zone = '+04:00'` |
 
 Seul `public/` est exposé au web. `src/`, `config/`, `templates/`, `sql/` et `tools/` restent hors de la racine web.
 
@@ -39,7 +39,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `026`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `027`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -96,16 +96,23 @@ post_max_size = 2M
 
 ### Tâches planifiées (crontab de l'utilisateur PHP)
 
+Chaque tâche passe par `tools/cron.sh <nom> <commande>`, qui date chaque ligne du journal et enregistre le résultat pour la surveillance (§ 3 bis). Heures en UTC (Maurice = UTC + 4).
+
 ```
-*/5 * * * * php /var/www/mips/tools/mra_retry.php            >> /var/log/mips/cron.log 2>&1
-15 2 * * *  php /var/www/mips/tools/clientbloom_expire.php   >> /var/log/mips/cron.log 2>&1
-0 * * * *   php /var/www/mips/tools/rendezvous_reminders.php >> /var/log/mips/cron.log 2>&1
-20 * * * *  php /var/www/mips/tools/bookora_ical_sync.php    >> /var/log/mips/cron.log 2>&1
-5 5 * * *   php /var/www/mips/tools/reminders.php            >> /var/log/mips/cron.log 2>&1   # 9 h 05 à Maurice si le serveur est en UTC (sinon 5 9 * * *) : fins d'essai, factures en retard, résumé du lundi
-45 22 * * * php /var/www/mips/tools/purge_companies.php      >> /var/log/mips/cron.log 2>&1   # comptes fermés depuis 30 jours ; historique d'usage de plus de 13 mois
+MAILTO=ops@mips.mu
+C=/var/www/mips/tools/cron.sh
+L=/var/log/mips/cron.log
+*/5 * * * *  $C mra_retry            php /var/www/mips/tools/mra_retry.php            >> $L 2>&1
+15 2 * * *   $C clientbloom_expire   php /var/www/mips/tools/clientbloom_expire.php   >> $L 2>&1
+0 * * * *    $C rendezvous_reminders php /var/www/mips/tools/rendezvous_reminders.php >> $L 2>&1
+20 * * * *   $C bookora_ical_sync    php /var/www/mips/tools/bookora_ical_sync.php    >> $L 2>&1
+5 5 * * *    $C reminders            php /var/www/mips/tools/reminders.php            >> $L 2>&1   # 9 h 05 à Maurice : fins d'essai, factures en retard, résumé du lundi
+45 22 * * *  $C purge_companies      php /var/www/mips/tools/purge_companies.php      >> $L 2>&1   # comptes fermés depuis 30 jours ; historique d'usage de plus de 13 mois
+45 21 * * *  $C backup               /var/www/mips/tools/backup.sh                    >> $L 2>&1   # 1 h 45 à Maurice
+*/10 * * * * $C watchdog             php /var/www/mips/tools/ops.php watchdog         >> $L 2>&1
 ```
 
-Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1. **Alerter sur ce code** (par exemple `MAILTO=ops@mips.mu` en tête de crontab avec `|| echo "échec"`, ou une sonde type Healthchecks.io) : une transmission MRA bloquée ne doit pas passer inaperçue.
+Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1, que la surveillance signale.
 
 ### Réseau sortant
 
@@ -121,10 +128,51 @@ Le serveur n'a besoin de joindre que : le service SMTP, les URL MRA et les calen
 
 ## 3. Sauvegardes
 
-- Base complète chaque nuit, chiffrée, copiée hors du serveur (autre région / autre fournisseur), 30 jours de rétention :
-  `mysqldump --single-transaction --routines mips_platform | gzip | gpg -e -r <clé> > mips-$(date +%F).sql.gz.gpg`
-- `config/config.local.php` et `app.secret_key` : dans le coffre-fort de l'équipe. Sans la clé, les mots de passe MRA enregistrés sont perdus.
-- **Tester une restauration** sur un serveur vierge avant le premier pilote, puis chaque trimestre. Une sauvegarde jamais restaurée ne compte pas.
+`tools/backup.sh` sauvegarde chaque nuit **toute la base** (les images des boutiques et logements y sont aussi) et `config/config.local.php`, chiffrées avec la **clé publique** de sauvegarde de MIPS. La clé privée ne va jamais sur le serveur : qui vole le serveur ou une copie de sauvegarde ne peut rien lire. Le script garde 30 jours sur le serveur et copie chaque sauvegarde **hors du serveur** ; sans copie hors serveur configurée, il sort en erreur (une sauvegarde sur le même disque disparaît avec lui), sauf `MIPS_BACKUP_LOCAL_ONLY=1`.
+
+**Une fois, sur le poste d'un responsable (pas le serveur)** :
+
+```bash
+gpg --quick-gen-key "MIPS sauvegardes <ops@mips.mu>" default default never   # phrase de passe longue, dans le coffre-fort
+gpg --armor --export ops@mips.mu > backup-public-key.asc                      # à copier sur le serveur
+gpg --armor --export-secret-keys ops@mips.mu > backup-private-key.asc         # coffre-fort + une copie hors ligne (clé USB au coffre)
+```
+
+Perdre la clé privée ou sa phrase de passe = perdre toutes les sauvegardes. La garder à deux endroits, connue d'au moins deux personnes.
+
+**Sur le serveur** :
+
+```bash
+sudo mkdir -p /etc/mips /var/backups/mips && sudo chown www-data /var/backups/mips && sudo chmod 700 /var/backups/mips
+sudo cp backup-public-key.asc /etc/mips/
+sudo mysql -e "CREATE USER 'mips_backup'@'localhost' IDENTIFIED BY '<mot de passe>';
+  GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT ON mips_platform.* TO 'mips_backup'@'localhost';"
+printf '[client]\nuser=mips_backup\npassword=<mot de passe>\n' | sudo tee /etc/mips/backup.my.cnf >/dev/null
+printf 'MIPS_BACKUP_RCLONE_REMOTE=b2:mips-backups\n' | sudo tee /etc/mips/backup.env >/dev/null   # ou MIPS_BACKUP_RSYNC_TARGET=…
+sudo chown www-data /etc/mips/backup.my.cnf /etc/mips/backup.env && sudo chmod 600 /etc/mips/backup.my.cnf /etc/mips/backup.env
+sudo -u www-data /var/www/mips/tools/cron.sh backup /var/www/mips/tools/backup.sh   # premier essai à la main
+```
+
+Copie hors serveur : `rclone` (Backblaze B2, S3, Google Drive… configuré avec `rclone config` par l'utilisateur www-data) ou `rsync` vers une autre machine. Chez un autre fournisseur ou dans une autre région que le serveur. La durée de conservation hors serveur se règle chez ce fournisseur (règle de cycle de vie, par ex. 90 jours) ; un compte qui ne peut qu'**ajouter** des fichiers protège aussi contre un pirate qui voudrait effacer les sauvegardes depuis le serveur.
+
+**Restaurer** (sur une machine qui a la clé privée) :
+
+```bash
+tools/restore.sh mips-2026-11-02-214500.sql.gz.gpg mips_restore             # dans une base à part, pour vérifier
+tools/restore.sh mips-2026-11-02-214500.sql.gz.gpg mips_platform --replace   # reprise après sinistre
+gpg --decrypt mips-2026-11-02-214500-config.php.gpg > config/config.local.php
+```
+
+Le script vérifie l'empreinte (`.sha256`), refuse une base qui contient déjà des tables sans `--replace`, puis affiche le nombre de tables et quelques comptages. La CI restaure une sauvegarde à chaque pull request et compare chaque table à l'original (`tests/e2e/e2e29.js`).
+
+**Tester une restauration** sur une machine vierge avant le premier pilote, puis chaque trimestre : restaurer, faire pointer une copie de l'application dessus, se connecter, ouvrir une facture. Une sauvegarde jamais restaurée ne compte pas.
+
+## 3 bis. Surveillance
+
+- **E-mail d'alerte** : `tools/ops.php watchdog` (toutes les 10 minutes) écrit à `ops.alert_email` quand une tâche planifiée échoue, ne tourne plus (par exemple aucune transmission MRA réussie depuis 30 minutes, aucune sauvegarde depuis 26 heures) ou que le disque est plein à plus de 90 %. Un e-mail quand le problème apparaît, un rappel par jour tant qu'il dure, un « Résolu » quand il disparaît. Si l'e-mail ne part pas, la tâche sort en erreur et cron écrit à `MAILTO`.
+- **Sonde externe** : `https://my.mips.mu/health.php` répond `200 ok`, ou `503 degraded` si la base ne répond pas ou qu'un problème ci-dessus est en cours. Une sonde gratuite (UptimeRobot, Healthchecks.io…) qui l'appelle toutes les 5 minutes alerte aussi quand le serveur entier est arrêté, ce que le serveur ne peut pas signaler lui-même. La page ne dit rien de plus.
+- **Détail** : `php tools/ops.php status` sur le serveur.
+- Une instance qui ne fait pas tourner une tâche (la démonstration sans sauvegarde, par exemple) la déclare dans `ops.skip_jobs`.
 
 ## 4. Mise à jour
 
@@ -165,7 +213,8 @@ En ligne de commande, `php tools/subscribe.php --org=<id> [--app=<slug>|all [--e
 - [ ] Base créée avec `schema.sql` **sans** `seed.sql` ; utilisateur `mips_app` sans droits de structure
 - [ ] `bookora.ical_allow_private = false`
 - [ ] Derrière un proxy/CDN : vraie adresse client restaurée (`real_ip`), testée en se trompant 6 fois de mot de passe depuis un téléphone : seul ce téléphone est bloqué
-- [ ] Pare-feu sortant en place ; alerte sur l'échec des cron
+- [ ] Pare-feu sortant en place
+- [ ] `ops.alert_email` renseigné ; `php tools/ops.php status` affiche `OK` ; sonde externe sur `/health.php` ; alerte reçue en arrêtant une tâche (test)
 - [ ] `billing.contact_email` renseigné
 - [ ] `backoffice.staff` rempli (comptes nominatifs de l'équipe) ; back-office limité à l'IP du bureau ou au VPN
 - [ ] Cron installés ; première exécution manuelle de chaque script sans erreur
@@ -179,7 +228,8 @@ En ligne de commande, `php tools/subscribe.php --org=<id> [--app=<slug>|all [--e
 - [ ] URL LIVE et clé publique MRA en place avant la première facture réelle
 
 **Données et légal**
-- [ ] Sauvegarde nocturne en place **et restauration testée**
+- [ ] Sauvegarde nocturne en place, copiée hors serveur, **et restauration testée** sur une machine vierge (§ 3)
+- [ ] Clé privée de sauvegarde et sa phrase de passe à deux endroits, connues de deux personnes
 - [ ] Bloc `legal` de `config.local.php` rempli (raison sociale, adresse, BRN, e-mails, hébergeur, service d'e-mail) : plus aucun « [… à compléter] » sur /cgu.php et /confidentialite.php ; `draft => false` une fois les textes validés par le juriste
 - [ ] CGU / politique de confidentialité publiées (Data Protection Act 2017 de Maurice : finalités, durée de conservation, sous-traitants — hébergeur, service e-mail) — à valider par un juriste
 - [ ] Enregistrement comme « controller / processor » auprès du Data Protection Office si requis — à vérifier
