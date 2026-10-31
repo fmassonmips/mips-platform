@@ -436,3 +436,129 @@ input[type="tel"] {
 .timeline li { padding: 10px 0; border-top: 1px solid var(--color-border); }
 #card-share { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
 #card-share div { flex: 1 1 260px; }
+
+/* -------- RendezVous -------- */
+input[type="number"],
+input[type="time"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px;
+    font: inherit; font-size: 15px; background: #fff; color: var(--color-text);
+}
+.nowrap { white-space: nowrap; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 6px; background: #eef2f7; color: var(--color-muted); font-size: 11px; vertical-align: middle; }
+
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px; }
+.week-strip a {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px;
+    border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); text-decoration: none; font-size: 13px;
+}
+.week-strip a strong { font-size: 16px; }
+.week-strip a.is-today { border-color: var(--color-primary); }
+.week-strip a.is-current { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.agenda tr.is-cancelled td { color: var(--color-muted); text-decoration: line-through; }
+.agenda tr.is-cancelled td:last-child, .agenda tr.is-cancelled td:nth-last-child(2) { text-decoration: none; }
+
+.status--rv-booked  { background: #e6f0fb; color: #1d5fa8; }
+.status--rv-done    { background: #e5f5ea; color: #1a7f37; }
+.status--rv-no_show { background: #fdecea; color: var(--color-error); }
+.status--rv-cancelled { background: #f1f2f4; color: var(--color-muted); }
+
+.hours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+.share-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.share-box input { flex: 1 1 260px; }
+
+.booking-card { max-width: 480px; }
+.slots-field { border: 0; padding: 0; margin: 0 0 16px; }
+.slots-field legend { font-size: 14px; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; min-height: 24px; }
+.slot {
+    padding: 8px 4px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff;
+    font: inherit; font-size: 14px; cursor: pointer; color: var(--color-text);
+}
+.slot:hover { border-color: var(--color-primary); }
+.slot.is-selected { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+.appt-details { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 16px 0; }
+.appt-details dt { color: var(--color-muted); }
+.appt-details dd { margin: 0; }
+@media (max-width: 600px) {
+    .week-strip { gap: 3px; }
+    .week-strip a { font-size: 11px; padding: 6px 2px; }
+}
+
+/* -------- Formelio -------- */
+.btn-link.danger { color: var(--color-error); }
+.status--fm-draft  { background: #f1f2f4; color: var(--color-muted); }
+.status--fm-open   { background: #e5f5ea; color: #1a7f37; }
+.status--fm-closed { background: #fdecea; color: var(--color-error); }
+
+.fm-fields { list-style: decimal; padding-left: 24px; margin: 0 0 16px; }
+.fm-field { padding: 12px; margin-bottom: 10px; border: 1px solid var(--color-border); border-radius: 8px; background: #fafbfc; }
+.fm-row { display: grid; grid-template-columns: 1fr 220px; gap: 8px; margin-bottom: 8px; }
+.fm-field textarea { margin-bottom: 8px; }
+.fm-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fm-tools .checkbox { margin: 0 auto 0 0; font-weight: 400; }
+@media (max-width: 600px) { .fm-row { grid-template-columns: 1fr; } }
+
+.bar-row { display: grid; grid-template-columns: minmax(80px, 30%) 1fr auto; gap: 10px; align-items: center; margin: 4px 0; font-size: 14px; }
+.bar-row meter { width: 100%; height: 14px; }
+.bar-value { color: var(--color-muted); font-size: 13px; white-space: nowrap; }
+.big-figure { font-size: 32px; font-weight: 700; margin: 4px 0 8px; }
+.latest { margin: 0; padding-left: 18px; }
+.latest li { margin-bottom: 6px; }
+.response { border-top: 1px solid var(--color-border); padding: 10px 0; }
+.response summary { cursor: pointer; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.answers { display: grid; grid-template-columns: minmax(120px, 35%) 1fr; gap: 6px 16px; margin: 12px 0; font-size: 14px; }
+.answers dt { color: var(--color-muted); }
+.answers dd { margin: 0; }
+
+.form-card { max-width: 560px; }
+.preview-banner { padding: 8px 12px; border-radius: 8px; background: #fff6e0; font-size: 14px; }
+.q-group { border: 0; padding: 0; margin: 0; }
+.q-group legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; padding: 0; }
+.option { display: flex; align-items: center; gap: 8px; font-weight: 400; margin-bottom: 6px; }
+.option input { width: auto; }
+.scale { display: flex; gap: 4px; flex-wrap: wrap; }
+.scale-item { margin: 0; font-weight: 400; }
+.scale-item input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.scale-item span {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 38px; height: 38px;
+    border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer; background: #fff;
+}
+.scale-item input:checked + span { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+.scale-item input:focus-visible + span { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.scale--nps .scale-item span { min-width: 30px; }
+.scale-legend { display: flex; justify-content: space-between; margin-top: 4px; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* -------- FlowDesk -------- */
+/* Multi-word French statuses (« À traiter », « En cours ») keep their case. */
+.status[class*="status--fd-"] { text-transform: none; }
+.status--fd-open     { background: #e6f0fb; color: #1d5fa8; }
+.status--fd-pending  { background: #fff6e0; color: #8a5a00; }
+.status--fd-resolved { background: #e5f5ea; color: #1a7f37; }
+.status--fd-closed   { background: #f1f2f4; color: var(--color-muted); }
+.prio { font-size: 13px; }
+.prio--high   { color: #b35c00; font-weight: 600; }
+.prio--urgent { color: var(--color-error); font-weight: 700; }
+.prio--low    { color: var(--color-muted); }
+.tag--warn { background: #fdecea; color: var(--color-error); }
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-tabs a { padding: 6px 10px; border-radius: 8px; color: var(--color-muted); text-decoration: none; font-size: 14px; }
+.filter-tabs a.is-current { background: #e6f0fb; color: #1d5fa8; font-weight: 600; }
+.filter-tabs .count { font-size: 12px; opacity: 0.8; }
+
+.ticket-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+.ticket-layout > .card + .card { margin-top: 0; }
+.ticket-side h3 { margin: 0 0 8px; font-size: 15px; }
+.ticket-side h3 + p { margin-top: 0; }
+@media (max-width: 860px) { .ticket-layout { grid-template-columns: 1fr; } }
+
+.thread { list-style: none; padding: 0; margin: 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.msg { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--color-border); max-width: 92%; }
+.msg-head { margin-bottom: 4px; }
+.msg--customer { background: #fff; align-self: flex-start; }
+.msg--agent { background: #eef4fb; border-color: #cfe0f3; align-self: flex-end; }
+.msg--note { background: #fff8e1; border-color: #f1e0a8; align-self: flex-end; }
+.seg { display: flex; gap: 16px; margin-bottom: 8px; }
+.seg label { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 0; }
+.seg input { width: auto; }
+#fd-answer textarea { margin-bottom: 0; }

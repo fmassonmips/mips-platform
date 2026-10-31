@@ -27,9 +27,9 @@ final class Catalog
         'shoplokal'   => ['name' => 'ShopLokal',   'domain' => 'shoplokal.mu',    'tagline' => 'Boutiques en ligne',      'status' => 'coming_soon'],
         'clientbloom' => ['name' => 'ClientBloom', 'domain' => 'clientbloom.com', 'tagline' => 'CRM & fidélité',          'status' => 'available'],
         'staffzen'    => ['name' => 'StaffZen',    'domain' => 'staffzen.mu',     'tagline' => 'RH & congés',             'status' => 'coming_soon'],
-        'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'coming_soon'],
-        'rendezvous'  => ['name' => 'RendezVous',  'domain' => 'rendezvous.mu',   'tagline' => 'Prise de rendez-vous',    'status' => 'coming_soon'],
-        'flowdesk'    => ['name' => 'FlowDesk',    'domain' => 'flowdesk.com',    'tagline' => 'Support client',          'status' => 'coming_soon'],
+        'formelio'    => ['name' => 'Formelio',    'domain' => 'formelio.com',    'tagline' => 'Formulaires & sondages',  'status' => 'available'],
+        'rendezvous'  => ['name' => 'RendezVous',  'domain' => 'rendezvous.mu',   'tagline' => 'Prise de rendez-vous',    'status' => 'available'],
+        'flowdesk'    => ['name' => 'FlowDesk',    'domain' => 'flowdesk.com',    'tagline' => 'Support client',          'status' => 'available'],
     ];
 
     /** Free trial length granted on activation. */
