@@ -60,6 +60,7 @@ async function createScenario(p, merchantId, name, params) {
       const cfoOpt = await ceo.locator('#ownerUserId option', { hasText: 'Demo CFO' }).getAttribute('value'); await ceo.selectOption('#ownerUserId', cfoOpt);
       const chairOpt = await ceo.locator('#approverUserId option', { hasText: 'Demo Board Chair' }).getAttribute('value'); await ceo.selectOption('#approverUserId', chairOpt);
       await ceo.fill('#deadline', '2026-11-15');
+      await ceo.fill('#measureFrom', '2026-11-01'); // the new pricing takes effect on 1 Nov (step 9); independent of the wall clock
       await Promise.all([ceo.waitForURL(/\/decisions\/[0-9a-f-]{36}$/, { timeout: 180000 }), ceo.click('button:has-text("Record decision for approval")')]);
       return ceo.url();
     });

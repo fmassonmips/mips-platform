@@ -49,6 +49,7 @@ const decisionSchema = z.object({
   title: z.string().min(5).max(200), description: z.string().min(10).max(4000), rationale: z.string().min(10).max(4000),
   scenarioId: z.string().uuid().optional().or(z.literal('').transform(() => undefined)),
   ownerUserId: z.string().uuid(), approverUserId: z.string().uuid(), deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  measureFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('').transform(() => undefined)),
   evidence: z.string().max(4000).optional(),
 });
 export async function createDecisionAction(_: FormState, form: FormData): Promise<FormState> {
@@ -58,7 +59,7 @@ export async function createDecisionAction(_: FormState, form: FormData): Promis
     const d = decisionSchema.parse(Object.fromEntries(form.entries()));
     const evidence = (d.evidence ?? '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [kind, ...rest] = l.split('|'); return { kind: ['source_file', 'import_batch', 'reconciliation', 'pricing_agreement', 'fee_schedule', 'calculation', 'note', 'external_document', 'report'].includes(kind.trim()) ? kind.trim() : 'note', ref: (rest[0] ?? kind).trim(), note: rest[1]?.trim() }; });
     if (d.scenarioId) evidence.unshift({ kind: 'calculation', ref: `scenario:${d.scenarioId}`, note: 'Scenario engine output (base / proposed / downside)' });
-    const r = await withTenant(tctx(auth), (t) => createDecision(t, { tenantId: auth.tenantId, userId: auth.userId }, { title: d.title, description: d.description, rationale: d.rationale, scenarioId: d.scenarioId ?? null, ownerUserId: d.ownerUserId, approverUserId: d.approverUserId, deadline: d.deadline, evidence }));
+    const r = await withTenant(tctx(auth), (t) => createDecision(t, { tenantId: auth.tenantId, userId: auth.userId }, { title: d.title, description: d.description, rationale: d.rationale, scenarioId: d.scenarioId ?? null, ownerUserId: d.ownerUserId, approverUserId: d.approverUserId, deadline: d.deadline, evidence, measurement: d.measureFrom ? { measure_from: d.measureFrom } : undefined }));
     id = r.id;
   } catch (e) { return { error: msg(e) }; }
   revalidatePath('/decisions');

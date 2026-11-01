@@ -50,6 +50,8 @@ export function DecisionForm({ scenarioId, users, defaults }: { scenarioId?: str
         <div><label className="label" htmlFor="approverUserId">Approver</label><select id="approverUserId" name="approverUserId" className="input" defaultValue={defaults.approver ?? ''} required><option value="" disabled>Select…</option>{users.filter((u) => ['board_chair', 'ceo', 'admin'].includes(u.role)).map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}</select></div>
         <div><label className="label" htmlFor="deadline">Implementation deadline</label><input id="deadline" name="deadline" type="date" className="input" defaultValue={defaults.deadline} required /></div>
       </div>
+      <div className="max-w-xs"><label className="label" htmlFor="measureFrom">Measure outcome from (optional)</label><input id="measureFrom" name="measureFrom" type="date" className="input" />
+        <p className="mt-1 text-2xs text-muted">Date the change takes effect. Default: first day of the month after approval.</p></div>
       <div><label className="label" htmlFor="evidence">Supporting evidence (one per line: kind|reference|note)</label><textarea id="evidence" name="evidence" className="input font-mono text-xs" rows={4} defaultValue={defaults.evidence} /></div>
       {state.error && <p role="alert" className="text-sm text-neg">{state.error}</p>}
       <button type="submit" className="btn-gold" disabled={pending}>{pending ? 'Recording…' : 'Record decision for approval'}</button>
