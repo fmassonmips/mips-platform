@@ -22,7 +22,7 @@ export async function loginAction(_: LoginState, form: FormData): Promise<LoginS
       (SELECT count(*)::int FROM login_attempts WHERE lower(email) = lower($1) AND NOT success AND attempted_at > now() - interval '${WINDOW_MIN} minutes') AS e,
       (SELECT count(*)::int FROM login_attempts WHERE ip = $2 AND NOT success AND attempted_at > now() - interval '${WINDOW_MIN} minutes') AS i`, [email, ip]);
     if ((fails?.e ?? 0) >= MAX_EMAIL_FAILS || (fails?.i ?? 0) >= MAX_IP_FAILS) return { error: `Too many failed attempts. Try again in ${WINDOW_MIN} minutes.` };
-    const u = await one<any>(tx, 'SELECT id, password_hash, is_active, mfa_enabled FROM users WHERE lower(email) = lower($1)', [email]);
+    const u = await one<any>(tx, 'SELECT * FROM auth_user_by_email($1)', [email]);
     const ok = await verifyPassword(password, u?.password_hash ?? DUMMY_HASH);
     await tx.query('INSERT INTO login_attempts (email, ip, success) VALUES ($1,$2,$3)', [email, ip, Boolean(u && u.is_active && ok)]);
     if (!u || !u.is_active || !ok) return { error: 'Invalid email or password.' };
@@ -32,6 +32,7 @@ export async function loginAction(_: LoginState, form: FormData): Promise<LoginS
     const last = await one<{ tenant_id: string }>(tx, 'SELECT tenant_id FROM sessions WHERE user_id = $1 AND tenant_id IS NOT NULL ORDER BY last_seen_at DESC LIMIT 1', [u.id]);
     const tenantId = memberships.find((m) => m.tenant_id === last?.tenant_id)?.tenant_id ?? memberships[0].tenant_id;
     const token = await createSession(tx, u.id, tenantId, !u.mfa_enabled, ip, ua);
+    await tx.query("SELECT set_config('app.user_id', $1, true)", [u.id]); // users RLS: an account may update only itself
     await tx.query('UPDATE users SET last_login_at = now() WHERE id = $1', [u.id]);
     return { token, mfa: u.mfa_enabled as boolean, tenantId, userId: u.id as string };
   });
@@ -47,8 +48,12 @@ export async function mfaAction(_: LoginState, form: FormData): Promise<LoginSta
   const c = await cookies(); const token = c.get(SESSION_COOKIE)?.value;
   if (!token) redirect('/login');
   const ok = await withoutTenant(async (tx) => {
-    const s = await one<any>(tx, `SELECT s.id, u.mfa_secret FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`, [hashToken(token!)]);
-    if (!s?.mfa_secret || !verifyTotp(s.mfa_secret, code)) return false;
+    const s = await one<any>(tx, `SELECT id, user_id FROM sessions WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`, [hashToken(token!)]);
+    if (!s) return false;
+    await tx.query("SELECT set_config('app.user_id', $1, true)", [s.user_id]);
+    const u = await one<{ mfa_secret: string | null }>(tx, 'SELECT mfa_secret FROM users WHERE id = $1', [s.user_id]);
+    s.mfa_secret = u?.mfa_secret;
+    if (!s.mfa_secret || !verifyTotp(s.mfa_secret, code)) return false;
     await tx.query('UPDATE sessions SET mfa_verified = true WHERE id = $1', [s.id]);
     return true;
   });

@@ -70,11 +70,16 @@ export async function contextFromToken(token: string | undefined): Promise<AuthC
   if (!token) return null;
   return withoutTenant(async (tx) => {
     const s = await one<any>(tx,
-      `SELECT s.id, s.user_id, s.tenant_id, s.mfa_verified, s.last_seen_at, u.email, u.name, u.mfa_enabled, u.is_active
-       FROM sessions s JOIN users u ON u.id = s.user_id
+      `SELECT s.id, s.user_id, s.tenant_id, s.mfa_verified, s.last_seen_at
+       FROM sessions s
        WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
          AND s.last_seen_at > now() - interval '${IDLE_MINUTES} minutes'`, [hashToken(token)]);
-    if (!s || !s.is_active || !s.tenant_id) return null;
+    if (!s || !s.tenant_id) return null;
+    // users is RLS-protected: the session's own account is visible once app.user_id is set.
+    await tx.query("SELECT set_config('app.user_id', $1, true)", [s.user_id]);
+    const u = await one<any>(tx, 'SELECT email, name, mfa_enabled, is_active FROM users WHERE id = $1', [s.user_id]);
+    if (!u || !u.is_active) return null;
+    Object.assign(s, u);
     await tx.query('UPDATE sessions SET last_seen_at = now() WHERE id = $1', [s.id]);
     // Tenant + role lookup in the tenant's RLS context
     await tx.query("SELECT set_config('app.tenant_id', $1, true)", [s.tenant_id]);

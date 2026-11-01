@@ -9,5 +9,7 @@ export const POST = handler('data.import', async ({ a, t, req }) => {
   if (!(file instanceof File)) throw Object.assign(new Error('file is required'), { status: 400 });
   if (kind && !(kind in KINDS)) throw Object.assign(new Error('unknown kind'), { status: 400 });
   const up = await uploadFile(t, actor(a), { name: file.name, bytes: Buffer.from(await file.arrayBuffer()), mime: file.type }, kind as any);
+  // Returned (not thrown) so the transaction commits the import.rejected_pan audit event.
+  if (up.panRejected) return Response.json({ error: up.message, code: 'PAN_DETECTED', pan_count: up.panRejected.count, locations: up.panRejected.hits }, { status: 422 });
   return { batch_id: up.batchId, duplicate_file: up.duplicateFile, validation: up.duplicateFile ? null : await validateBatch(t, actor(a), up.batchId) };
 });

@@ -20,9 +20,11 @@ export async function uploadAction(_: IState, form: FormData): Promise<IState> {
     const bytes = Buffer.from(await file.arrayBuffer());
     const r = await withTenant(tctx(auth), async (t) => {
       const up = await uploadFile(t, { tenantId: auth.tenantId, userId: auth.userId }, { name: file.name, bytes, mime: file.type }, kind);
+      if (up.panRejected) return up;
       if (!up.duplicateFile) await validateBatch(t, { tenantId: auth.tenantId, userId: auth.userId }, up.batchId);
       return up;
     });
+    if (r.panRejected) return { error: r.message };
     id = r.batchId;
     if (r.duplicateFile) { redirect(`/integrations/batches/${id}?dup=1`); }
   } catch (e) { if ((e as any)?.digest?.startsWith?.('NEXT_REDIRECT')) throw e; return { error: (e as Error).message }; }

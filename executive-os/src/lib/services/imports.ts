@@ -22,17 +22,29 @@ import { tenantInfo } from './facts';
 import { runCalculation } from './kpi';
 
 export interface Actor { tenantId: string; userId: string }
+import { scanForPans, panRefusalMessage, type PanReport } from '../import/pan';
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 
-export async function uploadFile(tx: Tx, a: Actor, file: { name: string; bytes: Buffer; mime?: string }, requestedKind?: ImportKind) {
+export type UploadResult =
+  | { batchId: string; duplicateFile: boolean; panRejected?: undefined }
+  | { batchId: null; duplicateFile: false; panRejected: PanReport; message: string };
+
+export async function uploadFile(tx: Tx, a: Actor, file: { name: string; bytes: Buffer; mime?: string }, requestedKind?: ImportKind): Promise<UploadResult> {
   if (file.bytes.length === 0) throw new Error('The uploaded file is empty');
   if (file.bytes.length > 20 * 1024 * 1024) throw new Error('File exceeds the 20 MB limit');
   const safeName = file.name.replace(/[^\w.\- ]+/g, '_').slice(0, 180);
   const parsed = await parseFile(file.bytes, safeName);
   if (parsed.rows.length > 200000) throw new Error('File exceeds 200 000 rows; split it into smaller files');
+  const hash = sha(file.bytes);
+  // PCI DSS: refuse any file holding a full card number BEFORE anything is persisted.
+  // Only the masked form (first 6 / last 4) reaches the audit trail.
+  const pan = scanForPans(parsed.columns, parsed.rows);
+  if (pan.count > 0) {
+    await audit(tx, { tenantId: a.tenantId, userId: a.userId, action: 'import.rejected_pan', entityType: 'import_batches', payload: { filename: safeName, sha256: hash, pan_count: pan.count, locations: pan.hits } });
+    return { batchId: null, duplicateFile: false, panRejected: pan, message: panRefusalMessage(pan) };
+  }
   const detected = detectKind(parsed.columns);
   const kind = requestedKind ?? detected[0].kind;
-  const hash = sha(file.bytes);
   const existing = await one<{ id: string; status: string }>(tx, 'SELECT id, status FROM import_batches WHERE kind = $1 AND file_sha256 = $2', [kind, hash]);
   if (existing) return { batchId: existing.id, duplicateFile: true };
   const mapping = autoMap(kind, parsed.columns);

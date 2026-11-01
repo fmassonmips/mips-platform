@@ -75,3 +75,54 @@ DO $$ BEGIN
     GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO mips_backup;
   END IF;
 END $$;
+
+-- =====================================================================
+-- User accounts isolation.
+-- users is global (one account may belong to several tenants), so it has no
+-- tenant_id. The runtime role sees an account only if it is the current user
+-- (app.user_id) or holds a membership in the current tenant (app.tenant_id).
+-- Accounts are updated only by their owner; creation goes through
+-- admin_find_or_create_user, which checks admin.users in the current tenant.
+-- Pre-authentication lookups use narrow SECURITY DEFINER functions.
+-- Not FORCEd: the owner role provisions accounts (seed, platform scripts).
+-- =====================================================================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS users_visible ON users;
+DROP POLICY IF EXISTS users_self_update ON users;
+CREATE POLICY users_visible ON users FOR SELECT USING (
+  id = app_user()
+  OR EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = users.id AND m.tenant_id = app_tenant())
+);
+CREATE POLICY users_self_update ON users FOR UPDATE USING (id = app_user()) WITH CHECK (id = app_user());
+REVOKE INSERT, DELETE ON users FROM mips_app;
+
+-- Login: credentials lookup by email, before any tenant or user context exists.
+CREATE OR REPLACE FUNCTION auth_user_by_email(p_email text)
+RETURNS TABLE (id uuid, password_hash text, is_active boolean, mfa_enabled boolean)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT u.id, u.password_hash, u.is_active, u.mfa_enabled FROM users u WHERE lower(u.email) = lower(p_email)
+$$;
+
+-- Tenant administrators add an account by email. Returns the existing account
+-- (possibly a member of other tenants) or creates it. Refuses callers without
+-- admin.users in the current tenant.
+CREATE OR REPLACE FUNCTION admin_find_or_create_user(p_email text, p_name text, p_password_hash text)
+RETURNS TABLE (user_id uuid, created boolean)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_id uuid;
+BEGIN
+  IF app_tenant() IS NULL OR app_user() IS NULL OR NOT EXISTS (
+    SELECT 1 FROM memberships m JOIN role_permissions rp ON rp.role_id = m.role_id AND rp.tenant_id = m.tenant_id
+    WHERE m.user_id = app_user() AND m.tenant_id = app_tenant() AND m.is_active AND rp.permission_code = 'admin.users'
+  ) THEN
+    RAISE EXCEPTION 'admin.users permission required in the current tenant' USING ERRCODE = '42501';
+  END IF;
+  SELECT u.id INTO v_id FROM users u WHERE lower(u.email) = lower(p_email);
+  IF v_id IS NOT NULL THEN RETURN QUERY SELECT v_id, false; RETURN; END IF;
+  INSERT INTO users (email, name, password_hash) VALUES (lower(p_email), p_name, p_password_hash) RETURNING id INTO v_id;
+  RETURN QUERY SELECT v_id, true;
+END $$;
+
+REVOKE ALL ON FUNCTION auth_user_by_email(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION admin_find_or_create_user(text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION auth_user_by_email(text), admin_find_or_create_user(text, text, text) TO mips_app;

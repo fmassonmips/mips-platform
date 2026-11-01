@@ -14,7 +14,7 @@
 | Segregation of duties | DB CHECK constraints: supplier invoice submitter ≠ approver; budget submitter ≠ approver; reconciliation preparer ≠ approver; adjustment proposer ≠ approver; collection reminder creator ≠ approver; decision proposer ≠ approver (service + CHECK) and only the designated approver (Board Chair by default in the demo) may approve or reject; import uploader ≠ approver (service) |
 
 ## Tenant isolation
-RLS policy `tenant_id = app_tenant()` on every table with `tenant_id`; `FORCE ROW LEVEL SECURITY` on all data tables; pre-tenant lookups only through narrow SECURITY DEFINER functions (`auth_user_memberships`, `auth_api_key_lookup`). Background work (imports, calculation runs, seeding) runs inside the same tenant-bound transaction. File storage (`source_files`) is RLS-isolated. Explicit tests: `tests/integration/security.test.ts` (cross-tenant reads, writes, updates, file storage, role attributes).
+RLS policy `tenant_id = app_tenant()` on every table with `tenant_id`; `FORCE ROW LEVEL SECURITY` on all data tables; pre-tenant lookups only through narrow SECURITY DEFINER functions (`auth_user_memberships`, `auth_api_key_lookup`, `auth_user_by_email`). The global `users` table has its own RLS: an account is visible only to itself (`app.user_id`) or to tenants where it holds a membership, is updatable only by itself, and is created only through `admin_find_or_create_user`, which re-checks `admin.users` in the current tenant. Background work (imports, calculation runs, seeding) runs inside the same tenant-bound transaction. File storage (`source_files`) is RLS-isolated. Explicit tests: `tests/integration/security.test.ts` (cross-tenant reads, writes, updates, file storage, role attributes).
 
 ## Integrity & audit
 - Immutable records (triggers): transactions (financial fields), GL entries (append-only; locked periods reject postings), import source files and rows, KPI results, formula versions, verifications, evidence records, reports, audit events.
@@ -31,7 +31,7 @@ RLS policy `tenant_id = app_tenant()` on every table with `tenant_id`; `FORCE RO
 - AI: the analyst is read-only, sees only a fact sheet, and every numeric claim is validated against cited facts; API key only from environment.
 
 ## Payment data (PCI DSS scope minimisation)
-The platform stores **no PAN, CVV/CVC, PIN, track data or other sensitive authentication data** — the schema has no such columns; transactions hold scheme, region, amounts and references only. Import mapping has no field for card numbers; unmapped columns remain only in the preserved raw row, so **source files must not contain PAN/SAD** (operational rule; a PAN detector on upload is on the roadmap).
+The platform stores **no PAN, CVV/CVC, PIN, track data or other sensitive authentication data** — the schema has no such columns; transactions hold scheme, region, amounts and references only. Import mapping has no field for card numbers; unmapped columns remain only in the preserved raw row, so **source files must not contain PAN/SAD**. This is enforced for PAN: every upload is scanned before storage (`src/lib/import/pan.ts`: Luhn + card-scheme prefix, 13–19 digits, spaces/hyphens tolerated) and refused if a full card number is found; the refusal is audited (`import.rejected_pan`) with masked values only. Masked forms (first 6 / last 4) are accepted. SAD (CVV, track data) is not yet detected.
 
 ## Encryption
 - In transit: deploy behind TLS (HSTS header set; `COOKIE_SECURE=true`). Database connections should use `sslmode=require` in production.

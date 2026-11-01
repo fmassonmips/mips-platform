@@ -25,11 +25,11 @@ describe('import framework', () => {
     ]);
     const up = await as(M(), fin)((t) => uploadFile(t, { tenantId: M(), userId: fin }, { name: 'it.csv', bytes: file }));
     expect(up.duplicateFile).toBe(false);
-    const v = await as(M(), fin)((t) => validateBatch(t, { tenantId: M(), userId: fin }, up.batchId));
+    const v = await as(M(), fin)((t) => validateBatch(t, { tenantId: M(), userId: fin }, up.batchId!));
     expect(v).toMatchObject({ rows: 5, valid: 2, duplicates: 1, errors: 2 });  // unknown merchant + locked Jan 2026
-    await expect(as(M(), fin)((t) => approveBatch(t, { tenantId: M(), userId: fin }, up.batchId))).rejects.toThrow(/Segregation/);
-    await as(M(), cfo)((t) => approveBatch(t, { tenantId: M(), userId: cfo }, up.batchId));
-    const c = await as(M(), cfo)((t) => commitBatch(t, { tenantId: M(), userId: cfo }, up.batchId, { recalc: false }));
+    await expect(as(M(), fin)((t) => approveBatch(t, { tenantId: M(), userId: fin }, up.batchId!))).rejects.toThrow(/Segregation/);
+    await as(M(), cfo)((t) => approveBatch(t, { tenantId: M(), userId: cfo }, up.batchId!));
+    const c = await as(M(), cfo)((t) => commitBatch(t, { tenantId: M(), userId: cfo }, up.batchId!, { recalc: false }));
     expect(c).toMatchObject({ committed_rows: 2, rows_reconcile: true, duplicates_skipped: 1, errors_not_imported: 2 });
     // traceability: committed transaction → source row → original file
     const tr = await as(M())((t) => one<any>(t, `SELECT t.amount_base::text, t.fx_rate_to_base::text, t.mdr_fee_base::text, s.raw->>'external_ref' AS raw_ref, f.sha256 FROM transactions t JOIN import_source_rows s ON s.id = t.source_row_id JOIN source_files f ON f.batch_id = t.import_batch_id WHERE t.external_ref = 'IT-0002'`));

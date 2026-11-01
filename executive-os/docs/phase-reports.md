@@ -25,4 +25,4 @@ All results below were produced by commands actually run on 2026-10-31 (local Po
 Decision `DEC-2026-002` "A — Pass through +25 bps" for Lagoon Resorts Group (DEMO): baseline monthly contribution MUR 324,875.30, expected MUR 338,886.71; November 2026 (partial, 1–14 Nov, 400 synthetic imported transactions) actual MUR 133,166.16, run-rate MUR 285,356.06 → below expectation, flagged for re-measurement after month end. Board report frozen with SHA-256 and exported to PDF.
 
 ## Remaining limitations
-See `known-limitations.md` (notably: users table not RLS-isolated; no PAN detector on upload; synchronous imports/calculations; 12-month fact loading performance).
+See `known-limitations.md` (notably: synchronous imports/calculations; 12-month fact loading performance).

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { tenants, userId, as, q, one, withoutTenant } from './helpers';
+import { uploadFile } from '@/lib/services/imports';
 
 let T: Record<string, string>; let ceo: string; let cfo: string; let fin: string;
 beforeAll(async () => { T = await tenants(); ceo = await userId('ceo@mips.demo'); cfo = await userId('cfo@mips.demo'); fin = await userId('finance@mips.demo'); });
@@ -89,5 +90,63 @@ describe('segregation of duties (database constraints)', () => {
     await expect(as(T['mips-demo'], chair)((t) => approveDecision(t, { tenantId: T['mips-demo'], userId: chair }, d.id))).rejects.toThrow(/designated approver/);
     const ok = await as(T['mips-demo'], ceo)((t) => approveDecision(t, { tenantId: T['mips-demo'], userId: ceo }, d.id));
     expect(ok.initiativeId).toBeTruthy();
+  });
+});
+
+describe('user accounts isolation (users RLS)', () => {
+  let acmeOnly: string;
+  beforeAll(async () => { acmeOnly = await userId('cfo@acme.demo'); });
+  it('a tenant sees only accounts that are members of it', async () => {
+    const seen = await as(T['mips-demo'], ceo)((t) => q<any>(t, 'SELECT id, email FROM users'));
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.some((u) => u.id === acmeOnly)).toBe(false);
+    const members = await as(T['mips-demo'], ceo)((t) => q<any>(t, 'SELECT DISTINCT user_id FROM memberships'));
+    expect(new Set(seen.map((u) => u.id))).toEqual(new Set(members.map((m) => m.user_id)));
+  });
+  it('another tenant’s account cannot be read by id, nor its password hash', async () => {
+    const leak = await as(T['mips-demo'], ceo)((t) => one<any>(t, 'SELECT password_hash, mfa_secret FROM users WHERE id = $1', [acmeOnly]));
+    expect(leak).toBeNull();
+  });
+  it('without context no account is visible', async () => {
+    const n = await withoutTenant((t) => one<any>(t, 'SELECT count(*)::int AS n FROM users'));
+    expect(n!.n).toBe(0);
+  });
+  it('an account can update only itself', async () => {
+    const other = await as(T['mips-demo'], ceo)((t) => t.query("UPDATE users SET name = name WHERE id = $1", [cfo]));
+    expect(other.rowCount).toBe(0);
+    const self = await as(T['mips-demo'], ceo)((t) => t.query("UPDATE users SET name = name WHERE id = $1", [ceo]));
+    expect(self.rowCount).toBe(1);
+  });
+  it('the runtime role cannot create or delete accounts directly', async () => {
+    await expect(as(T['mips-demo'], ceo)((t) => t.query("INSERT INTO users (email, name, password_hash) VALUES ('x@y.z','x','x')"))).rejects.toThrow(/permission denied/);
+    await expect(as(T['mips-demo'], ceo)((t) => t.query('DELETE FROM users WHERE id = $1', [ceo]))).rejects.toThrow(/permission denied/);
+  });
+  it('an admin finds an existing account of another tenant by email, or creates a new one', async () => {
+    const admin = await userId('admin@mips.demo');
+    const found = await as(T['mips-demo'], admin)((t) => one<any>(t, "SELECT * FROM admin_find_or_create_user('CFO@acme.demo','x','h')"));
+    expect(found).toEqual({ user_id: acmeOnly, created: false });
+    const email = `it-${Date.now()}@mips.test`;
+    const made = await as(T['mips-demo'], admin)((t) => one<any>(t, 'SELECT * FROM admin_find_or_create_user($1,$2,$3)', [email, 'IT user', 'h']));
+    expect(made!.created).toBe(true);
+  });
+  it('account creation requires admin.users in the current tenant', async () => {
+    await expect(as(T['mips-demo'], fin)((t) => q(t, "SELECT * FROM admin_find_or_create_user('nobody@x.test','N','h')"))).rejects.toThrow(/admin\.users permission required/);
+    await expect(withoutTenant((t) => q(t, "SELECT * FROM admin_find_or_create_user('nobody@x.test','N','h')"))).rejects.toThrow(/admin\.users permission required/);
+  });
+});
+
+describe('card numbers (PAN) at import', () => {
+  it('a file containing a full PAN is refused, nothing is stored, the refusal is audited masked', async () => {
+    const file = Buffer.from(['external_ref,merchant_code,product_code,acquirer_code,payment_method,card_region,status,txn_currency,amount,event_at,card_number',
+      'PAN-0001,M001,ECOM,SBM,visa,international,success,MUR,100.00,2026-10-30T10:00:00+04:00,4111 1111 1111 1111'].join('\n'));
+    const before = await as(T['mips-demo'], fin)((t) => one<any>(t, 'SELECT (SELECT count(*) FROM import_batches)::int AS b, (SELECT count(*) FROM source_files)::int AS f'));
+    const up = await as(T['mips-demo'], fin)((t) => uploadFile(t, { tenantId: T['mips-demo'], userId: fin }, { name: 'pan.csv', bytes: file }));
+    expect(up.batchId).toBeNull();
+    expect(up.panRejected?.count).toBe(1);
+    const after = await as(T['mips-demo'], fin)((t) => one<any>(t, 'SELECT (SELECT count(*) FROM import_batches)::int AS b, (SELECT count(*) FROM source_files)::int AS f'));
+    expect(after).toEqual(before);
+    const ev = await as(T['mips-demo'], fin)((t) => one<any>(t, "SELECT payload FROM audit_events WHERE action = 'import.rejected_pan' ORDER BY id DESC LIMIT 1"));
+    expect(ev!.payload.locations[0]).toEqual({ row: 2, column: 'card_number', masked: '411111******1111' });
+    expect(JSON.stringify(ev!.payload)).not.toMatch(/4111 ?1111 ?1111 ?1111/);
   });
 });

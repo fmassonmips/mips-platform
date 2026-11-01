@@ -19,7 +19,7 @@ Status legend: ✅ delivered in this release · 🔜 next · 🗓 later
 3. Pre-aggregated daily transaction summary table (refreshed on import) to bring 12-month fact loading under 1 s at 10M+ rows.
 4. Background job queue for large imports and calculation runs (currently synchronous within the request).
 5. Odoo and QuickBooks API connectors (file-export paths work today); scheduled MIPS gateway SFTP feed.
-6. PAN/SAD detector on upload (reject files containing card numbers).
+6. ✅ PAN detector on upload (done). Next: SAD (CVV/track data) detection.
 7. Feature-flag menu gating; tenant self-service provisioning; subscription billing.
 8. Settlement reconciliation (acquirer settlement files vs expected net settlement per merchant).
 

@@ -53,15 +53,14 @@ export async function inviteUser(_: InviteState, form: FormData): Promise<Invite
       const role = await one<{ code: string }>(t, 'SELECT code FROM roles WHERE id = $1', [v.role_id]);
       if (!role) throw new UserError('Role not found.');
       if (v.department && !(await one(t, 'SELECT 1 FROM departments WHERE code = $1', [v.department]))) throw new UserError(`Unknown department ${v.department}.`);
-      const existing = await one<{ id: string; is_active: boolean }>(t, 'SELECT id, is_active FROM users WHERE lower(email) = lower($1)', [v.email]);
-      let userId: string; let password: string | undefined;
+      // users is RLS-isolated: accounts of other tenants are invisible here, so lookup/creation by
+      // email goes through a SECURITY DEFINER function that re-checks admin.users in this tenant.
+      let password: string | undefined = generateOneTimePassword();
+      const fc = await one<{ user_id: string; created: boolean }>(t, 'SELECT * FROM admin_find_or_create_user($1,$2,$3)', [v.email, v.name, await hashPassword(password)]);
+      const userId = fc!.user_id; const existing = !fc!.created;
       if (existing) {
-        if (await one(t, 'SELECT 1 FROM memberships WHERE user_id = $1', [existing.id])) throw new UserError('This user is already a member of this tenant (reactivate or change role in the list).');
-        userId = existing.id;
-      } else {
-        password = generateOneTimePassword();
-        const u = await one<{ id: string }>(t, 'INSERT INTO users (email, name, password_hash) VALUES ($1,$2,$3) RETURNING id', [v.email, v.name, await hashPassword(password)]);
-        userId = u!.id;
+        password = undefined;
+        if (await one(t, 'SELECT 1 FROM memberships WHERE user_id = $1', [userId])) throw new UserError('This user is already a member of this tenant (reactivate or change role in the list).');
       }
       await t.query('INSERT INTO memberships (tenant_id, user_id, role_id, department) VALUES ($1,$2,$3,$4)', [auth.tenantId, userId, v.role_id, v.department]);
       await audit(t, { tenantId: auth.tenantId, userId: auth.userId, action: existing ? 'admin.membership_added' : 'admin.user_created', entityType: 'user', entityId: userId, payload: { email: v.email, role: role.code, department: v.department, one_time_password_issued: !existing } });
