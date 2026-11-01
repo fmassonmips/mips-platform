@@ -172,6 +172,20 @@
 | `C04-case-under-review-approver-view.png` | Dossier soumis vu par un approbateur : contrôles passés, boutons Approve / Reject | admin | Vue interne. Depuis le 2026-10-30, les boutons ne s'affichent qu'à un approbateur qui n'a jamais eu la main sur le dossier ; ils sont visibles ici car l'administrateur capturé n'a ni créé, ni instruit, ni réassigné ce dossier. | *Case under review: approver view* |
 | `C05-terms-versions-consent-count.png` | Versions des conditions d'utilisation du portail (non modifiables une fois publiées), nombre d'acceptations, empreinte sha256 du texte, publication d'une nouvelle version réservée aux administrateurs (build `d91d250`) | admin | **Texte de remplissage**, pas les conditions MIPS. Une seule version publiée. | *Versioned terms of use and acceptance record* |
 
+## Schémas (pas des captures d'écran) — ajoutés le 2026-11-01
+
+Deux schémas dessinés, sans aucune donnée de transaction, figurent dans la version anglaise pour la BoM
+(`outputs/recap/MIPS-platform-BoM-EN-DRAFT.pptx`). Ce sont des **descriptions du modèle retenu**, pas des preuves
+qu'un système fonctionne.
+
+| Fichier | Montre | Limites | Légende proposée |
+|---|---|---|---|
+| `outputs/ecosysteme/eco-overview-en.png` | Acteurs (payeurs, passerelle MIPS, banques acquéreuses, wallets, marchands, plateforme) et trois flux : argent, données, documents. Le règlement va de la banque acquéreuse au marchand. | Modèle A retenu le 2026-10-31, **sous réserve** des deux vérifications (licence, wallets). Le flux wallets et virement est marqué **« to confirm »** en rouge : à retirer ou à redessiner en règlement direct avant tout dépôt. La plateforme y est marquée « reference prototype, not deployed ». | *MIPS ecosystem: money, data and document flows under the gateway model* |
+| `outputs/ecosysteme/eco-sequence-en.png` | Une vente dans le temps : autorisation le jour de la vente, règlement par la banque acquéreuse, données et facture de commission en fin de mois. | Le délai de règlement n'est pas indiqué (« timing per acquirer agreement ») : il dépend des contrats, non vérifiés ici. | *One sale, from payment to fee invoice, under the gateway model* |
+
+Versions françaises : `outputs/ecosysteme/eco-overview.png`, `eco-sequence.png` ; page complète :
+`outputs/ecosysteme/ecosysteme-mips.html`.
+
 ## Vérification automatique des fonctions montrées (2026-10-30)
 
 Onze suites de tests (`tests/run_tests.sh`, 590 vérifications) pilotent l'application par son API, sur une base
