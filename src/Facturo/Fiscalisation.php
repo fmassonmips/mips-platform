@@ -29,8 +29,8 @@ final class Fiscalisation
     /** Document types sent to MRA, with their MRA invoice type. */
     public const MRA_TYPES = ['invoice' => 'STD', 'credit_note' => 'CRN'];
 
-    /** Stop retrying a document automatically after this many transient failures. */
-    private const MAX_ATTEMPTS = 50;
+    /** Stop retrying a document automatically after this many transient failures (App\Ops\Health reports it). */
+    public const MAX_ATTEMPTS = 50;
 
     /**
      * Requirements checked when issuing a document that will be fiscalised.
@@ -98,8 +98,8 @@ final class Fiscalisation
                 $result = self::transmitOne($orgId, (int) $id);
                 if ($result === 'fiscalised') {
                     $done++;
-                } elseif ($result === 'transient') {
-                    break;   // MRA unreachable: keep the rest in order for the next attempt
+                } elseif ($result !== 'rejected') {
+                    break;   // MRA unreachable, account problem or unanswered send: keep the rest in order
                 }
             }
         } finally {
@@ -209,7 +209,7 @@ final class Fiscalisation
     }
 
     /**
-     * @return 'fiscalised'|'rejected'|'transient'
+     * @return 'fiscalised'|'rejected'|'transient'|'account'|'unknown'
      */
     private static function transmitOne(int $orgId, int $id): string
     {
@@ -230,15 +230,27 @@ final class Fiscalisation
                 $response = self::send($orgId, $creds, $payload, true);   // token expired early: re-authenticate once
             }
         } catch (MraException | \RuntimeException $e) {
+            if ($e instanceof MraException && $e->isAccount()) {
+                // Credentials, EBS or configuration: the company's problem, not this document's.
+                // It stays pending, its attempts untouched, and the batch stops.
+                Database::connection()->prepare(
+                    'UPDATE facturo_documents SET mra_error = :e WHERE id = :id AND mra_status = \'pending\''
+                )->execute([':e' => mb_substr($e->getMessage(), 0, 1000), ':id' => $id]);
+                return 'account';
+            }
+            if ($e instanceof MraException && $e->isUncertain()) {
+                self::record($id, 'unknown', null, null, $e->getMessage());
+                return 'unknown';
+            }
             $transient = $e instanceof MraException && $e->isTransient();
             self::record($id, $transient ? 'pending' : 'rejected', null, null, $e->getMessage());
             return $transient ? 'transient' : 'rejected';
         }
 
         $result = $response['fiscalisedInvoices'][0] ?? null;
-        if (is_array($result) && ($result['status'] ?? '') === 'SUCCESS'
-            && is_string($result['qrCode'] ?? null) && base64_decode($result['qrCode'], true) !== false) {
-            self::record($id, 'fiscalised', (string) ($result['uuid'] ?? $result['irn'] ?? ''), $result['qrCode'], null);
+        $qr = is_array($result) && is_string($result['qrCode'] ?? null) ? (string) preg_replace('/\s+/', '', $result['qrCode']) : '';
+        if (is_array($result) && ($result['status'] ?? '') === 'SUCCESS' && $qr !== '' && base64_decode($qr, true) !== false) {
+            self::record($id, 'fiscalised', (string) ($result['uuid'] ?? $result['irn'] ?? ''), $qr, null);
             return 'fiscalised';
         }
 
@@ -267,19 +279,19 @@ final class Fiscalisation
     private static function token(int $orgId, array $creds, bool $fresh): array
     {
         $pdo = Database::connection();
-        if (!$fresh) {
-            $stmt = $pdo->prepare(
-                'SELECT token, session_key_enc FROM mra_tokens
-                 WHERE organization_id = :oid AND expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE)'
-            );
-            $stmt->execute([':oid' => $orgId]);
-            $row = $stmt->fetch();
-            if (is_array($row)) {
-                return [(string) $row['token'], Secrets::decrypt((string) $row['session_key_enc'])];
-            }
+        $stmt = $pdo->prepare(
+            'SELECT token, session_key_enc, expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE) AS fresh, expires_at > NOW() AS alive
+             FROM mra_tokens WHERE organization_id = :oid'
+        );
+        $stmt->execute([':oid' => $orgId]);
+        $row = $stmt->fetch();
+        if (!$fresh && is_array($row) && (int) $row['fresh'] === 1) {
+            return [(string) $row['token'], Secrets::decrypt((string) $row['session_key_enc'])];
         }
+        // In the last 10 minutes of a token, MRA expects refreshToken = true (§ 5.1.4).
+        $renewing = !$fresh && is_array($row) && (int) $row['alive'] === 1;
 
-        $auth = Client::fromConfig()->authenticate($creds['username'], $creds['password'], $creds['ebs_id']);
+        $auth = Client::fromConfig()->authenticate($creds['username'], $creds['password'], $creds['ebs_id'], $renewing);
         $pdo->prepare(
             'INSERT INTO mra_tokens (organization_id, token, session_key_enc, expires_at) VALUES (:oid, :t, :k, :e)
              ON DUPLICATE KEY UPDATE token = VALUES(token), session_key_enc = VALUES(session_key_enc), expires_at = VALUES(expires_at)'
@@ -306,13 +318,14 @@ final class Fiscalisation
     }
 
     /**
-     * Re-queue a rejected document after the settings were fixed (same counter, same data).
+     * Re-queue a rejected document after the settings were fixed (same counter, same data),
+     * or an unanswered one once the company checked on the MRA portal that it was not fiscalised.
      */
     public static function requeue(int $orgId, int $id): ?string
     {
         $stmt = Database::connection()->prepare(
             'UPDATE facturo_documents SET mra_status = \'pending\', mra_attempts = 0
-             WHERE organization_id = :oid AND id = :id AND mra_status IN (\'pending\', \'rejected\')'
+             WHERE organization_id = :oid AND id = :id AND mra_status IN (\'pending\', \'rejected\', \'unknown\')'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
         return $stmt->rowCount() === 1 ? null : 'Ce document n\'est pas en attente de la MRA.';

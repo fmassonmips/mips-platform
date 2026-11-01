@@ -17,7 +17,9 @@ declare(strict_types=1);
 namespace App\Facturo;
 
 use App\Database;
+use App\Format;
 use App\Mra\Settings;
+use App\RendezVous\Booking;
 use App\Suite\Tenant;
 
 final class Documents
@@ -319,6 +321,14 @@ final class Documents
             if ($subtotal + $tax <= 0) {
                 return [[], 'Un avoir doit avoir un total positif.'];
             }
+            // A credit note reverses what the invoice charged: no VAT treatment it did not have.
+            $invoiceCodes = array_unique(array_map(static fn (array $l): string => (string) $l['tax_code'], (array) $invoice['lines']));
+            foreach ($lines as $i => $l) {
+                if (!in_array($l['tax_code'], $invoiceCodes, true)) {
+                    return [[], 'Ligne ' . ($i + 1) . ' : la facture n\'a pas de ligne avec ce traitement TVA ('
+                        . self::TAX_CODES[$l['tax_code']]['label'] . ').'];
+                }
+            }
             $creditable = self::creditableCents($orgId, (int) $invoice['id']);
             if ($subtotal + $tax > $creditable) {
                 return [[], 'Un avoir ne peut pas dépasser le reste à créditer sur la facture ('
@@ -453,7 +463,7 @@ final class Documents
                 if ($error === null && $doc['type'] === 'credit_note') {
                     $src = $pdo->prepare('SELECT mra_status FROM facturo_documents WHERE organization_id = :oid AND id = :id');
                     $src->execute([':oid' => $orgId, ':id' => (int) $doc['source_document_id']]);
-                    if (in_array($src->fetchColumn(), ['pending', 'rejected'], true)) {
+                    if (in_array($src->fetchColumn(), ['pending', 'rejected', 'unknown'], true)) {
                         $error = 'La facture doit être fiscalisée par la MRA avant de pouvoir être créditée.';
                     }
                 }
@@ -474,6 +484,24 @@ final class Documents
 
             $type = (string) $doc['type'];
             $year = (int) substr((string) $doc['issue_date'], 0, 4);
+            // Numbers follow dates: no document dated in the future, none dated before the last one issued.
+            $today  = Booking::now()->format('Y-m-d');
+            $fiscal = $type !== 'quote';
+            if ($fiscal && (string) $doc['issue_date'] > $today) {
+                $pdo->rollBack();
+                return 'La date d\'émission ne peut pas être dans le futur : corrigez-la avant d\'émettre.';
+            }
+            $last = $pdo->prepare(
+                'SELECT MAX(issue_date) FROM facturo_documents
+                 WHERE organization_id = :oid AND type = :type AND status <> \'draft\' AND id <> :id'
+            );
+            $last->execute([':oid' => $orgId, ':type' => $type, ':id' => $id]);
+            $lastDate = $last->fetchColumn();
+            if ($fiscal && is_string($lastDate) && (string) $doc['issue_date'] < $lastDate) {
+                $pdo->rollBack();
+                return 'La date d\'émission est antérieure au dernier document émis (' . Format::date($lastDate)
+                    . ') : les numéros doivent suivre l\'ordre des dates. Mettez la date du jour.';
+            }
             $pdo->prepare(
                 'INSERT INTO facturo_sequences (organization_id, type, year, last_value)
                  VALUES (:oid, :type, :year, 0)
@@ -542,18 +570,21 @@ final class Documents
             $status = 'credited';
         }
 
-        Database::connection()->prepare(
+        $upd = Database::connection()->prepare(
             'UPDATE facturo_documents
              SET status = :status, paid_at = IF(:paid = 1, NOW(), NULL)
              WHERE organization_id = :oid AND id = :id AND status = :from'
-        )->execute([
+        );
+        $upd->execute([
             ':status' => $status,
             ':paid'   => $status === 'paid' ? 1 : 0,
             ':oid'    => $orgId,
             ':id'     => $id,
             ':from'   => $doc['status'],
         ]);
-        return null;
+        // Changed by someone else in between (a double click on « Payée »): nothing to follow up,
+        // so the cashback of a paid invoice is never credited twice.
+        return $upd->rowCount() === 1 ? null : 'Le document vient d\'être modifié : rechargez la page.';
     }
 
     /**
@@ -569,6 +600,27 @@ final class Documents
             return [0, 'Seul un devis envoyé ou accepté peut être converti en facture.'];
         }
 
+        // Two clicks at once must not create two invoices for one quote.
+        $pdo  = Database::connection();
+        $lock = 'facturo_convert_' . $orgId . '_' . $quoteId;
+        $got  = $pdo->prepare('SELECT GET_LOCK(:n, 10)');
+        $got->execute([':n' => $lock]);
+        if ((int) $got->fetchColumn() !== 1) {
+            return [0, 'Conversion déjà en cours : rechargez la page.'];
+        }
+        try {
+            return self::convertLocked($orgId, $userId, $quoteId, $quote);
+        } finally {
+            $pdo->prepare('SELECT RELEASE_LOCK(:n)')->execute([':n' => $lock]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $quote
+     * @return array{0:int,1:?string}
+     */
+    private static function convertLocked(int $orgId, int $userId, int $quoteId, array $quote): array
+    {
         $existing = Database::connection()->prepare(
             'SELECT id FROM facturo_documents
              WHERE organization_id = :oid AND type = \'invoice\' AND source_document_id = :qid LIMIT 1'
@@ -674,7 +726,7 @@ final class Documents
         );
         $stmt->execute([':token' => $token]);
         $row = $stmt->fetch();
-        return is_array($row) ? self::find((int) $row['organization_id'], (int) $row['id']) : null;
+        return is_array($row) && \App\Suite\Tenant::isOpen((int) $row['organization_id']) ? self::find((int) $row['organization_id'], (int) $row['id']) : null;
     }
 
     public static function delete(int $orgId, int $id): ?string

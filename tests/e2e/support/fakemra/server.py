@@ -1,5 +1,5 @@
 """Fake MRA e-Invoicing API following the MRA Technical Guidelines 2023 (sections 5-6)."""
-import base64, json, os, sys, uuid, secrets, datetime, struct, zlib
+import base64, json, os, sys, time, uuid, secrets, datetime, struct, zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization
@@ -47,7 +47,8 @@ class H(BaseHTTPRequestHandler):
                 creds = json.loads(priv.decrypt(base64.b64decode(body["payload"]), padding.PKCS1v15()))
             except Exception:
                 return self.reply(400, {"status": "ERROR", "errors": ["Decryption failed"]})
-            if creds.get("password") != USERS[user]["password"] or creds.get("username") != user:
+            with open(os.path.join(DIR, "auth.log"), "a") as f: f.write(creds["refreshToken"] + "\n")
+            if os.path.exists(os.path.join(DIR, "BADPASS")) or creds.get("password") != USERS[user]["password"] or creds.get("username") != user:
                 return self.reply(400, {"status": "ERROR", "errors": ["Invalid User"]})
             assert creds["refreshToken"] in ("false", "true")
             client_key = base64.b64decode(creds["encryptKey"]); assert len(client_key) == 32
@@ -88,6 +89,8 @@ class H(BaseHTTPRequestHandler):
                     out.append({"invoiceIdentifier": inv.get("invoiceIdentifier"), "uuid": None, "qrCode": None, "status": "ERROR", "errorMessages": errs})
                 else:
                     out.append({"invoiceIdentifier": inv["invoiceIdentifier"], "uuid": str(uuid.uuid4()), "qrCode": png(), "status": "SUCCESS", "errorMessages": None})
+            if os.path.exists(os.path.join(DIR, "TIMEOUT")):   # accepted, but the answer never arrives in time
+                os.remove(os.path.join(DIR, "TIMEOUT")); time.sleep(6)
             st = "SUCCESS" if all(o["status"] == "SUCCESS" for o in out) else "ERROR"
             return self.reply(200, {"responseId": "R1", "requestId": body["requestId"], "status": st, "environment": "SANDBOX", "fiscalisedInvoices": out})
         self.reply(404, {})

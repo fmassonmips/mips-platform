@@ -14,6 +14,8 @@ use App\Mail\SmtpMailer;
 final class Alerts
 {
     private const REPEAT_SECONDS = 24 * 3600;
+    /** A problem is e-mailed only once it has lasted this long: a job that fails once and recovers stays quiet. */
+    private const CONFIRM_SECONDS = 15 * 60;
     /** Database down: no table to remember what was sent, so at most one e-mail per hour (file stamp). */
     private const DB_DOWN_REPEAT = 3600;
 
@@ -35,27 +37,41 @@ final class Alerts
 
         $pdo  = Database::connection();
         $open = [];
-        foreach ($pdo->query('SELECT problem, notified_at FROM ops_alerts')->fetchAll() as $r) {
-            $open[(string) $r['problem']] = $r['notified_at'] !== null ? (int) strtotime((string) $r['notified_at']) : null;
+        foreach ($pdo->query('SELECT problem, since, notified_at FROM ops_alerts')->fetchAll() as $r) {
+            $open[(string) $r['problem']] = [
+                'since'    => (int) strtotime((string) $r['since']),
+                'notified' => $r['notified_at'] !== null ? (int) strtotime((string) $r['notified_at']) : null,
+            ];
         }
         $now = date('Y-m-d H:i:s');
         $add = $pdo->prepare('INSERT IGNORE INTO ops_alerts (problem, since, notified_at) VALUES (:p, :s, NULL)');
         foreach (array_diff_key($problems, $open) as $key => $_) {
             $add->execute([':p' => $key, ':s' => $now]);
-            $open[$key] = null;
+            $open[$key] = ['since' => time(), 'notified' => null];
         }
-        $resolved = array_keys(array_diff_key($open, $problems));
-        $due = array_filter($problems, static fn (string $k): bool => $open[$k] === null || time() - $open[$k] >= self::REPEAT_SECONDS, ARRAY_FILTER_USE_KEY);
+        $del = $pdo->prepare('DELETE FROM ops_alerts WHERE problem = :p');
+        $resolved = [];
+        foreach (array_diff_key($open, $problems) as $key => $o) {
+            if ($o['notified'] !== null) {
+                $resolved[] = $key;               // announced: say it is over
+            } else {
+                $del->execute([':p' => $key]);    // never announced: forget it quietly
+            }
+        }
+        $confirmed = array_filter($problems, static fn (string $k): bool => $open[$k]['notified'] !== null
+            || time() - $open[$k]['since'] >= self::CONFIRM_SECONDS, ARRAY_FILTER_USE_KEY);
+        $due = array_filter($confirmed, static fn (string $k): bool => $open[$k]['notified'] === null
+            || time() - $open[$k]['notified'] >= self::REPEAT_SECONDS, ARRAY_FILTER_USE_KEY);
         if ($due === [] && $resolved === []) {
-            echo count($problems) . " problem(s), already reported.\n";
+            echo count($problems) . ' problem(s), ' . (count($problems) - count($confirmed)) . " not confirmed yet, the others already reported.\n";
             return 0;
         }
 
         $lines = [];
-        if ($problems !== []) {
-            $lines[] = count($problems) === 1 ? 'Un problème en cours :' : count($problems) . ' problèmes en cours :';
-            foreach ($problems as $key => $text) {
-                $lines[] = '- ' . $text . ($open[$key] !== null && isset($due[$key]) ? ' (rappel : toujours en cours)' : '');
+        if ($confirmed !== []) {
+            $lines[] = count($confirmed) === 1 ? 'Un problème en cours :' : count($confirmed) . ' problèmes en cours :';
+            foreach ($confirmed as $key => $text) {
+                $lines[] = '- ' . $text . ($open[$key]['notified'] !== null && isset($due[$key]) ? ' (rappel : toujours en cours)' : '');
             }
             $lines[] = '';
         }
@@ -66,8 +82,8 @@ final class Alerts
             }
             $lines[] = '';
         }
-        $subject = $problems !== []
-            ? '[my.mips.mu] ' . (count($problems) === 1 ? '1 problème' : count($problems) . ' problèmes') . ' : ' . self::label((string) array_key_first($problems))
+        $subject = $confirmed !== []
+            ? '[my.mips.mu] ' . (count($confirmed) === 1 ? '1 problème' : count($confirmed) . ' problèmes') . ' : ' . self::label((string) array_key_first($confirmed))
             : '[my.mips.mu] Résolu : ' . implode(', ', array_map([self::class, 'label'], $resolved));
         $body = implode("\n", $lines)
             . "Détail : php tools/ops.php status sur le serveur, et le journal des tâches planifiées (/var/log/mips/cron.log).\n";
@@ -81,7 +97,6 @@ final class Alerts
             }
         }
         if ($resolved !== []) {
-            $del = $pdo->prepare('DELETE FROM ops_alerts WHERE problem = :p');
             foreach ($resolved as $key) {
                 $del->execute([':p' => $key]);
             }
@@ -96,8 +111,11 @@ final class Alerts
         if ($key === 'db') {
             return 'base de données';
         }
-        if ($key === 'disk') {
+        if (str_starts_with($key, 'disk')) {
             return 'espace disque';
+        }
+        if ($key === 'mra:stuck') {
+            return 'factures MRA';
         }
         return explode(':', $key)[1] ?? $key;   // job:<name>:<what>
     }

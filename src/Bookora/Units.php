@@ -104,8 +104,20 @@ final class Units
                                   ':now' => Booking::now()->format('Y-m-d H:i:s')]);
             return [(int) $pdo->lastInsertId(), null];
         }
-        if (self::find($orgId, $id) === null) {
+        $old = self::find($orgId, $id);
+        if ($old === null) {
             return [0, 'Logement introuvable.'];
+        }
+        if ((string) $old['tax_code'] !== $code) {
+            // Season prices are stored excl. VAT: keep the price guests pay, as the owner typed it.
+            $oldRate = Products::rate((string) $old['tax_code']);
+            $seasons = $pdo->prepare('SELECT id, price_cents FROM bookora_seasons WHERE unit_id = :u');
+            $seasons->execute([':u' => $id]);
+            $upd = $pdo->prepare('UPDATE bookora_seasons SET price_cents = :p WHERE id = :id');
+            foreach ($seasons->fetchAll() as $season) {
+                [$ht, $tax] = Money::line(1000, (int) $season['price_cents'], $oldRate);
+                $upd->execute([':p' => self::ht($ht + $tax, $code), ':id' => (int) $season['id']]);
+            }
         }
         $pdo->prepare(
             'UPDATE bookora_units SET name = :n, description = :d, capacity = :c, price_cents = :p, tax_code = :tc, min_nights = :m, active = :a'

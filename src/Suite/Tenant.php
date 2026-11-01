@@ -50,6 +50,19 @@ final class Tenant
     public const DOCUMENT_LANGUAGES = ['fr', 'en'];
 
     /**
+     * False when the company is suspended by the MIPS team or closing: its public
+     * pages, links and automatic e-mails stop (the data is kept).
+     */
+    public static function isOpen(int $orgId): bool
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT 1 FROM organizations WHERE id = :o AND suspended_at IS NULL AND deletion_scheduled_at IS NULL'
+        );
+        $stmt->execute([':o' => $orgId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
+    /**
      * @return array<string,string>
      */
     public static function profile(int $orgId): array

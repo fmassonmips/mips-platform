@@ -80,7 +80,7 @@ $title    = $isQuote ? $t['quote'] : ($isCredit ? $t['credit_note'] : (($seller[
       <img src="data:image/png;base64,<?= $e($doc['mra_qr']) ?>" alt="<?= $e($t['mra_qr']) ?>">
       <div><?= $e($t['mra_ok']) ?><br>IRN<?= $e($t['colon']) ?> <?= $e($doc['mra_irn']) ?></div>
     </section>
-  <?php elseif (in_array($doc['mra_status'], ['pending', 'rejected'], true)): ?>
+  <?php elseif (in_array($doc['mra_status'], ['pending', 'rejected', 'unknown'], true)): ?>
     <p class="mra-warning"><?= $e($t['mra_pending']) ?></p>
   <?php endif; ?>
 </article>

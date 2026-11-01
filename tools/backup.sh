@@ -33,19 +33,24 @@ RCLONE=${MIPS_BACKUP_RCLONE_REMOTE:-}
 RSYNC=${MIPS_BACKUP_RSYNC_TARGET:-}
 
 [ -r "$KEY" ] || { echo "Backup public key not found: $KEY" >&2; exit 1; }
+[[ "$KEEP" =~ ^[0-9]+$ ]] || { echo "MIPS_BACKUP_KEEP_DAYS must be a number of days: $KEEP" >&2; exit 1; }
 mkdir -p "$DIR"
+exec 9> "$DIR/.lock"
+flock -n 9 || { echo "Another backup is running." >&2; exit 1; }
 DUMP=$(command -v mariadb-dump || command -v mysqldump)
 dump_args=()
 [ -r "$MYCNF" ] && dump_args+=("--defaults-extra-file=$MYCNF")   # must come first
 dump_args+=(--single-transaction --quick --routines --triggers --events --hex-blob --no-tablespaces --default-character-set=utf8mb4 "$DB")
 
+stamp=$(date +%F-%H%M%S)
 GNUPGHOME=$(mktemp -d); export GNUPGHOME   # throwaway keyring: the key is used from its file, nothing to trust
-trap 'rm -rf "$GNUPGHOME"; rm -f "$DIR"/*.part' EXIT
+trap 'rm -rf "$GNUPGHOME"; rm -f "$DIR"/mips-"$stamp"*.part' EXIT
 encrypt() { gpg --batch --quiet --no-tty --trust-model always --recipient-file "$KEY" --encrypt --output "$1"; }
 
-stamp=$(date +%F-%H%M%S)
 db_file="$DIR/mips-$stamp.sql.gz.gpg"
 "$DUMP" "${dump_args[@]}" | gzip -6 | encrypt "$db_file.part"
+size=$(stat -c %s "$db_file.part")
+[ "$size" -ge 2048 ] || { echo "Backup suspiciously small ($size bytes): not kept." >&2; exit 1; }
 mv "$db_file.part" "$db_file"
 files=("$db_file")
 if [ -f "$ROOT/config/config.local.php" ]; then
@@ -54,8 +59,6 @@ if [ -f "$ROOT/config/config.local.php" ]; then
     mv "$conf_file.part" "$conf_file"
     files+=("$conf_file")
 fi
-size=$(stat -c %s "$db_file")
-[ "$size" -ge 2048 ] || { echo "Backup suspiciously small ($size bytes): $db_file" >&2; exit 1; }
 (cd "$DIR" && sha256sum "${files[@]##*/}" > "mips-$stamp.sha256")
 files+=("$DIR/mips-$stamp.sha256")
 echo "Backup written: $db_file ($((size / 1024)) KB)"

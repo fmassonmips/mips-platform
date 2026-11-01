@@ -82,7 +82,7 @@ final class Dashboard
         $pdo = Database::connection();
         $m   = $pdo->prepare(
             'SELECT COUNT(*) FROM facturo_documents
-             WHERE organization_id = :oid AND type IN (\'invoice\', \'credit_note\') AND mra_status IN (\'pending\', \'rejected\')'
+             WHERE organization_id = :oid AND type IN (\'invoice\', \'credit_note\') AND mra_status IN (\'pending\', \'rejected\', \'unknown\')'
         );
         $m->execute([':oid' => $orgId]);
         $f = $pdo->prepare(

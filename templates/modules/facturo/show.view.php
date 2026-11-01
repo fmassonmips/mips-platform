@@ -60,7 +60,12 @@ $canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], tru
       <?php else: ?>
         <span>
           <strong>MRA :</strong>
-          <?= $doc['mra_status'] === 'pending' ? 'en attente de fiscalisation (MRA injoignable, nouvel essai automatique).' : 'rejeté.' ?>
+          <?= match (true) {
+              $doc['mra_status'] === 'unknown' => 'envoyé sans réponse de la MRA. Vérifiez sur le portail MRA s’il a été fiscalisé avant de le renvoyer : un second envoi d’un document déjà fiscalisé est refusé ou dédoublé.',
+              $doc['mra_status'] === 'pending' && (int) $doc['mra_attempts'] >= \App\Facturo\Fiscalisation::MAX_ATTEMPTS => 'en attente de fiscalisation : essais automatiques arrêtés après ' . \App\Facturo\Fiscalisation::MAX_ATTEMPTS . ' échecs.',
+              $doc['mra_status'] === 'pending' => 'en attente de fiscalisation (nouvel essai automatique).',
+              default => 'rejeté.',
+          } ?>
           <?php if ($doc['mra_error'] !== null): ?><br><span class="small"><?= $e($doc['mra_error']) ?></span><?php endif; ?>
         </span>
         <?php if ($manager): ?>

@@ -375,7 +375,7 @@ final class Bookings
         $stmt = Database::connection()->prepare('SELECT organization_id, id FROM bookora_bookings WHERE token = :t');
         $stmt->execute([':t' => $token]);
         $r = $stmt->fetch();
-        return $r ? [(int) $r['organization_id'], self::find((int) $r['organization_id'], (int) $r['id'])] : null;
+        return $r && \App\Suite\Tenant::isOpen((int) $r['organization_id']) ? [(int) $r['organization_id'], self::find((int) $r['organization_id'], (int) $r['id'])] : null;
     }
 
     /**

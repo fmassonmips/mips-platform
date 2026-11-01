@@ -41,6 +41,12 @@ const JOBS = ['mra_retry', 'rendezvous_reminders', 'bookora_ical_sync', 'reminde
   fresh();
   r = php('watchdog');
   let m = fresh();
+  assert(r.status === 0 && m.length === 0 && r.stdout.includes('not confirmed yet'), 'quiet for the first 15 minutes ' + r.stdout);
+  cron('mra_retry', 'true'); php('watchdog');
+  assert(fresh().length === 0 && sql('SELECT COUNT(*) FROM ops_alerts') === '0', 'a failure that recovers is forgotten quietly');
+  cron('mra_retry', 'bash', '-c', 'exit 3'); php('watchdog');
+  sql("UPDATE ops_alerts SET since = NOW() - INTERVAL 16 MINUTE");
+  r = php('watchdog'); m = fresh();
   assert(r.status === 0 && m.length === 1 && m[0].to === 'ops@mips.mu' && m[0].subject === '[my.mips.mu] 1 problème : mra_retry'
          && m[0].body.includes('Transmission des factures à la MRA') && m[0].body.includes('a échoué, code 3'), 'alert ' + JSON.stringify(m) + r.stdout);
   php('watchdog');
@@ -54,13 +60,15 @@ const JOBS = ['mra_retry', 'rendezvous_reminders', 'bookora_ical_sync', 'reminde
   assert((await health()).status === 200, 'healthy again');
   php('watchdog');
   assert(fresh().length === 0, 'nothing more to say');
-  step('a job fails (code 3): health 503, one e-mail to ops.alert_email naming it and its code, not repeated, a reminder after 24 h, « Résolu » once it succeeds again');
+  step('a job fails (code 3): health 503 at once; e-mail only if still failing after 15 minutes (a failure that recovers stays quiet), naming the job and its code, not repeated, a reminder after 24 h, « Résolu » once it succeeds again');
 
   // 3. A job that stopped running; the mail server down while alerting
   sql("UPDATE ops_jobs SET last_run_at = NOW() - INTERVAL 2 DAY, last_ok_at = NOW() - INTERVAL 2 DAY WHERE job = 'reminders'");
   assert((await health()).status === 503, 'stale job');
   execFileSync('pkill', ['-f', 'fake_smtp.py']);
   await new Promise(res => setTimeout(res, 500));
+  php('watchdog');
+  sql("UPDATE ops_alerts SET since = NOW() - INTERVAL 16 MINUTE");
   r = php('watchdog');
   assert(r.status === 1 && r.stdout.includes('Alert e-mail failed'), 'smtp down ' + r.stdout);
   assert(sql("SELECT COUNT(*) FROM ops_alerts WHERE notified_at IS NULL") === '1', 'not marked as sent');

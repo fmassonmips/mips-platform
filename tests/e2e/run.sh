@@ -40,7 +40,7 @@ return [
     'mail'       => ['host' => '127.0.0.1', 'port' => 2525, 'encryption' => 'none', 'username' => '', 'password' => '', 'from_address' => 'no-reply@mips.mu'],
     'mra'        => ['auth_url' => 'http://127.0.0.1:8098/einvoice-token-service/token-api/generate-token',
                      'transmit_url' => 'http://127.0.0.1:8098/realtime/invoice/transmit-simulation',
-                     'public_key_file' => '$W/fakemra/mra_public_key.pem'],
+                     'public_key_file' => '$W/fakemra/mra_public_key.pem', 'timeout' => 3],
     'bookora'    => ['ical_allow_private' => true, 'ical_timeout' => 5],
     'backoffice' => ['staff' => ['Staff@MIPS.mu']],
     'billing'    => ['contact_email' => 'abonnement@mips.mu'],
@@ -76,7 +76,8 @@ reset() {
     mysql -e "DROP DATABASE IF EXISTS \`$DB\`; CREATE DATABASE \`$DB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci" &&
     sed "1,12{/^CREATE DATABASE/,/;/d;/^USE /d}" "$W/t/sql/schema.sql" | mysql "$DB" &&
     sed "/^USE /d" "$W/t/sql/seed.sql" | mysql "$DB" &&
-    find "$W/mail" -type f -delete
+    find "$W/mail" -type f -delete &&
+    rm -f "$W/fakemra/DOWN" "$W/fakemra/EXPIRE" "$W/fakemra/TIMEOUT" "$W/fakemra/BADPASS"
 }
 
 suites=("$@")

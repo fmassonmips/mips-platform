@@ -65,6 +65,7 @@ final class Products
         $ttc     = Money::parseCents(trim((string) ($in['price'] ?? '')));
         $code    = (string) ($in['tax_code'] ?? 'TC03');
         $stockIn = trim((string) ($in['stock'] ?? ''));
+        $wasIn   = trim((string) ($in['stock_was'] ?? ''));   // stock shown when the form was opened
         $image   = (string) ($in['image'] ?? '');
         if ($name === '' || mb_strlen($name) > 150) {
             return [0, 'Le nom du produit est obligatoire (150 caractères max.).'];
@@ -105,10 +106,17 @@ final class Products
         if (self::find($orgId, $id) === null) {
             return [0, 'Produit introuvable.'];
         }
+        // Orders placed while the form was open already took their units: apply only the
+        // change the owner typed (new − shown) to the live stock, never back to a stale value.
+        $relative = $stockIn !== '' && preg_match('/^\d{1,7}$/', $wasIn);
+        unset($params[':s']);
         $pdo->prepare(
-            'UPDATE shoplokal_products SET name = :n, description = :d, price_cents = :p, tax_code = :tc, stock = :s, active = :a'
+            'UPDATE shoplokal_products SET name = :n, description = :d, price_cents = :p, tax_code = :tc, active = :a, stock = '
+            . ($stockIn === '' ? 'NULL' : ($relative ? 'IF(stock IS NULL, :s1, GREATEST(0, stock + :delta))' : ':s1'))
             . ($image === '' ? '' : ', image = :img') . ' WHERE organization_id = :oid AND id = :id'
-        )->execute($params + [':id' => $id] + ($image === '' ? [] : [':img' => $imageSql]));
+        )->execute($params + [':id' => $id]
+            + ($stockIn === '' ? [] : [':s1' => (int) $stockIn] + ($relative ? [':delta' => (int) $stockIn - (int) $wasIn] : []))
+            + ($image === '' ? [] : [':img' => $imageSql]));
         return [$id, null];
     }
 

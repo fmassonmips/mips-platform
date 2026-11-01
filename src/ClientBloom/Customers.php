@@ -314,7 +314,7 @@ final class Customers
         );
         $stmt->execute([':t' => $token]);
         $row = $stmt->fetch();
-        if (!is_array($row)) {
+        if (!is_array($row) || !\App\Suite\Tenant::isOpen((int) $row['organization_id'])) {
             return null;
         }
         $c = self::find((int) $row['organization_id'], (int) $row['id']);

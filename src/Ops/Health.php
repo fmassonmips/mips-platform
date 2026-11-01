@@ -79,10 +79,32 @@ final class Health
                     . ($ok === false ? 'le début' : 'le ' . self::when((string) $r['last_ok_at'])) . '.';
             }
         }
-        $total = @disk_total_space(ROOT_PATH);
-        $free  = @disk_free_space(ROOT_PATH);
-        if ($total !== false && $free !== false && $total > 0 && $free / $total < self::MIN_FREE_DISK) {
-            $problems['disk'] = sprintf('Disque presque plein : %d %% libre (%.1f Go).', (int) round(100 * $free / $total), $free / 1e9);
+        // Invoices MRA has not fiscalised: sent without an answer, automatic retries stopped, or waiting for 2 hours.
+        $stuck = Database::connection()->prepare(
+            'SELECT organization_id, COUNT(*) AS n FROM facturo_documents
+             WHERE mra_status = \'unknown\'
+                OR (mra_status = \'pending\' AND (mra_attempts >= :max OR issued_at < NOW() - INTERVAL 2 HOUR))
+             GROUP BY organization_id ORDER BY organization_id'
+        );
+        $stuck->execute([':max' => \App\Facturo\Fiscalisation::MAX_ATTEMPTS]);
+        $rows = $stuck->fetchAll();
+        if ($rows !== []) {
+            $problems['mra:stuck'] = 'Factures non fiscalisées par la MRA depuis plus de 2 heures ou sans réponse : '
+                . implode(', ', array_map(static fn (array $r): string => (int) $r['n'] . ' (entreprise #' . (int) $r['organization_id'] . ')', $rows))
+                . '. Voir le message d’erreur sur chaque document.';
+        }
+        // The application, the backups and the database: each partition once.
+        $seen = [];
+        foreach ((array) ($GLOBALS['config']['ops']['disk_paths'] ?? [ROOT_PATH, '/var/backups/mips', '/var/lib/mysql']) as $path) {
+            $total = is_dir((string) $path) ? @disk_total_space((string) $path) : false;
+            $free  = $total !== false ? @disk_free_space((string) $path) : false;
+            if ($total === false || $free === false || $total <= 0 || isset($seen[(string) $total])) {
+                continue;
+            }
+            $seen[(string) $total] = true;
+            if ($free / $total < self::MIN_FREE_DISK) {
+                $problems['disk:' . $path] = sprintf('Disque presque plein (%s) : %d %% libre (%.1f Go).', $path, (int) round(100 * $free / $total), $free / 1e9);
+            }
         }
         return $problems;
     }

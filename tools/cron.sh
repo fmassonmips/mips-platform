@@ -7,7 +7,7 @@ set -u
 job=${1:?usage: cron.sh <job> <command> [args...]}
 shift
 root=$(cd "$(dirname "$0")/.." && pwd)
-"$@" 2>&1 | while IFS= read -r line; do printf '%s [%s] %s\n' "$(date '+%F %T')" "$job" "$line"; done
+"$@" 2>&1 | while IFS= read -r line || [ -n "$line" ]; do printf '%s [%s] %s\n' "$(date '+%F %T')" "$job" "$line"; done
 code=${PIPESTATUS[0]}
 php "$root/tools/ops.php" record "$job" "$code" || echo "$(date '+%F %T') [$job] could not record the result (exit $code)"
 exit "$code"

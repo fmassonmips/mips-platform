@@ -90,7 +90,7 @@ final class Forms
         $stmt = Database::connection()->prepare('SELECT * FROM formelio_forms WHERE public_token = :t');
         $stmt->execute([':t' => $token]);
         $row = $stmt->fetch();
-        return is_array($row) ? self::decode($row) : null;
+        return is_array($row) && \App\Suite\Tenant::isOpen((int) $row['organization_id']) ? self::decode($row) : null;
     }
 
     /**

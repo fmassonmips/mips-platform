@@ -108,9 +108,10 @@ L=/var/log/mips/cron.log
 20 * * * *   $C bookora_ical_sync    php /var/www/mips/tools/bookora_ical_sync.php    >> $L 2>&1
 5 5 * * *    $C reminders            php /var/www/mips/tools/reminders.php            >> $L 2>&1   # 9 h 05 à Maurice : fins d'essai, factures en retard, résumé du lundi
 45 22 * * *  $C purge_companies      php /var/www/mips/tools/purge_companies.php      >> $L 2>&1   # comptes fermés depuis 30 jours ; historique d'usage de plus de 13 mois
-45 21 * * *  $C backup               /var/www/mips/tools/backup.sh                    >> $L 2>&1   # 1 h 45 à Maurice
-*/10 * * * * $C watchdog             php /var/www/mips/tools/ops.php watchdog         >> $L 2>&1
+*/10 * * * * $C watchdog             php /var/www/mips/tools/ops.php watchdog         >> $L 2>&1 || echo "Alerte non envoyée par e-mail : voir $L"
 ```
+
+La sauvegarde tourne sous un compte système à part (§ 3), avec sa propre ligne dans **sa** crontab. La ligne `watchdog` écrit sur la sortie quand l'alerte n'a pas pu partir : c'est cette ligne que cron envoie à `MAILTO` (il faut un `sendmail` local, par ex. `msmtp-mta`, sinon rien ne part).
 
 Chaque script refuse de tourner hors ligne de commande et prend un verrou : deux exécutions simultanées ne se gênent pas. Une entreprise en erreur n'arrête pas les autres ; le script sort alors avec le code 1, que la surveillance signale.
 
@@ -143,17 +144,21 @@ Perdre la clé privée ou sa phrase de passe = perdre toutes les sauvegardes. La
 **Sur le serveur** :
 
 ```bash
-sudo mkdir -p /etc/mips /var/backups/mips && sudo chown www-data /var/backups/mips && sudo chmod 700 /var/backups/mips
+# Compte système à part : un pirate qui prend la main sur l'application (www-data) ne peut ni lire ni effacer les sauvegardes.
+sudo useradd --system --home-dir /var/backups/mips --shell /usr/sbin/nologin --groups www-data mips-backup   # groupe www-data : lit config.local.php
+sudo mkdir -p /etc/mips /var/backups/mips && sudo chown mips-backup /var/backups/mips && sudo chmod 700 /var/backups/mips
 sudo cp backup-public-key.asc /etc/mips/
 sudo mysql -e "CREATE USER 'mips_backup'@'localhost' IDENTIFIED BY '<mot de passe>';
   GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES, EVENT ON mips_platform.* TO 'mips_backup'@'localhost';"
 printf '[client]\nuser=mips_backup\npassword=<mot de passe>\n' | sudo tee /etc/mips/backup.my.cnf >/dev/null
 printf 'MIPS_BACKUP_RCLONE_REMOTE=b2:mips-backups\n' | sudo tee /etc/mips/backup.env >/dev/null   # ou MIPS_BACKUP_RSYNC_TARGET=…
-sudo chown www-data /etc/mips/backup.my.cnf /etc/mips/backup.env && sudo chmod 600 /etc/mips/backup.my.cnf /etc/mips/backup.env
-sudo -u www-data /var/www/mips/tools/cron.sh backup /var/www/mips/tools/backup.sh   # premier essai à la main
+sudo chown mips-backup /etc/mips/backup.my.cnf /etc/mips/backup.env && sudo chmod 600 /etc/mips/backup.my.cnf /etc/mips/backup.env
+sudo -u mips-backup /var/www/mips/tools/cron.sh backup /var/www/mips/tools/backup.sh   # premier essai à la main
+# puis : sudo crontab -u mips-backup -e
+#   45 21 * * *  /var/www/mips/tools/cron.sh backup /var/www/mips/tools/backup.sh >> /var/backups/mips/backup.log 2>&1   # 1 h 45 à Maurice
 ```
 
-Copie hors serveur : `rclone` (Backblaze B2, S3, Google Drive… configuré avec `rclone config` par l'utilisateur www-data) ou `rsync` vers une autre machine. Chez un autre fournisseur ou dans une autre région que le serveur. La durée de conservation hors serveur se règle chez ce fournisseur (règle de cycle de vie, par ex. 90 jours) ; un compte qui ne peut qu'**ajouter** des fichiers protège aussi contre un pirate qui voudrait effacer les sauvegardes depuis le serveur.
+Copie hors serveur : `rclone` (Backblaze B2, S3, Google Drive… configuré avec `rclone config` par l'utilisateur mips-backup) ou `rsync` vers une autre machine. Chez un autre fournisseur ou dans une autre région que le serveur. La durée de conservation hors serveur se règle chez ce fournisseur (règle de cycle de vie, par ex. 90 jours) ; donner à ce compte une clé qui peut **ajouter** des fichiers mais pas les effacer (Backblaze B2 : clé d'application sans `deleteFiles` ; S3 : verrouillage d'objet) : même un pirate maître du serveur ne peut alors pas effacer les copies.
 
 **Restaurer** (sur une machine qui a la clé privée) :
 
@@ -163,13 +168,15 @@ tools/restore.sh mips-2026-11-02-214500.sql.gz.gpg mips_platform --replace   # r
 gpg --decrypt mips-2026-11-02-214500-config.php.gpg > config/config.local.php
 ```
 
-Le script vérifie l'empreinte (`.sha256`), refuse une base qui contient déjà des tables sans `--replace`, puis affiche le nombre de tables et quelques comptages. La CI restaure une sauvegarde à chaque pull request et compare chaque table à l'original (`tests/e2e/e2e29.js`).
+Le script vérifie l'empreinte (`.sha256`), refuse une base qui contient déjà des tables sans `--replace`, charge d'abord la sauvegarde dans une base à part (`<base>_restoring`) et n'échange les tables qu'une fois le chargement réussi : une phrase de passe fausse ou un fichier abîmé laisse la base en place. Les tables remplacées restent dans `<base>_before_restore`. Il affiche ensuite le nombre de tables et quelques comptages.
+
+Une restauration ramène aussi les entreprises supprimées depuis la date de la sauvegarde : relancer aussitôt `php tools/purge_companies.php` (leur date de suppression est conservée) et vérifier dans le journal du back-office les suppressions faites depuis. La CI restaure une sauvegarde à chaque pull request et compare chaque table à l'original (`tests/e2e/e2e29.js`).
 
 **Tester une restauration** sur une machine vierge avant le premier pilote, puis chaque trimestre : restaurer, faire pointer une copie de l'application dessus, se connecter, ouvrir une facture. Une sauvegarde jamais restaurée ne compte pas.
 
 ## 3 bis. Surveillance
 
-- **E-mail d'alerte** : `tools/ops.php watchdog` (toutes les 10 minutes) écrit à `ops.alert_email` quand une tâche planifiée échoue, ne tourne plus (par exemple aucune transmission MRA réussie depuis 30 minutes, aucune sauvegarde depuis 26 heures) ou que le disque est plein à plus de 90 %. Un e-mail quand le problème apparaît, un rappel par jour tant qu'il dure, un « Résolu » quand il disparaît. Si l'e-mail ne part pas, la tâche sort en erreur et cron écrit à `MAILTO`.
+- **E-mail d'alerte** : `tools/ops.php watchdog` (toutes les 10 minutes) écrit à `ops.alert_email` quand une tâche planifiée échoue ou ne tourne plus (par exemple aucune transmission MRA réussie depuis 30 minutes, aucune sauvegarde depuis 26 heures), qu'une facture n'est pas fiscalisée depuis 2 heures ou attend une vérification sur le portail MRA, ou qu'un disque (application, sauvegardes, base : `ops.disk_paths`) est plein à plus de 90 %. Un problème n'est signalé qu'après 15 minutes (une panne passagère reste silencieuse), puis rappelé chaque jour tant qu'il dure ; un « Résolu » part quand il disparaît. Si l'e-mail ne part pas, la ligne de crontab l'écrit et cron l'envoie à `MAILTO`.
 - **Sonde externe** : `https://my.mips.mu/health.php` répond `200 ok`, ou `503 degraded` si la base ne répond pas ou qu'un problème ci-dessus est en cours. Une sonde gratuite (UptimeRobot, Healthchecks.io…) qui l'appelle toutes les 5 minutes alerte aussi quand le serveur entier est arrêté, ce que le serveur ne peut pas signaler lui-même. La page ne dit rien de plus.
 - **Détail** : `php tools/ops.php status` sur le serveur.
 - Une instance qui ne fait pas tourner une tâche (la démonstration sans sauvegarde, par exemple) la déclare dans `ops.skip_jobs`.
@@ -178,7 +185,7 @@ Le script vérifie l'empreinte (`.sha256`), refuse une base qui contient déjà 
 
 ```bash
 cd /var/www/mips
-mysqldump --single-transaction mips_platform | gzip > /backup/avant-maj-$(date +%F-%H%M).sql.gz
+sudo -u mips-backup tools/cron.sh backup tools/backup.sh      # sauvegarde chiffrée juste avant (jamais de copie en clair)
 git pull
 sudo mysql mips_platform < sql/migrations/0XX_….sql     # seulement les nouvelles, dans l'ordre
 sudo systemctl reload php8.3-fpm

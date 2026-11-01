@@ -11,13 +11,13 @@ La PR ajoute environ 28 600 lignes (315 fichiers, 40 commits) sur la branche `cl
 ## 2. Relancer les tests
 
 ```bash
-tests/e2e/run.sh              # les 28 suites, ~30 min
+tests/e2e/run.sh              # les 30 suites, ~35 min
 tests/e2e/run.sh e2e22 e2e25  # quelques suites
 ```
 
 Prérequis (en tête de `tests/e2e/run.sh`) : PHP 8.3 avec pdo_mysql, mbstring, curl, sodium, zip ; MariaDB démarrée et accessible par la commande `mysql` en administrateur ; Node avec Playwright et Chromium ; Python 3 avec `cryptography` ; rsync et openssl ; ports 8099, 8098, 8097 et 2525 libres. Le script utilise sa propre base `mips_e2e`, recréée avant chaque suite (il refuse `mips_platform`), une copie du code dans `tests/.work/`, un faux serveur SMTP, un faux serveur de l'API MRA et un faux calendrier Airbnb. Captures d'écran et e-mails reçus restent dans `tests/.work/` pour inspection.
 
-**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 28 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
+**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 30 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
 
 Ce que les tests ne couvrent pas : la vraie API MRA (jamais appelée), un vrai serveur SMTP, Nginx en production (testé une fois à la main, voir `docs/deploiement.md`), la charge, les navigateurs autres que Chromium.
 
@@ -77,13 +77,56 @@ Par ordre de gravité si c'est faux. Pour chaque point : quoi vérifier, où.
 8. **Sauvegardes (lot 12 bis).** Une sauvegarde illisible ou incomplète ne se voit que le jour où on en a besoin. Vérifier que `backup.sh` échoue (code ≠ 0) dès qu'une étape échoue (`set -o pipefail`), qu'aucun fichier en clair ne touche le disque, que la clé privée n'est jamais requise sur le serveur, et que `restore.sh` ne peut pas écraser une base sans `--replace`. Le test `e2e29` restaure et compare chaque table.
 9. **Back-office (lot 11).** Accès par liste d'adresses (`backoffice.staff`) et 404 pour tout autre visiteur ; la restriction par IP se fait dans Nginx. Chaque action est journalisée.
 
-## 5. Contrôles mécaniques
+## 5. Contre-relecture automatique (1er novembre 2026)
+
+Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de l'auteur), une par zone à risque. Chaque constat a été vérifié dans le code avant correction ; chaque correction a son test (`e2e30`, `e2e31`, `e2e29`). Ce n'est pas une relecture humaine : elle la prépare.
+
+**Cloisonnement entre entreprises** : aucun accès croisé trouvé (chaque requête par identifiant tracée jusqu'à ses appelants, chaque identifiant reçu vérifié, pages publiques et exports). Durcissement facultatif : quelques fonctions internes (`Tasks::time`, `Tickets::messages`, `Units::seasons`…) font confiance à l'appelant pour la vérification.
+
+**Corrigé :**
+
+| Zone | Défaut | Correction |
+|---|---|---|
+| MRA | Délai dépassé après envoi : la facture était renvoyée automatiquement alors que la MRA l'avait peut-être fiscalisée (double IRN ou rejet « déjà reçue ») | Nouvel état `unknown` (« envoyé sans réponse ») : jamais renvoyé automatiquement ; vérification sur le portail MRA puis renvoi manuel ; signalé par la surveillance |
+| MRA | Identifiants refusés, clé publique ou configuration fausses : toutes les factures en attente passaient en « rejeté », une authentification par facture | Erreur de compte : les factures restent en attente sans consommer d'essai, un seul appel par passage |
+| MRA | Après 50 échecs, plus aucun essai, sans le dire | Le document l'indique ; la surveillance signale toute facture non fiscalisée depuis 2 h |
+| MRA | `refreshToken` toujours `false` (guide MRA § 5.1.4) | `true` dans les 10 dernières minutes du jeton |
+| MRA | Garde-fou production contournable (`app.env` ≠ « production » exactement, URL de test sans « sandbox ») | Tout sauf `demo`/`development` est production ; réponse `environment` ≠ `LIVE` refusée en production |
+| MRA | Toute erreur contenant « token » traitée comme jeton expiré | Seul `ERR0050` |
+| Facturo | « Payée » cliqué deux fois en même temps : cashback crédité deux fois | Le second changement de statut est refusé |
+| Facturo | Un devis converti deux fois en même temps : deux factures | Verrou par devis |
+| Facturo | Facture émise avec une date future ou antérieure à la dernière émise (numéros hors ordre chronologique) | Refusé à l'émission |
+| Facturo | Avoir avec un traitement TVA absent de la facture (ex. TVA 15 % sur une facture exonérée) | Refusé |
+| ShopLokal | Modifier une fiche produit remettait le stock à la valeur du formulaire (ventes faites entre-temps perdues, survente) | Seule la différence saisie est appliquée au stock réel |
+| Bookora | Changer le traitement TVA d'un logement changeait le prix TTC des saisons | Prix TTC des saisons conservé |
+| Suppression | Le compte d'un ancien employé était supprimé avec l'entreprise qu'il avait rejointe, effaçant son historique de congés chez l'ancien employeur | Compte anonymisé au lieu d'être supprimé quand une autre entreprise a un historique |
+| Suppression | Fermeture annulée au dernier moment : entreprise supprimée quand même | Condition revérifiée sous verrou dans la transaction |
+| Suppression | Entreprise suspendue ou en fermeture : pages publiques (factures, réservations, cartes, tickets, invitations…), rappels de rendez-vous et synchro iCal continuaient | Fermés tant que l'entreprise n'est pas rouverte |
+| Sauvegardes | `restore.sh --replace` supprimait la base avant de savoir si la sauvegarde était lisible | Chargement dans une base à part, puis échange atomique ; anciennes tables gardées |
+| Sauvegardes | Copie « avant mise à jour » en clair et jamais effacée ; sauvegardes possédées par l'utilisateur web | Sauvegarde chiffrée avant mise à jour ; compte système `mips-backup` ; clé hors serveur sans droit d'effacement |
+| Surveillance | Alerte à chaque échec passager (jusqu'à ~144 e-mails/jour) ; repli `MAILTO` qui ne pouvait jamais partir ; disques des sauvegardes et de la base non surveillés | Alerte après 15 min ; ligne de crontab qui écrit sur échec ; `ops.disk_paths` |
+| Divers | Fichier trop petit gardé sous son nom définitif ; deux sauvegardes simultanées ; dernière ligne de journal perdue | Corrigés |
+
+**Ouvert, à trancher ou à valider (pas corrigé) :**
+
+1. **Format du JSON MRA non vérifié** (bloquant). Les noms de champs et les codes du code (`totalAmtWoVatCur`, `buyerType: "VATR"`, `taxCode: "TC01"`…) diffèrent de l'exemple du guide public MRA 2023 (`totalAmtWoVat`, `"01"`…). Le fichier de structure officiel (Excel « Data Structure of an e-Invoice ») est sur le portail développeur MRA, non public. Le faux serveur des tests a été écrit d'après le code : les tests verts ne prouvent rien sur ce point. À valider en SANDBOX puis CONFORMANCE avec ce fichier.
+2. **Chaînage `previousNoteHash`** : formule et portée (par type de document) non confirmées par le guide public. Une facture rejetée laisse passer les suivantes, qui la référencent.
+3. **TAN du vendeur** pris dans le n° TVA ; les vendeurs non assujettis à la TVA (qui ont un TAN) ne peuvent pas fiscaliser. Ajouter un champ TAN distinct.
+4. **Paiement** : `totalAmtPaid` = total et `salesTransactions` = `CREDIT` toujours ; `paymentMethods` jamais envoyé. Règle MRA à confirmer.
+5. **Prix saisis TTC** (ShopLokal, Bookora) : le prix est stocké HT et la TVA arrondie par ligne, donc environ 13 % des prix ronds à 15 % ressortent à ±1 centime (Rs 10.00 → Rs 10.01 ; 3 × Rs 10.00 → Rs 30.02). Aucun prix HT au centime ne donne exactement certains TTC : il faut décider (avec le comptable) de calculer ces lignes à partir du TTC. Décision de règle de calcul, pas un correctif.
+6. **ClientBloom** : annuler à la main un achat issu d'une facture déjà en partie créditée retire le cashback deux fois ; une seconde annulation simultanée renvoie une erreur 500 au lieu d'un message ; un passage en caisse soumis deux fois enregistre probablement deux achats (non confirmé).
+7. **ShopLokal** : annuler une commande déjà facturée ne crée pas d'avoir ; la TVA de la livraison est recalculée à la facturation.
+8. **Envoi MRA dans la requête web** à l'émission : jusqu'à ~60 s d'attente si la MRA est lente.
+9. **Le jeton MRA** est stocké en clair (la clé de session, elle, est chiffrée).
+10. Une restauration ramène les entreprises supprimées depuis la sauvegarde (procédure dans `deploiement.md` § 3).
+
+## 6. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
 - **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 027), à refaire au moins une fois de 001 à 027.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
-## 6. Limites connues, décidées
+## 7. Limites connues, décidées
 
 - Pas de tests unitaires, seulement des tests de bout en bout (lents mais proches de l'usage réel).
 - Les tests tournent contre MariaDB 10.11 et Chromium seulement.
@@ -92,6 +135,6 @@ Par ordre de gravité si c'est faux. Pour chaque point : quoi vérifier, où.
 - L'historique d'usage ne garde que la date de passage, pas la fréquence ni le détail.
 - Les textes des CGU et de la politique de confidentialité sont des versions provisoires à faire valider par un juriste.
 
-## 7. Questions à remonter
+## 8. Questions à remonter
 
 Notez chaque problème avec le fichier et la ligne, le scénario qui le déclenche, et sa gravité (bloquant avant pilote / à corriger / remarque). Les bloquants passent avant tout nouveau développement.

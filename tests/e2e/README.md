@@ -31,4 +31,6 @@ Une suite reçoit en argument le dossier de travail (`tests/.work/`) : copie du 
 | e2e24, e2e28 | E-mails automatiques, résumé du lundi |
 | e2e25 | Export et fermeture du compte |
 | e2e29 | Surveillance (/health.php, alertes), sauvegarde chiffrée et restauration |
+| e2e30 | MRA : envoi sans réponse, identifiants refusés, renouvellement du jeton, essais arrêtés ; dates d'émission, TVA des avoirs, double « Payée » |
+| e2e31 | Suppression définitive (comptes anonymisés, fermeture annulée), liens publics fermés, stock ShopLokal, saisons Bookora |
 | e2e26 | CGU et confidentialité |

@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     language           CHAR(2)      NULL,          -- fr | en, frozen at issue
     public_token       VARCHAR(64)  NULL,                   -- unguessable link sent to the client
     -- MRA fiscalisation (invoices and credit notes of organizations with e-invoicing on)
-    mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected
+    mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected | unknown (sent, no answer)
     mra_counter        INT UNSIGNED NULL,                   -- EBS invoice counter, never reset
     mra_irn            VARCHAR(100) NULL,                   -- identifier returned by MRA
     mra_qr             MEDIUMTEXT   NULL,                   -- base64 PNG returned by MRA

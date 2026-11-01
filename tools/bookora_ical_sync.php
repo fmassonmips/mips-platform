@@ -21,6 +21,7 @@ if ((int) $pdo->query("SELECT GET_LOCK('bookora_ical_sync', 0)")->fetchColumn() 
 try {
     $units = $pdo->query(
         "SELECT u.* FROM bookora_units u JOIN organization_modules m ON m.organization_id = u.organization_id AND m.module_slug = 'bookora'
+         JOIN organizations o ON o.id = u.organization_id AND o.suspended_at IS NULL AND o.deletion_scheduled_at IS NULL
          WHERE u.active = 1 AND u.ical_import_url IS NOT NULL AND m.status <> 'disabled'
            AND (m.status = 'active' OR m.trial_ends_at IS NULL OR m.trial_ends_at > NOW())"
     )->fetchAll();

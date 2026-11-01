@@ -170,7 +170,8 @@ final class Team
                     (SELECT COUNT(*) FROM users x WHERE x.email = i.email) AS has_account
              FROM organization_invitations i JOIN organizations o ON o.id = i.organization_id
              LEFT JOIN users u ON u.id = i.invited_by
-             WHERE i.token_hash = :h AND i.accepted_at IS NULL AND i.expires_at > :now'
+             WHERE i.token_hash = :h AND i.accepted_at IS NULL AND i.expires_at > :now
+               AND o.suspended_at IS NULL AND o.deletion_scheduled_at IS NULL'
         );
         $stmt->execute([':h' => hash('sha256', $token), ':now' => Booking::now()->format('Y-m-d H:i:s')]);
         $row = $stmt->fetch();

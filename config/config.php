@@ -109,6 +109,8 @@ return [
     'ops' => [
         'alert_email' => '',
         'skip_jobs'   => [],
+        // Partitions watched for free space (missing ones are ignored).
+        'disk_paths'  => [ROOT_PATH, '/var/backups/mips', '/var/lib/mysql'],
     ],
 
     'rate_limit' => [
