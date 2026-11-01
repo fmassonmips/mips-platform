@@ -1,0 +1,24 @@
+# Local / single-host deployment. For production use managed PostgreSQL with
+# encryption at rest, TLS, PITR backups, and a secrets manager.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_pw}
+    volumes: [pgdata:/var/lib/postgresql/data, ./db/bootstrap.sql:/docker-entrypoint-initdb.d/00-bootstrap.sql:ro]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres"], interval: 5s, retries: 20 }
+  migrate:
+    build: { context: ., target: tools }
+    environment: { DATABASE_OWNER_URL: "postgres://mips_owner:${OWNER_DB_PASSWORD:-owner_dev_pw}@db:5432/mips_eos" }
+    depends_on: { db: { condition: service_healthy } }
+    command: ["sh", "-c", "npx tsx scripts/migrate.ts && if [ \"$SEED_DEMO\" = 'true' ]; then npx tsx scripts/seed-demo.ts; fi"]
+  app:
+    build: { context: ., target: runtime }
+    environment:
+      DATABASE_URL: "postgres://mips_app:${APP_DB_PASSWORD:-app_dev_pw}@db:5432/mips_eos"
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports: ["3000:3000"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+volumes: { pgdata: {} }
