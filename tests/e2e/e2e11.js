@@ -47,12 +47,14 @@ const ago20 = ymd(new Date(mu.getTime() - 20 * 864e5));
     await api('/api/facturo/documents', { action: 'issue', id });
     return id;
   };
-  const a = await doc('invoice', client, FIRST, TODAY, '1000');      // paid this month
-  await api('/api/facturo/documents', { action: 'status', id: a, status: 'paid' });
-  await doc('invoice', client2, FIRST, FIRST, '2000');                // overdue (due on the 1st) unless today is the 1st
+  // Issued in date order: invoice numbers must follow dates.
   const c = await doc('invoice', client, PREV, PREV, '500');          // last month
   await api('/api/facturo/documents', { action: 'status', id: c, status: 'paid' });
   sql(`UPDATE facturo_documents SET paid_at = '${PREV} 10:00:00' WHERE id = ${c}`);
+  const a = await doc('invoice', client, FIRST, TODAY, '1000');      // paid this month
+  await api('/api/facturo/documents', { action: 'status', id: a, status: 'paid' });
+  const o = await doc('invoice', client2, FIRST, FIRST, '2000');      // overdue
+  sql(`UPDATE facturo_documents SET due_date = CURDATE() - INTERVAL 1 DAY WHERE id = ${o}`);   // overdue on the 1st of the month too
   await doc('quote', client, ago20, null, '3000');                    // to follow up
   step('Facturo: 2 invoices this month (one paid, one overdue), 1 last month, a 20-day-old quote');
 
