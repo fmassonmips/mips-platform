@@ -129,6 +129,9 @@ Le serveur n'a besoin de joindre que : le service SMTP, les URL MRA et les calen
 
 ## 3. Sauvegardes
 
+En cas de panne : `docs/incidents.md` (une fiche par incident probable).
+
+
 `tools/backup.sh` sauvegarde chaque nuit **toute la base** (les images des boutiques et logements y sont aussi) et `config/config.local.php`, chiffrées avec la **clé publique** de sauvegarde de MIPS. La clé privée ne va jamais sur le serveur : qui vole le serveur ou une copie de sauvegarde ne peut rien lire. Le script garde 30 jours sur le serveur et copie chaque sauvegarde **hors du serveur** ; sans copie hors serveur configurée, il sort en erreur (une sauvegarde sur le même disque disparaît avec lui), sauf `MIPS_BACKUP_LOCAL_ONLY=1`.
 
 **Une fois, sur le poste d'un responsable (pas le serveur)** :

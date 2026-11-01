@@ -119,6 +119,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 8. **Envoi MRA dans la requête web** à l'émission : jusqu'à ~60 s d'attente si la MRA est lente.
 9. **Le jeton MRA** est stocké en clair (la clé de session, elle, est chiffrée).
 10. Une restauration ramène les entreprises supprimées depuis la sauvegarde (procédure dans `deploiement.md` § 3).
+11. **Facture « envoyé sans réponse » en fait fiscalisée** : aucun écran pour saisir l'IRN relevé sur le portail MRA, ni pour récupérer le QR code (appel MRA de consultation non branché faute de spec). Procédure manuelle [dév] dans `docs/incidents.md` fiche 4.
 
 ## 6. Contrôles mécaniques
 
