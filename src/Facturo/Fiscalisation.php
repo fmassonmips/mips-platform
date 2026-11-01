@@ -151,6 +151,8 @@ final class Fiscalisation
 
         $buyerVat = (string) ($client['vat_number'] ?? '');
         $buyerBrn = (string) ($client['brn'] ?? '');
+        // Documents issued before the TAN field: the VAT number when it is a plain 8-digit TAN.
+        $buyerTan = (string) ($client['tan'] ?? '') !== '' ? (string) $client['tan'] : (\App\Suite\Tenant::normalizeTan($buyerVat) ?? '');
 
         $invoice = [
             'invoiceCounter'        => (string) $doc['mra_counter'],
@@ -178,7 +180,7 @@ final class Fiscalisation
             ],
             'buyer' => [
                 'name'         => mb_substr((string) ($client['name'] ?? ''), 0, 100),
-                'tan'          => $buyerVat,
+                'tan'          => $buyerTan,
                 'brn'          => $buyerBrn,
                 'businessAddr' => mb_substr(preg_replace('/\s+/', ' ', (string) ($client['address'] ?? '')) ?? '', 0, 100),
                 'buyerType'    => $buyerVat !== '' ? 'VATR' : 'NVTR',

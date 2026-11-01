@@ -58,7 +58,7 @@ Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle).
 | 11 | Back-office MIPS + historique d'usage | `src/Backoffice/*`, `public/backoffice.php`, `public/export.php` | 850 | 5903699, b8dc80e | e2e22, e2e27 |
 | 12 | Premiers pas, import, e-mails, export, fermeture | `src/Suite/{Onboarding,Import,Notifications,DataExport,Closure}.php`, `src/Facturo/Reminders.php`, `tools/*` | 1 900 | 08cc84d, f0feba2, ea5a3d9 | e2e23, e2e24, e2e25 |
 | 12 bis | Sauvegardes et surveillance | `tools/{backup,restore,cron}.sh`, `tools/ops.php`, `src/Ops/*`, `public/health.php` | 500 | (ce commit) | e2e29 |
-| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `028` | 1 900 | tous | contrôle § 5 |
+| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `029` | 1 900 | tous | contrôle § 5 |
 | 14 | JavaScript et gabarits | `public/assets/js/*`, `templates/**` | 5 000 | tous | toutes |
 
 Les gabarits et le JavaScript (lot 14) sont volumineux mais peu risqués : la revue de sécurité a vérifié l'échappement de chaque sortie et l'absence d'`innerHTML`. On peut les parcourir plus vite.
@@ -111,7 +111,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 
 1. **Format du JSON MRA non vérifié** (bloquant). Les noms de champs et les codes du code (`totalAmtWoVatCur`, `buyerType: "VATR"`, `taxCode: "TC01"`…) diffèrent de l'exemple du guide public MRA 2023 (`totalAmtWoVat`, `"01"`…). Le fichier de structure officiel (Excel « Data Structure of an e-Invoice ») est sur le portail développeur MRA, non public. Le faux serveur des tests a été écrit d'après le code : les tests verts ne prouvent rien sur ce point. À valider en SANDBOX puis CONFORMANCE avec ce fichier.
 2. **Chaînage `previousNoteHash`** : formule et portée (par type de document) non confirmées par le guide public. Une facture rejetée laisse passer les suivantes, qui la référencent.
-3. ~~TAN du vendeur pris dans le n° TVA ; vendeurs non assujettis bloqués~~ : corrigé (migration 028, champ TAN distinct, `personType` NVTR, lignes « Exonéré / sans TVA » imposées sans n° TVA ; `e2e30`). Reste : le TAN de l'**acheteur** est encore pris dans son n° TVA (fiche client). À valider avec le comptable : un vendeur non assujetti ne doit facturer ni TVA ni taux zéro.
+3. ~~TAN du vendeur pris dans le n° TVA ; vendeurs non assujettis bloqués~~ : corrigé (migration 028, champ TAN distinct, `personType` NVTR, lignes « Exonéré / sans TVA » imposées sans n° TVA ; `e2e30`). Le TAN de l'acheteur a aussi son champ (migration 029, fiche client et import). À valider avec le comptable : un vendeur non assujetti ne doit facturer ni TVA ni taux zéro.
 4. **Paiement** : `totalAmtPaid` = total et `salesTransactions` = `CREDIT` toujours ; `paymentMethods` jamais envoyé. Règle MRA à confirmer.
 5. **Prix saisis TTC** (ShopLokal, Bookora) : le prix est stocké HT et la TVA arrondie par ligne, donc environ 13 % des prix ronds à 15 % ressortent à ±1 centime (Rs 10.00 → Rs 10.01 ; 3 × Rs 10.00 → Rs 30.02). Aucun prix HT au centime ne donne exactement certains TTC : il faut décider (avec le comptable) de calculer ces lignes à partir du TTC. Décision de règle de calcul, pas un correctif.
 6. **ClientBloom** : annuler à la main un achat issu d'une facture déjà en partie créditée retire le cashback deux fois ; une seconde annulation simultanée renvoie une erreur 500 au lieu d'un message ; un passage en caisse soumis deux fois enregistre probablement deux achats (non confirmé).
@@ -123,7 +123,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 ## 6. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
-- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 028), à refaire au moins une fois de 001 à 028.
+- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 029), à refaire au moins une fois de 001 à 029.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
 ## 7. Limites connues, décidées

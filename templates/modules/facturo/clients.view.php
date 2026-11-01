@@ -18,6 +18,7 @@ $companyLang = DocText::LANGUAGES[$profile['document_language']] ?? 'Français';
       <div class="field"><label for="c-phone">Téléphone</label><input type="text" id="c-phone" name="phone" maxlength="40"></div>
       <div class="field"><label for="c-brn">BRN</label><input type="text" id="c-brn" name="brn" maxlength="40"></div>
       <div class="field"><label for="c-vat">N° TVA</label><input type="text" id="c-vat" name="vat_number" maxlength="40"></div>
+      <div class="field"><label for="c-tan">TAN <span class="small">(n° fiscal MRA)</span></label><input type="text" id="c-tan" name="tan" maxlength="12" inputmode="numeric"></div>
     </div>
     <div class="field"><label for="c-address">Adresse</label><textarea id="c-address" name="address" rows="2" maxlength="500"></textarea></div>
     <div class="field"><label for="c-lang">Langue des documents envoyés à ce client</label>

@@ -151,6 +151,22 @@ const mu = (days) => new Date(Date.now() + 4 * 3600e3 + days * 86400e3).toISOStr
   assert(status(g) === 'fiscalised 1' && last.personType === 'NVTR' && last.seller.tan === '27000000' && last.totalVatAmount === '0.00', 'NVTR ' + JSON.stringify([status(g), last.personType, last.seller.tan, last.totalVatAmount]));
   step('TAN typed with spaces is stored as 8 digits, a wrong one refused; without a VAT number the company still fiscalises (personType NVTR, seller TAN sent), VAT lines refused');
 
+  // 9. The client's TAN is its own field too (sent as buyer TAN), its VAT number gives the buyer type
+  await page.goto(B + '/app.php?m=facturo&p=clients');
+  await page.fill('#c-name', 'Hôtel Azur'); await page.fill('#c-brn', 'C07012345'); await page.fill('#c-vat', 'VAT27012345'); await page.fill('#c-tan', '27 01234');
+  await page.click('#client-form button[type=submit]');
+  assert((await err()).includes('TAN du client invalide'), 'client TAN checked');
+  await page.fill('#c-tan', '27 012 345'); await page.click('#client-form button[type=submit]'); await page.waitForSelector('text=Hôtel Azur');
+  await page.goto(B + '/app.php?m=facturo&p=edit&type=invoice');
+  await page.selectOption('#client_id', { label: 'Hôtel Azur' });
+  const row = page.locator('#lines tr.line').first();
+  await row.locator('[name=description]').fill('Service'); await row.locator('[name=quantity]').fill('1'); await row.locator('[name=unit_price]').fill('80'); await row.locator('[name=tax_code]').selectOption('TC03');
+  await Promise.all([page.waitForURL(/id=\d+/), page.click('#document-form button[type=submit]')]);
+  await issue();
+  const lastB = JSON.parse(fs.readFileSync(M + '/received/' + fs.readdirSync(M + '/received').sort().pop()))[0];
+  assert(lastB.buyer.tan === '27012345' && lastB.buyer.buyerType === 'VATR' && lastB.buyer.brn === 'C07012345', 'buyer ' + JSON.stringify(lastB.buyer));
+  step('client TAN « 27 012 345 » stored and sent as buyer TAN 27012345 (not « VAT27012345 »), buyer type VATR from its VAT number; a 7-digit TAN refused');
+
   assert(errors.length === 0, 'JS errors ' + errors);
   await browser.close();
   console.log('ALL GREEN');

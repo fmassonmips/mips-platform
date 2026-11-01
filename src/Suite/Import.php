@@ -39,8 +39,9 @@ final class Import
                 'address'    => ['Adresse', false,       ['adresse', 'address', 'adresse postale', 'ville']],
                 'brn'        => ['BRN', false,           ['brn', 'business registration number', 'n brn']],
                 'vat_number' => ['N° TVA', false,        ['tva', 'vat', 'numero tva', 'n tva', 'vat number', 'vat no']],
+                'tan'        => ['TAN', false,           ['tan', 'numero fiscal', 'n fiscal', 'tax account number']],
             ],
-            'example' => ['Hôtel Le Lagon', 'compta@lagon.mu', '230 5712 3456', 'Royal Road, Grand Baie', 'C07012345', 'VAT27012345'],
+            'example' => ['Hôtel Le Lagon', 'compta@lagon.mu', '230 5712 3456', 'Royal Road, Grand Baie', 'C07012345', 'VAT27012345', '27012345'],
         ],
         'customers' => [
             'app' => 'clientbloom', 'title' => 'Clients fidélité ClientBloom', 'back' => '/app.php?m=clientbloom&p=customers',
