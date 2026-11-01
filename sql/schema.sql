@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     address         VARCHAR(500) NULL,
     brn             VARCHAR(40)  NULL,
     vat_number      VARCHAR(40)  NULL,
+    tan             VARCHAR(8)   NULL,                   -- MRA Tax Account Number (8 digits), VAT-registered or not
     email           VARCHAR(254) NULL,
     phone           VARCHAR(40)  NULL,
     -- Language of documents sent to clients (quotes, invoices, credit notes, e-mails)

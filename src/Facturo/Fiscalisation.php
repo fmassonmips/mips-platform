@@ -40,8 +40,18 @@ final class Fiscalisation
      */
     public static function issueBlocker(array $doc, array $seller): ?string
     {
-        if ($seller['vat_number'] === '' || $seller['address'] === '') {
-            return 'La facturation électronique MRA exige votre n° TVA et votre adresse (page Entreprise).';
+        if (($seller['tan'] ?? '') === '' || $seller['address'] === '') {
+            return 'La facturation électronique MRA exige votre TAN (n° fiscal MRA, 8 chiffres) et votre adresse (page Entreprise).';
+        }
+        if ($seller['vat_number'] === '') {
+            // Not registered for VAT: no VAT may be charged, at any rate (not even 0 %, which is for registered sellers).
+            $codes = Database::connection()->prepare('SELECT tax_code FROM facturo_document_lines WHERE document_id = :id ORDER BY position');
+            $codes->execute([':id' => (int) $doc['id']]);
+            foreach ($codes->fetchAll(\PDO::FETCH_COLUMN) as $i => $code) {
+                if ($code !== 'TC03') {
+                    return 'Ligne ' . ($i + 1) . ' : sans n° TVA, vos documents sont « Exonéré / sans TVA » (renseignez votre n° TVA si vous êtes assujetti).';
+                }
+            }
         }
         if ($doc['currency'] !== 'MUR') {
             return 'Facturation électronique MRA : seuls les documents en MUR sont pris en charge pour l\'instant.';
@@ -160,7 +170,7 @@ final class Fiscalisation
             'seller' => [
                 'name'            => mb_substr((string) (($seller['legal_name'] ?? '') !== '' ? $seller['legal_name'] : ($seller['name'] ?? '')), 0, 100),
                 'tradeName'       => mb_substr((string) ($seller['name'] ?? ''), 0, 100),
-                'tan'             => (string) ($seller['vat_number'] ?? ''),
+                'tan'             => (string) (($seller['tan'] ?? '') !== '' ? $seller['tan'] : ($seller['vat_number'] ?? '')),   // documents issued before the TAN field
                 'brn'             => (string) ($seller['brn'] ?? ''),
                 'businessAddr'    => mb_substr(preg_replace('/\s+/', ' ', (string) ($seller['address'] ?? '')) ?? '', 0, 250),
                 'businessPhoneNo' => mb_substr(preg_replace('/[^0-9+ ]/', '', (string) ($seller['phone'] ?? '')) ?? '', 0, 20),

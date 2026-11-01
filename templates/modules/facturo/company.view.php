@@ -22,7 +22,8 @@ $ro = $can_manage ? '' : ' disabled';
       <div class="field"><label for="o-name">Nom affiché</label><input type="text" id="o-name" name="name" maxlength="160" value="<?= $e($profile['name']) ?>"<?= $ro ?>></div>
       <div class="field"><label for="o-legal">Raison sociale</label><input type="text" id="o-legal" name="legal_name" maxlength="200" value="<?= $e($profile['legal_name']) ?>"<?= $ro ?>></div>
       <div class="field"><label for="o-brn">BRN</label><input type="text" id="o-brn" name="brn" maxlength="40" value="<?= $e($profile['brn']) ?>"<?= $ro ?>></div>
-      <div class="field"><label for="o-vat">N° TVA</label><input type="text" id="o-vat" name="vat_number" maxlength="40" value="<?= $e($profile['vat_number']) ?>"<?= $ro ?>></div>
+      <div class="field"><label for="o-vat">N° TVA <span class="small">(vide si non assujetti)</span></label><input type="text" id="o-vat" name="vat_number" maxlength="40" value="<?= $e($profile['vat_number']) ?>"<?= $ro ?>></div>
+      <div class="field"><label for="o-tan">TAN <span class="small">(n° fiscal MRA, 8 chiffres)</span></label><input type="text" id="o-tan" name="tan" maxlength="12" inputmode="numeric" value="<?= $e($profile['tan']) ?>"<?= $ro ?>></div>
       <div class="field"><label for="o-email">E-mail</label><input type="email" id="o-email" name="email" maxlength="254" value="<?= $e($profile['email']) ?>"<?= $ro ?>></div>
       <div class="field"><label for="o-phone">Téléphone</label><input type="text" id="o-phone" name="phone" maxlength="40" value="<?= $e($profile['phone']) ?>"<?= $ro ?>></div>
     </div>

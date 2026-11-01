@@ -29,7 +29,7 @@ const mu = (days) => new Date(Date.now() + 4 * 3600e3 + days * 86400e3).toISOStr
   await page.click('button[data-module="facturo"]'); await page.waitForSelector('a[href="/app.php?m=facturo"]');
   await page.goto(B + '/app.php?m=facturo&p=company');
   await page.fill('#o-legal', 'MIPS Demo Ltd'); await page.fill('#o-brn', 'C09999999');
-  await page.fill('#o-vat', '27000000'); await page.fill('#o-address', 'Ebène'); await page.fill('#o-phone', '+230 207-6000');
+  await page.fill('#o-vat', 'VAT27000000'); await page.fill('#o-tan', '27000000'); await page.fill('#o-address', 'Ebène'); await page.fill('#o-phone', '+230 207-6000');
   await page.click('#company-form button[type=submit]'); await page.waitForSelector('#company-saved:not([hidden])');
   await page.fill('#mra-user', 'mips-test'); await page.fill('#mra-pass', 'S3cret!pass'); await page.fill('#mra-ebs', 'EBS-123');
   await page.check('input[name=enabled]');
@@ -137,6 +137,19 @@ const mu = (days) => new Date(Date.now() + 4 * 3600e3 + days * 86400e3).toISOStr
   }, d);
   assert(codes.filter(x => x === 200).length === 1, 'only one succeeds ' + codes);
   step('two simultaneous « Payée » on one invoice: one succeeds, the other is refused (no double cashback)');
+
+  // 8. TAN separate from the VAT number; a seller not registered for VAT fiscalises too, without VAT
+  await page.goto(B + '/app.php?m=facturo&p=company');
+  await page.fill('#o-tan', '2700000'); await page.click('#company-form button[type=submit]');
+  assert((await err()).includes('TAN invalide'), 'TAN checked');
+  await page.fill('#o-tan', '27000000'); await page.fill('#o-vat', '');
+  await page.click('#company-form button[type=submit]'); await page.waitForSelector('#company-saved:not([hidden])');
+  await draft('50', 'TC01'); await page.click('button[data-doc-action="issue"]');
+  assert((await err()).includes('sans n° TVA'), 'no VAT charged without a VAT number');
+  const g = await draft('50', 'TC03'); await issue();
+  const last = JSON.parse(fs.readFileSync(M + '/received/' + fs.readdirSync(M + '/received').sort().pop()))[0];
+  assert(status(g) === 'fiscalised 1' && last.personType === 'NVTR' && last.seller.tan === '27000000' && last.totalVatAmount === '0.00', 'NVTR ' + JSON.stringify([status(g), last.personType, last.seller.tan, last.totalVatAmount]));
+  step('TAN typed with spaces is stored as 8 digits, a wrong one refused; without a VAT number the company still fiscalises (personType NVTR, seller TAN sent), VAT lines refused');
 
   assert(errors.length === 0, 'JS errors ' + errors);
   await browser.close();

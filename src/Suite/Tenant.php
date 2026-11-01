@@ -68,7 +68,7 @@ final class Tenant
     public static function profile(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT name, legal_name, address, brn, vat_number, email, phone, document_language
+            'SELECT name, legal_name, address, brn, vat_number, tan, email, phone, document_language
              FROM organizations WHERE id = :id'
         );
         $stmt->execute([':id' => $orgId]);
@@ -78,6 +78,7 @@ final class Tenant
         foreach (array_keys(self::PROFILE_FIELDS) as $field) {
             $profile[$field] = (string) ($row[$field] ?? '');
         }
+        $profile['tan'] = (string) ($row['tan'] ?? '');
         $profile['document_language'] = in_array($row['document_language'] ?? null, self::DOCUMENT_LANGUAGES, true)
             ? (string) $row['document_language'] : 'fr';
         return $profile;
@@ -97,6 +98,22 @@ final class Tenant
         Database::connection()
             ->prepare('UPDATE organizations SET ' . implode(', ', $sets) . ' WHERE id = :id')
             ->execute($params);
+    }
+
+    /**
+     * "27 000 000" → "27000000"; null when it is not an 8-digit MRA Tax Account Number.
+     */
+    public static function normalizeTan(string $value): ?string
+    {
+        $digits = preg_replace('/[\s.\-]/', '', $value) ?? '';
+        return preg_match('/^\d{8}$/', $digits) ? $digits : null;
+    }
+
+    /** Saved only by the forms that show it (the Facturo company page), so the others never erase it. */
+    public static function setTan(int $orgId, string $tan): void
+    {
+        Database::connection()->prepare('UPDATE organizations SET tan = :t WHERE id = :id')
+            ->execute([':t' => $tan !== '' ? $tan : null, ':id' => $orgId]);
     }
 
     /**

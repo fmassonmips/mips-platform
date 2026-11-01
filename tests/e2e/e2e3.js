@@ -19,7 +19,7 @@ const B = 'http://127.0.0.1:8099', S = process.argv[2], M = S + '/fakemra';
 
   await page.goto(B + '/app.php?m=facturo&p=company');
   await page.fill('#o-legal', 'MIPS Demo Ltd'); await page.fill('#o-brn', 'C09999999');
-  await page.fill('#o-vat', '27000000'); await page.fill('#o-address', 'Ebène\nCybercity'); await page.fill('#o-phone', '+230 207-6000');
+  await page.fill('#o-vat', 'VAT 27000000'); await page.fill('#o-tan', '27 000 000'); await page.fill('#o-address', 'Ebène\nCybercity'); await page.fill('#o-phone', '+230 207-6000');
   await page.click('#company-form button[type=submit]'); await page.waitForSelector('#company-saved:not([hidden])');
 
   await page.fill('#mra-user', 'mips-test'); await page.fill('#mra-pass', 'wrong'); await page.fill('#mra-ebs', 'EBS-123');
@@ -91,13 +91,13 @@ const B = 'http://127.0.0.1:8099', S = process.argv[2], M = S + '/fakemra';
   step('expired token: ' + await mraBox());
 
   // 6. Wrong TAN → rejected with MRA message
-  await page.goto(B + '/app.php?m=facturo&p=company'); await page.fill('#o-vat', '11111111');
+  await page.goto(B + '/app.php?m=facturo&p=company'); await page.fill('#o-tan', '11111111');
   await page.click('#company-form button[type=submit]'); await page.waitForSelector('#company-saved:not([hidden])');
   await newInvoice([['Misc', 'SERVICES', '1', '10', 'TC01']]); await issue();
   step('wrong TAN: ' + await mraBox());
 
   // 7. Foreign currency blocked
-  await page.goto(B + '/app.php?m=facturo&p=company'); await page.fill('#o-vat', '27000000');
+  await page.goto(B + '/app.php?m=facturo&p=company'); await page.fill('#o-tan', '27000000');
   await page.click('#company-form button[type=submit]'); await page.waitForSelector('#company-saved:not([hidden])');
   await newInvoice([['Export', 'SERVICES', '1', '10', 'TC02']], 'EUR');
   await page.click('button[data-doc-action="issue"]'); step('EUR invoice: ' + await err());
