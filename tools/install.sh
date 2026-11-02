@@ -249,8 +249,18 @@ fi
 
 step "Checks"
 sudo -u www-data php -r "define('MIPS_NO_SESSION', true); \$_SERVER['HTTP_USER_AGENT'] = 'cli'; require '$APP/src/bootstrap.php'; App\Database::connection()->query('SELECT 1'); echo 'Application connects to the database as mips_app.', PHP_EOL;"
-code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $DOMAIN" http://127.0.0.1/login.php)
-[ "$code" = 200 ] || [ "$code" = 301 ] || { echo "login.php answered HTTP $code" >&2; exit 1; }
+# A reload is asynchronous: give the new workers a few seconds before judging.
+for _ in $(seq 20); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $DOMAIN" http://127.0.0.1/login.php)
+    { [ "$code" = 200 ] || [ "$code" = 301 ]; } && break
+    sleep 0.5
+done
+if [ "$code" != 200 ] && [ "$code" != 301 ]; then
+    echo "login.php answered HTTP $code" >&2
+    tail -5 /var/log/nginx/error.log >&2 || true
+    tail -5 /var/log/mips/php.log >&2 || true
+    exit 1
+fi
 echo "login.php answers ($code)."
 health=$(curl -s -H "Host: $DOMAIN" http://127.0.0.1/health.php || true)
 echo "health.php: $health (\"degraded\" until every scheduled job has run once)."
