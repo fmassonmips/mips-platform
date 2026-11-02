@@ -74,7 +74,7 @@ echo "   $applied applied."
 
 echo "== Reload and checks"
 systemctl reload php8.3-fpm
-host=$(php -r '$c = require "config/config.php"; if (is_file("config/config.local.php")) { $c = array_replace_recursive($c, require "config/config.local.php"); } echo parse_url($c["app"]["url"], PHP_URL_HOST);')
+host=$(php -r 'define("MIPS_NO_SESSION", true); $_SERVER["HTTP_USER_AGENT"] = "cli"; require "src/bootstrap.php"; echo parse_url($GLOBALS["config"]["app"]["url"], PHP_URL_HOST);')
 for _ in $(seq 20); do
     code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" http://127.0.0.1/login.php || true)
     [ "$code" = 200 ] || [ "$code" = 301 ] && break

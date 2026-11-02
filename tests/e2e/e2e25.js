@@ -136,7 +136,7 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
 
   // every company table is exported (a new app must add its tables)
   const internal = ['backoffice_log', 'login_attempts', 'mra_tokens', 'notification_log', 'facturo_sequences', 'users', 'user_tokens', 'organization_users', 'organizations', 'organization_modules', 'organization_invitations',
-                    'ops_jobs', 'ops_alerts'];   // platform supervision, no company data
+                    'ops_jobs', 'ops_alerts', 'schema_migrations'];   // platform supervision and migrations, no company data
   const tables = sql("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '" + (process.env.MIPS_E2E_DB || 'mips_platform') + "'").split(/\n/).filter(t => !internal.includes(t));
   const exported = php("echo implode(' ', (new ReflectionClassConstant(App\\Suite\\DataExport::class, 'TABLES'))->getValue());");
   const missing = tables.filter(t => !exported.includes(' ' + t + ' '));
