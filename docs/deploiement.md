@@ -18,6 +18,17 @@ Seul `public/` est exposé au web. `src/`, `config/`, `templates/`, `sql/` et `t
 
 ## 2. Installation
 
+**Le plus simple : `tools/install.sh`** sur un serveur Ubuntu 24.04 neuf. Il fait tout ce qui suit (paquets, MariaDB et ses deux comptes, `config.local.php` avec mots de passe et `secret_key` générés, Nginx et certificat Let's Encrypt, PHP, tâches planifiées, compte `mips-backup`, rotation des journaux, pare-feu, mises à jour de sécurité automatiques), vérifie le résultat et liste ce qui reste à faire à la main. Il peut être relancé sans risque : il ne touche jamais aux données, à `config.local.php`, aux réglages de sauvegarde ni au certificat. La CI le fait tourner deux fois sur une machine Ubuntu 24.04 neuve à chaque pull request.
+
+```bash
+sudo git clone <dépôt> /var/www/mips
+sudo MIPS_DOMAIN=my.mips.mu MIPS_ADMIN_EMAIL=ops@mips.mu MIPS_OFFICE_IPS="<IP du bureau ou du VPN>" /var/www/mips/tools/install.sh
+```
+
+Le DNS de `MIPS_DOMAIN` doit déjà pointer vers le serveur (certificat) ; sinon `MIPS_CERTBOT=0`, puis relancer une fois le DNS en place. Reprise après sinistre : même commande sur un serveur neuf, puis restauration (§ 3).
+
+**À la main**, les étapes détaillées :
+
 ```bash
 # 1. Code
 sudo mkdir -p /var/www/mips && sudo chown deploy:deploy /var/www/mips
