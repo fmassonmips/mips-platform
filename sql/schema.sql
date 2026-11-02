@@ -972,6 +972,13 @@ CREATE TABLE IF NOT EXISTS ops_alerts (
     PRIMARY KEY (problem)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ---- schema_migrations (migrations received, for tools/update.sh) ----------
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version    VARCHAR(80) NOT NULL,                -- file name in sql/migrations
+    applied_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Optional: a dedicated application user rather than root.
 -- CREATE USER 'mips_user'@'localhost' IDENTIFIED BY 'change_me_in_production';
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON mips_platform.* TO 'mips_user'@'localhost';

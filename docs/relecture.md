@@ -58,7 +58,7 @@ Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle).
 | 11 | Back-office MIPS + historique d'usage | `src/Backoffice/*`, `public/backoffice.php`, `public/export.php` | 850 | 5903699, b8dc80e | e2e22, e2e27 |
 | 12 | Premiers pas, import, e-mails, export, fermeture | `src/Suite/{Onboarding,Import,Notifications,DataExport,Closure}.php`, `src/Facturo/Reminders.php`, `tools/*` | 1 900 | 08cc84d, f0feba2, ea5a3d9 | e2e23, e2e24, e2e25 |
 | 12 bis | Sauvegardes et surveillance | `tools/{backup,restore,cron}.sh`, `tools/ops.php`, `src/Ops/*`, `public/health.php` | 500 | (ce commit) | e2e29 |
-| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `030` | 1 900 | tous | contrôle § 5 |
+| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `031` | 1 900 | tous | contrôle § 5 |
 | 14 | JavaScript et gabarits | `public/assets/js/*`, `templates/**` | 5 000 | tous | toutes |
 
 Les gabarits et le JavaScript (lot 14) sont volumineux mais peu risqués : la revue de sécurité a vérifié l'échappement de chaque sortie et l'absence d'`innerHTML`. On peut les parcourir plus vite.
@@ -124,7 +124,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 ## 6. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
-- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 030), à refaire au moins une fois de 001 à 030.
+- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 031), à refaire au moins une fois de 001 à 031.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
 ## 7. Limites connues, décidées

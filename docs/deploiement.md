@@ -50,7 +50,7 @@ nano config/config.local.php
 sudo chown deploy:www-data config/config.local.php && sudo chmod 640 config/config.local.php
 ```
 
-Les migrations (`sql/migrations/001` → `030`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
+Les migrations (`sql/migrations/001` → `031`) servent à mettre à jour une base existante ; une base neuve se crée avec `schema.sql`, qui les contient toutes. Les migrations modifient la structure : les passer avec un compte administrateur MariaDB, pas avec `mips_app`.
 
 ### Nginx
 
@@ -196,6 +196,10 @@ Une restauration ramène aussi les entreprises supprimées depuis la date de la 
 - Une instance qui ne fait pas tourner une tâche (la démonstration sans sauvegarde, par exemple) la déclare dans `ops.skip_jobs`.
 
 ## 4. Mise à jour
+
+**En une commande** : `sudo /var/www/mips/tools/update.sh`. Il fait une sauvegarde chiffrée, avance le code au dernier commit de la branche (jamais en arrière, jamais de réécriture), passe les migrations pas encore reçues (table `schema_migrations`, dans l'ordre), recharge PHP et vérifie le site ; si la vérification échoue, il remet le code précédent. Une base créée avant `schema_migrations` (migration 031) : une fois `sudo tools/update.sh --baseline` (seulement si elle est à jour du code). La CI le teste après `install.sh` : une migration passée une fois, une mise à jour cassée annulée.
+
+À la main, les mêmes étapes :
 
 ```bash
 cd /var/www/mips

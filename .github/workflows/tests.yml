@@ -151,3 +151,26 @@ jobs:
           sudo GNUPGHOME="$GNUPGHOME" /var/www/mips/tools/restore.sh "/tmp/$f" mips_restore
           test "$(sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_restore'")" = \
                "$(sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_platform'")"
+      - name: Update with tools/update.sh (one migration), then a broken update rolled back
+        run: |
+          set -x
+          cd /var/www/mips
+          g() { sudo git -c safe.directory=/var/www/mips -c user.name=ci -c user.email=ci@example.com "$@"; }
+          test "$(sudo mysql -N -e 'SELECT COUNT(*) FROM mips_platform.schema_migrations')" = "$(ls sql/migrations/*.sql | wc -l)"
+          base=$(g rev-parse HEAD)
+          echo 'ALTER TABLE organizations ADD COLUMN ci_update INT NULL;' | sudo tee sql/migrations/999_ci_update.sql >/dev/null
+          g add sql/migrations/999_ci_update.sql && g commit -q -m 'CI: one migration'
+          good=$(g rev-parse HEAD)
+          echo '<?php syntax error' | sudo tee -a public/login.php >/dev/null
+          g commit -q -am 'CI: broken login page'
+          bad=$(g rev-parse HEAD)
+          g reset -q --hard "$base"
+          sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$good" MIPS_BACKUP_LOCAL_ONLY=1 tools/update.sh
+          test "$(g rev-parse HEAD)" = "$good"
+          sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='mips_platform' AND table_name='organizations' AND column_name='ci_update'" | grep -q 1
+          sudo mysql -N -e "SELECT 1 FROM mips_platform.schema_migrations WHERE version='999_ci_update.sql'" | grep -q 1
+          sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$good" tools/update.sh | grep -q 'Already at'
+          ! sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$bad" MIPS_UPDATE_BACKUP=0 tools/update.sh
+          test "$(g rev-parse HEAD)" = "$good"                       # code rolled back
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: mips.test' http://127.0.0.1/login.php)" = 200 ]
+          ! sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$base" MIPS_UPDATE_BACKUP=0 tools/update.sh   # never backwards

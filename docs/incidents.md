@@ -188,7 +188,7 @@ tools/restore.sh /var/backups/mips/mips-<date>.sql.gz.gpg mips_restore      # su
 
 ## 19. Une mise à jour casse quelque chose
 
-1. Revenir à la version précédente : `git log --oneline -5`, puis `git checkout <commit précédent>` et `sudo systemctl reload php8.3-fpm`.
+1. `tools/update.sh` remet déjà le code précédent quand ses vérifications échouent. Sinon, revenir à la main : `git log --oneline -5`, puis `git reset --hard <commit précédent>` et `sudo systemctl reload php8.3-fpm`.
 2. La mise à jour contenait une migration (`sql/migrations/…`) : revenir au code précédent ne suffit pas toujours. [dév] Restaurer la sauvegarde faite juste avant la mise à jour (`docs/deploiement.md` § 4), dans une base à part d'abord.
 3. Noter ce qui a cassé : un test manquait. Le développeur l'ajoute avant de réessayer.
 

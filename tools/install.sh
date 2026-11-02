@@ -69,6 +69,10 @@ mysql -e "CREATE DATABASE IF NOT EXISTS \`$DB\` CHARACTER SET utf8mb4 COLLATE ut
 tables=$(mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$DB'")
 if [ "$tables" -eq 0 ]; then
     sed "1,12{/^CREATE DATABASE/,/;/d;/^USE /d}" "$APP/sql/schema.sql" | mysql "$DB"
+    # schema.sql already contains every migration: record them, so tools/update.sh applies only later ones.
+    for f in "$APP"/sql/migrations/*.sql; do
+        mysql "$DB" -e "INSERT IGNORE INTO schema_migrations (version) VALUES ('$(basename "$f")')"
+    done
     echo "Schema loaded (no seed: no test account in production)."
 else
     echo "Database already has $tables tables: kept. New migrations (sql/migrations) are applied by hand, see docs/deploiement.md § 4."
