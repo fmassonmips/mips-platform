@@ -25,6 +25,16 @@ nettoyage et de classement, de deux façons :
 Critère de réussite : **le même mois importé par fichier et par BigQuery donne un rapport identique au
 centime** (§ 9, test 1).
 
+### Visuels de référence
+
+![Écosystème : flux d'argent, de données et de documents (modèle A)](../ecosysteme/eco-overview.png)
+
+*Écosystème : flux d'argent, de données et de documents (modèle A).*
+
+![Une vente, du paiement à la facture de commission](../ecosysteme/eco-sequence.png)
+
+*Une vente, du paiement à la facture de commission.*
+
 ---
 
 ## 2. Accès (à mettre en place par l'administrateur GCP)

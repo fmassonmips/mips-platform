@@ -30,6 +30,22 @@ Permettre à un **prospect** de faire lui-même son entrée en relation avec MIP
 
 Le portail ne couvre **pas** l'espace d'un marchand actif (transactions, relevés, règlements) : hors périmètre.
 
+### Visuels de référence
+
+![Chemin d'une requête de dépôt : chaque contrôle refuse avec un code précis (419 et 429 pas encore testés)](../ecosysteme/eco-request.png)
+
+*Chemin d'une requête de dépôt : chaque contrôle refuse avec un code précis (419 et 429 pas encore testés).*
+
+![Préqualification côté marchand (extrait)](../cahier-des-charges/img/lot4-prequalification.png)
+
+*Préqualification côté marchand (extrait).*
+
+![Pièces déposées par le marchand, vues par MIPS, analysées par ClamAV (extrait)](../cahier-des-charges/img/lot4-pieces-antivirus.png)
+
+*Pièces déposées par le marchand, vues par MIPS, analysées par ClamAV (extrait).*
+
+*Captures DEV du prototype, données fictives : elles montrent le comportement attendu, pas une interface à reproduire.*
+
 ---
 
 ## 2. Principes d'architecture

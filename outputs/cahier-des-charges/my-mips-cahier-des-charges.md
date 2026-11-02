@@ -22,6 +22,8 @@ Conventions utilisées dans ce document :
 - **[PROPOSITION]** : exigence que je recommande, absente ou différente du prototype. À accepter ou rejeter en revue.
 - **[HORS PÉRIMÈTRE]** : ne pas développer dans ce marché.
 
+Les captures d'écran viennent du prototype : elles portent le bandeau « DEMONSTRATION ENVIRONMENT » et ne contiennent que des données fictives. Elles montrent le **comportement attendu**, pas une interface à reproduire à l'identique. Les schémas décrivent la conception, pas un déploiement en production.
+
 Ce cahier des charges ne remplace pas les spécifications détaillées : il fixe le cadre, le découpage et les
 exigences communes, et renvoie à chaque spécification pour les règles métier. En cas de contradiction, la
 spécification détaillée prévaut pour les règles métier, ce document pour la sécurité, l'exploitation et la recette.
@@ -59,6 +61,10 @@ marchands**. Pas de compte trust, pas de reversement, pas de solde marchand.
 
 Cette décision reste **sous réserve de deux vérifications bloquantes** (voir § 11) : la licence demandée ne doit
 pas exiger la détention des fonds, et aucun flux (wallets, virement) ne doit transiter par un compte MIPS.
+
+![Figure 1 — Écosystème sous le modèle A : flux d'argent, de données et de documents. En rouge, le circuit des wallets et virements, à confirmer par la finance.](../ecosysteme/eco-overview.png)
+
+![Figure 2 — Une vente, du paiement à la facture de commission. Le délai de règlement dépend du contrat acquéreur.](../ecosysteme/eco-sequence.png)
 
 ## 2.2 Dans le périmètre
 
@@ -121,7 +127,7 @@ Exigences :
 
 ## 5.1 Architecture cible
 
-Deux interfaces, un socle commun (schéma : `outputs/ecosysteme/eco-architecture.png`).
+Deux interfaces, un socle commun (figure 3).
 
 - **Back-office** pour le personnel, session du personnel.
 - **Portail marchand** sur un **sous-domaine dédié** [PROPOSITION], session séparée (cookie distinct).
@@ -130,6 +136,8 @@ Deux interfaces, un socle commun (schéma : `outputs/ecosysteme/eco-architecture
 - **Socle commun** : authentification, 2FA, blocage des tentatives, journal en ajout seul, chiffrement, stockage des documents, emails.
 - **Stockage** : une base relationnelle unique ; documents **hors de la racine web**.
 - **Services externes** : BigQuery (lecture seule), antivirus ClamAV (démon `clamd`), SMTP, fichier MCB mensuel.
+
+![Figure 3 — Architecture en couches du prototype de référence. Ce qui doit rester dans my.mips.mu : sessions séparées, contrôles centralisés, fichiers hors web, journal en ajout seul, secrets chiffrés.](../ecosysteme/eco-architecture.png)
 
 ## 5.2 Choix techniques
 
@@ -167,6 +175,8 @@ d'acceptation ; il ne les remplace pas.
 | R-AUD-2 | [PROPOSITION] Inaltérabilité garantie par les droits de la base (le compte applicatif n'a ni `UPDATE` ni `DELETE` sur le journal) et, idéalement, par chaînage d'empreintes ou export régulier vers un stockage non modifiable. Le prototype ne repose que sur les droits. |
 | R-CRY-1 | [FIGÉ] Numéros d'identité et secrets 2FA **chiffrés** en base ; jamais dans les logs ni dans le journal d'audit. |
 
+![Figure 4 — Capture DEV, données fictives : utilisateurs, rôles et état de la 2FA (prototype).](img/lot1-utilisateurs-roles.png)
+
 ## 6.2 Lot 2 — Reporting et facturation
 
 Spécifications : `my-mips-monthly-report-excel-export.md`, `my-mips-bigquery-commission-data.md`.
@@ -184,6 +194,10 @@ Spécifications : `my-mips-monthly-report-excel-export.md`, `my-mips-bigquery-co
 | R-BIL-3 | [À CONFIRMER — finance] Unité de `somme_totale` (MUR ou centimes), traitement des remboursements dans l'assiette, TVA sur les commissions, mentions de l'émetteur. |
 | R-BIL-4 | [PROPOSITION] Séparation préparateur / approbateur sur l'émission des factures. Absente du prototype. |
 
+![Figure 5 — Capture DEV, données fictives : rapport mensuel avec les alertes « Verify before use » et le nettoyage (extrait).](img/lot2-rapport-mensuel.png)
+
+![Figure 6 — Capture DEV, données fictives : factures du mois et règles de commission.](img/lot2-factures-regles.png)
+
 ## 6.3 Lot 3 — Marchands et KYC
 
 Spécification : `my-mips-onboarding-kyc.md`.
@@ -198,6 +212,10 @@ Spécification : `my-mips-onboarding-kyc.md`.
 | R-KYC-5 | [FIGÉ] Contrôle sanctions / PEP **saisi** par personne (résultat et référence). Toute modification d'identité remet le contrôle à faire. Le screening automatisé est hors périmètre (§ 9). |
 | R-KYC-6 | [FIGÉ] Relances automatiques des pièces manquantes, alertes d'expiration des pièces d'identité, revues périodiques. |
 | R-KYC-7 | [FIGÉ] Un dossier déclaré complet par le marchand n'est **jamais** présenté au marchand comme approuvé. |
+
+![Figure 7 — Capture DEV, données fictives : dossier en collecte, blocages d'approbation affichés en permanence.](img/lot3-blocages-approbation.png)
+
+![Figure 8 — Capture DEV, données fictives : dossier approuvé en double regard, décision par une personne jamais intervenue.](img/lot3-double-regard.png)
 
 ## 6.4 Lot 4 — Portail marchand
 
@@ -216,6 +234,8 @@ Spécification : `my-mips-merchant-portal.md`.
 | R-POR-9 | [FIGÉ] Toute action du marchand est tracée (acteur `portal:<email>`) et visible dans l'historique du dossier côté MIPS. |
 | R-POR-10 | [FIGÉ] Codes de refus précis, chacun couvert par un test : 419 jeton anti-falsification, 403 renvoi vers 2FA ou conditions, 409 dossier fermé, 429 trop de dépôts, 422 format refusé ou fichier infecté, 503 antivirus indisponible. **Les cas 419 et 429 ne sont pas encore testés dans le prototype** : à couvrir dans my.mips.mu. |
 
+![Figure 9 — Capture DEV, données fictives : formulaire de préqualification côté marchand (extrait).](img/lot4-prequalification.png)
+
 ## 6.5 Antivirus des pièces (lots 3 et 4)
 
 | Réf. | Exigence |
@@ -226,6 +246,8 @@ Spécification : `my-mips-merchant-portal.md`.
 | R-AV-4 | [FIGÉ] Contrôle de format avant l'antivirus ; taille maximale 20 Mo ; empreinte sha256 enregistrée. |
 | R-AV-5 | [PROPOSITION] `freshclam` supervisé : alerte si les signatures ont plus de 48 heures. Sans signatures, tous les dépôts sont refusés. |
 | R-AV-6 | [PROPOSITION] Procédure écrite en cas de détection : qui est prévenu, que dit-on au marchand, que fait-on du dossier. |
+
+![Figure 10 — Capture DEV, données fictives : pièces déposées par le marchand, vues par MIPS, chacune analysée par ClamAV (« antivirus OK ») et validée par une autre personne que le déposant (extrait).](img/lot4-pieces-antivirus.png)
 
 ## 6.6 Lot 5 — Rapprochement MCB
 
@@ -239,6 +261,8 @@ Spécification : `my-mips-mcb-reconciliation.md`.
 | R-REC-4 | [FIGÉ] Pourcentage d'écart par devise ; liste des vrais écarts et préparation de la réclamation MCB. |
 | R-REC-5 | [À CONFIRMER — finance] Validation sur **un mois déjà réconcilié à la main** avant mise en service. |
 | R-REC-6 | [PROPOSITION] Séparation préparateur / approbateur sur la clôture d'un rapprochement. Absente du prototype. |
+
+![Figure 11 — Capture DEV, données fictives : rapprochement MCB ↔ MIPS, écart ventilé jusqu'à zéro inexpliqué (extrait).](img/lot5-rapprochement.png)
 
 # 7. Exigences non fonctionnelles
 
@@ -255,6 +279,8 @@ Spécification : `my-mips-mcb-reconciliation.md`.
 | R-SEC-7 | [PROPOSITION] HTTPS uniquement, HSTS, certificats gérés et renouvelés automatiquement. |
 | R-SEC-8 | [PROPOSITION] Test d'intrusion par un tiers avant la mise en service du portail marchand, qui est exposé sur Internet. |
 | R-SEC-9 | [PROPOSITION] Revue de sécurité par un pair pour chaque lot : accès, double regard, données sensibles, fichiers. |
+
+![Figure 12 — Chemin d'une requête de dépôt de pièce par un marchand : chaque contrôle refuse avec un code précis. Les refus 419 et 429 ne sont pas encore testés dans le prototype.](../ecosysteme/eco-request.png)
 
 ## 7.2 Données personnelles
 

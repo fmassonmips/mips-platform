@@ -24,6 +24,14 @@ Remplacer le classeur Excel produit chaque mois à la main (script `analyze.py` 
 
 Les chiffres doivent être **identiques au centime** à ceux de `analyze.py` sur les mêmes données (§ 6).
 
+### Visuels de référence
+
+![Rapport mensuel, alertes « Verify before use » et nettoyage (extrait)](../cahier-des-charges/img/lot2-rapport-mensuel.png)
+
+*Rapport mensuel, alertes « Verify before use » et nettoyage (extrait).*
+
+*Captures DEV du prototype, données fictives : elles montrent le comportement attendu, pas une interface à reproduire.*
+
 ---
 
 ## 2. Règles métier figées (ne pas réinterpréter)

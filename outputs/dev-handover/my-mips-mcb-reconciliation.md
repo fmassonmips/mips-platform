@@ -31,6 +31,14 @@ Chaque mois, rapprocher le fichier MCB e-commerce avec l'extraction MIPS du mêm
 
 Aujourd'hui fait à la main dans Excel ; cible : un écran dans my.mips.mu, plus les exports.
 
+### Visuels de référence
+
+![Rapprochement MCB ↔ MIPS, écart ventilé (extrait)](../cahier-des-charges/img/lot5-rapprochement.png)
+
+*Rapprochement MCB ↔ MIPS, écart ventilé (extrait).*
+
+*Captures DEV du prototype, données fictives : elles montrent le comportement attendu, pas une interface à reproduire.*
+
 ---
 
 ## 2. Fichiers d'entrée

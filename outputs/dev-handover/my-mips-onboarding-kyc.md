@@ -33,6 +33,22 @@ Remplacer le suivi par email et tableur par un **dossier d'onboarding par marcha
 **Phase 1 (référence existante)** : back-office, utilisé par le personnel MIPS. Le marchand envoie ses pièces par email.
 **Phase 2 (§ 10)** : portail marchand. Le prospect remplit la préqualification, accepte les conditions et dépose lui-même ses pièces.
 
+### Visuels de référence
+
+![Architecture du prototype de référence](../ecosysteme/eco-architecture.png)
+
+*Architecture du prototype de référence.*
+
+![Dossier en collecte : blocages d'approbation affichés en permanence](../cahier-des-charges/img/lot3-blocages-approbation.png)
+
+*Dossier en collecte : blocages d'approbation affichés en permanence.*
+
+![Dossier approuvé en double regard](../cahier-des-charges/img/lot3-double-regard.png)
+
+*Dossier approuvé en double regard.*
+
+*Captures DEV du prototype, données fictives : elles montrent le comportement attendu, pas une interface à reproduire.*
+
 ---
 
 ## 2. Rôles et séparation des tâches
