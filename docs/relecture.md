@@ -11,13 +11,13 @@ La PR ajoute environ 28 600 lignes (315 fichiers, 40 commits) sur la branche `cl
 ## 2. Relancer les tests
 
 ```bash
-tests/e2e/run.sh              # les 30 suites, ~35 min
+tests/e2e/run.sh              # les 32 suites, ~40 min
 tests/e2e/run.sh e2e22 e2e25  # quelques suites
 ```
 
 Prérequis (en tête de `tests/e2e/run.sh`) : PHP 8.3 avec pdo_mysql, mbstring, curl, sodium, zip ; MariaDB démarrée et accessible par la commande `mysql` en administrateur ; Node avec Playwright et Chromium ; Python 3 avec `cryptography` ; rsync et openssl ; ports 8099, 8098, 8097 et 2525 libres. Le script utilise sa propre base `mips_e2e`, recréée avant chaque suite (il refuse `mips_platform`), une copie du code dans `tests/.work/`, un faux serveur SMTP, un faux serveur de l'API MRA et un faux calendrier Airbnb. Captures d'écran et e-mails reçus restent dans `tests/.work/` pour inspection.
 
-**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 30 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
+**Sur GitHub** (`.github/workflows/tests.yml`) : à chaque pull request, contrôle de syntaxe PHP, JavaScript et shell, puis les 32 suites réparties sur quatre machines en parallèle (moins de 2 minutes), contre MariaDB 10.11. Si une suite échoue, ses captures d'écran et e-mails sont téléchargeables 7 jours depuis la page de l'exécution (« Artifacts »).
 
 Ce que les tests ne couvrent pas : la vraie API MRA (jamais appelée), un vrai serveur SMTP, Nginx en production (testé une fois à la main, voir `docs/deploiement.md`), la charge, les navigateurs autres que Chromium.
 
@@ -58,7 +58,7 @@ Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle).
 | 11 | Back-office MIPS + historique d'usage | `src/Backoffice/*`, `public/backoffice.php`, `public/export.php` | 850 | 5903699, b8dc80e | e2e22, e2e27 |
 | 12 | Premiers pas, import, e-mails, export, fermeture | `src/Suite/{Onboarding,Import,Notifications,DataExport,Closure}.php`, `src/Facturo/Reminders.php`, `tools/*` | 1 900 | 08cc84d, f0feba2, ea5a3d9 | e2e23, e2e24, e2e25 |
 | 12 bis | Sauvegardes et surveillance | `tools/{backup,restore,cron}.sh`, `tools/ops.php`, `src/Ops/*`, `public/health.php` | 500 | (ce commit) | e2e29 |
-| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `029` | 1 900 | tous | contrôle § 5 |
+| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `030` | 1 900 | tous | contrôle § 5 |
 | 14 | JavaScript et gabarits | `public/assets/js/*`, `templates/**` | 5 000 | tous | toutes |
 
 Les gabarits et le JavaScript (lot 14) sont volumineux mais peu risqués : la revue de sécurité a vérifié l'échappement de chaque sortie et l'absence d'`innerHTML`. On peut les parcourir plus vite.
@@ -114,8 +114,8 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 3. ~~TAN du vendeur pris dans le n° TVA ; vendeurs non assujettis bloqués~~ : corrigé (migration 028, champ TAN distinct, `personType` NVTR, lignes « Exonéré / sans TVA » imposées sans n° TVA ; `e2e30`). Le TAN de l'acheteur a aussi son champ (migration 029, fiche client et import). À valider avec le comptable : un vendeur non assujetti ne doit facturer ni TVA ni taux zéro.
 4. **Paiement** : `totalAmtPaid` = total et `salesTransactions` = `CREDIT` toujours ; `paymentMethods` jamais envoyé. Règle MRA à confirmer.
 5. **Prix saisis TTC** (ShopLokal, Bookora) : le prix est stocké HT et la TVA arrondie par ligne, donc environ 13 % des prix ronds à 15 % ressortent à ±1 centime (Rs 10.00 → Rs 10.01 ; 3 × Rs 10.00 → Rs 30.02). Aucun prix HT au centime ne donne exactement certains TTC : il faut décider (avec le comptable) de calculer ces lignes à partir du TTC. Décision de règle de calcul, pas un correctif.
-6. **ClientBloom** : annuler à la main un achat issu d'une facture déjà en partie créditée retire le cashback deux fois ; une seconde annulation simultanée renvoie une erreur 500 au lieu d'un message ; un passage en caisse soumis deux fois enregistre probablement deux achats (non confirmé).
-7. **ShopLokal** : annuler une commande déjà facturée ne crée pas d'avoir ; la TVA de la livraison est recalculée à la facturation.
+6. ~~ClientBloom : achat issu d'une facture annulable à la main (cashback retiré deux fois) ; double annulation simultanée en erreur 500 ; passage en caisse soumis deux fois~~ : corrigés (`e2e32`, migration 030 : clé par vente).
+7. ~~ShopLokal : annuler une commande déjà facturée~~ : corrigé (facture brouillon supprimée avec la commande ; facture émise : annulation refusée tant qu'un avoir ne la couvre pas ; `e2e32`). Reste : la TVA de la livraison est recalculée au moment de la facture (écart possible si le n° TVA de l'entreprise change entre la commande et la facture).
 8. **Envoi MRA dans la requête web** à l'émission : jusqu'à ~60 s d'attente si la MRA est lente.
 9. **Le jeton MRA** est stocké en clair (la clé de session, elle, est chiffrée).
 10. Une restauration ramène les entreprises supprimées depuis la sauvegarde (procédure dans `deploiement.md` § 3).
@@ -124,7 +124,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 ## 6. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
-- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 029), à refaire au moins une fois de 001 à 029.
+- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 030), à refaire au moins une fois de 001 à 030.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
 ## 7. Limites connues, décidées

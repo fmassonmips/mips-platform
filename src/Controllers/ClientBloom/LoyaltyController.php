@@ -52,7 +52,8 @@ final class LoyaltyController
                 if ($amount === null || $redeem === null) {
                     Response::json(['error' => 'Les montants doivent être des nombres avec 2 décimales au plus.'], 422);
                 }
-                [$result, $error] = Ledger::checkout($org['id'], (int) $user['id'], $id, $amount, $redeem, Request::str($data, 'reference', 100));
+                [$result, $error] = Ledger::checkout($org['id'], (int) $user['id'], $id, $amount, $redeem, Request::str($data, 'reference', 100), null, 0,
+                    Request::str($data, 'key', 40) ?: null);
                 if ($error !== null) {
                     Response::json(['error' => $error], 409);
                 }

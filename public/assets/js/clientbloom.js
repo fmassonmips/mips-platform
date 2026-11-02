@@ -62,9 +62,12 @@
         const result   = document.getElementById('co-result');
         const coForm   = document.getElementById('checkout-form');
         let customerId = 0;
+        let saleKey = '';   // one per sale: a form sent twice is recorded once
+        const newKey = function () { return Array.from(crypto.getRandomValues(new Uint8Array(16)), function (b) { return b.toString(16).padStart(2, '0'); }).join(''); };
 
         const showCustomer = function (c) {
             customerId = c.id;
+            saleKey = newKey();
             document.getElementById('co-name').textContent = c.name;
             document.getElementById('co-phone').textContent = c.phone;
             document.getElementById('co-balance').textContent = c.balance;
@@ -95,7 +98,9 @@
                 amount: coForm.elements.amount.value,
                 redeem: coForm.elements.redeem.value,
                 reference: coForm.elements.reference.value,
+                key: saleKey,
             });
+            saleKey = newKey();
             result.textContent = 'Vente enregistrée. Cashback gagné : ' + body.earned
                 + (body.redeemed_cents > 0 ? ', utilisé : ' + body.redeemed : '')
                 + '. Nouveau solde : ' + body.balance + '.';

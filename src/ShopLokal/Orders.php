@@ -238,12 +238,26 @@ final class Orders
         if (!in_array($status, self::NEXT[$o['status']] ?? [], true)) {
             return 'Changement de statut impossible.';
         }
+        $draftInvoice = null;
+        if ($status === 'cancelled' && $o['facturo_invoice_id'] !== null) {
+            // An issued invoice stays legally valid: it must be credited first. A draft goes with the order.
+            $inv = Documents::find($orgId, (int) $o['facturo_invoice_id']);
+            if ($inv !== null && $inv['status'] === 'draft') {
+                $draftInvoice = (int) $inv['id'];
+            } elseif ($inv !== null && Documents::creditableCents($orgId, (int) $inv['id']) > 0) {
+                return 'La facture ' . $inv['number'] . ' de cette commande est émise : faites d\'abord un avoir dans Facturo, puis annulez la commande.';
+            }
+        }
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
             $upd = $pdo->prepare('UPDATE shoplokal_orders SET status = :s, updated_at = :now WHERE organization_id = :oid AND id = :id AND status = :old');
             $upd->execute([':s' => $status, ':now' => Booking::now()->format('Y-m-d H:i:s'), ':oid' => $orgId, ':id' => $id, ':old' => $o['status']]);
             if ($upd->rowCount() === 1 && $status === 'cancelled') {
+                if ($draftInvoice !== null) {
+                    $pdo->prepare('UPDATE shoplokal_orders SET facturo_invoice_id = NULL WHERE organization_id = :oid AND id = :id')->execute([':oid' => $orgId, ':id' => $id]);
+                    $pdo->prepare('DELETE FROM facturo_documents WHERE organization_id = :oid AND id = :d AND status = \'draft\'')->execute([':oid' => $orgId, ':d' => $draftInvoice]);
+                }
                 $back = $pdo->prepare('UPDATE shoplokal_products SET stock = stock + :q WHERE id = :p AND stock IS NOT NULL');
                 foreach ($o['lines'] as $l) {
                     if ($l['product_id'] !== null) {

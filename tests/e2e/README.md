@@ -32,5 +32,6 @@ Une suite reçoit en argument le dossier de travail (`tests/.work/`) : copie du 
 | e2e25 | Export et fermeture du compte |
 | e2e29 | Surveillance (/health.php, alertes), sauvegarde chiffrée et restauration |
 | e2e30 | MRA : envoi sans réponse, identifiants refusés, renouvellement du jeton, essais arrêtés ; dates d'émission, TVA des avoirs, double « Payée » |
+| e2e32 | ClientBloom : achat d'une facture, double annulation, vente envoyée deux fois ; ShopLokal : annulation d'une commande facturée |
 | e2e31 | Suppression définitive (comptes anonymisés, fermeture annulée), liens publics fermés, stock ShopLokal, saisons Bookora |
 | e2e26 | CGU et confidentialité |

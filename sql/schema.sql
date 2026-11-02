@@ -331,10 +331,12 @@ CREATE TABLE IF NOT EXISTS clientbloom_transactions (
     balance_after   BIGINT       NOT NULL,
     reference       VARCHAR(100) NULL,                      -- receipt / invoice number, reason
     reversal_of     BIGINT UNSIGNED NULL,
+    request_key     CHAR(32)     NULL,                      -- counter sale: one per submitted form (no double sale)
     created_by      BIGINT UNSIGNED NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cb_tx_reversal (reversal_of),             -- a transaction is reversed at most once
+    UNIQUE KEY uq_cb_tx_request (organization_id, request_key),
     KEY idx_cb_tx_customer (customer_id, id),
     KEY idx_cb_tx_org_date (organization_id, created_at),
     CONSTRAINT fk_cb_tx_org      FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
