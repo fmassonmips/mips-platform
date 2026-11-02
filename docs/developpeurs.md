@@ -131,7 +131,7 @@ Un script `tools/<tâche>.php` sur le modèle de `tools/reminders.php` : refuse 
 ## 8. MRA : ce qu'il faut savoir avant d'y toucher
 
 - Code : `src/Mra/Client.php` (authentification RSA + AES-256-ECB, transmission), `src/Facturo/Fiscalisation.php` (contenu du JSON, compteur, chaînage, reprise), `tools/mra_retry.php` (toutes les 5 minutes).
-- États d'un document : `pending` (à envoyer ou en reprise), `fiscalised` (IRN + QR), `rejected` (refusé par la MRA, corrigé puis renvoyé à la main), `unknown` (envoyé sans réponse : **jamais renvoyé automatiquement**, vérifier sur le portail MRA).
+- États d'un document : `pending` (à envoyer ou en reprise), `fiscalised` (IRN + QR), `rejected` (refusé par la MRA, corrigé puis renvoyé à la main), `unknown` (envoyé sans réponse : **jamais renvoyé automatiquement**, vérifier sur le portail MRA ; s'il y est, le propriétaire saisit l'IRN sur le document, `Fiscalisation::enterIrn`, sans QR). Jeton et clé de session MRA chiffrés en base (`Secrets`).
 - Une erreur de compte (identifiants, clé, configuration) laisse tous les documents en attente sans consommer d'essai ; une erreur d'un document le rejette seul.
 - En production (`app.env` ni `demo` ni `development`), les URL de test et toute réponse dont l'environnement n'est pas `LIVE` sont refusées.
 - **Non vérifié** contre la spécification officielle : noms des champs, codes, chaînage `previousNoteHash`, champs de paiement. À valider en SANDBOX puis CONFORMANCE avec le fichier de structure du portail développeur MRA avant toute facture réelle.

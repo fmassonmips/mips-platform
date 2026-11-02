@@ -292,22 +292,26 @@ final class Fiscalisation
     {
         $pdo = Database::connection();
         $stmt = $pdo->prepare(
-            'SELECT token, session_key_enc, expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE) AS fresh, expires_at > NOW() AS alive
+            'SELECT token_enc, session_key_enc, expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE) AS fresh, expires_at > NOW() AS alive
              FROM mra_tokens WHERE organization_id = :oid'
         );
         $stmt->execute([':oid' => $orgId]);
         $row = $stmt->fetch();
         if (!$fresh && is_array($row) && (int) $row['fresh'] === 1) {
-            return [(string) $row['token'], Secrets::decrypt((string) $row['session_key_enc'])];
+            try {
+                return [Secrets::decrypt((string) $row['token_enc']), Secrets::decrypt((string) $row['session_key_enc'])];
+            } catch (\RuntimeException) {
+                // Unreadable cache (app.secret_key changed): authenticate again below.
+            }
         }
         // In the last 10 minutes of a token, MRA expects refreshToken = true (§ 5.1.4).
         $renewing = !$fresh && is_array($row) && (int) $row['alive'] === 1;
 
         $auth = Client::fromConfig()->authenticate($creds['username'], $creds['password'], $creds['ebs_id'], $renewing);
         $pdo->prepare(
-            'INSERT INTO mra_tokens (organization_id, token, session_key_enc, expires_at) VALUES (:oid, :t, :k, :e)
-             ON DUPLICATE KEY UPDATE token = VALUES(token), session_key_enc = VALUES(session_key_enc), expires_at = VALUES(expires_at)'
-        )->execute([':oid' => $orgId, ':t' => $auth['token'], ':k' => Secrets::encrypt($auth['key']), ':e' => $auth['expires_at']]);
+            'INSERT INTO mra_tokens (organization_id, token_enc, session_key_enc, expires_at) VALUES (:oid, :t, :k, :e)
+             ON DUPLICATE KEY UPDATE token_enc = VALUES(token_enc), session_key_enc = VALUES(session_key_enc), expires_at = VALUES(expires_at)'
+        )->execute([':oid' => $orgId, ':t' => Secrets::encrypt($auth['token']), ':k' => Secrets::encrypt($auth['key']), ':e' => $auth['expires_at']]);
         return [$auth['token'], $auth['key']];
     }
 
@@ -341,6 +345,32 @@ final class Fiscalisation
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
         return $stmt->rowCount() === 1 ? null : 'Ce document n\'est pas en attente de la MRA.';
+    }
+
+    /**
+     * Record the IRN the company read on the MRA portal for a document sent without an answer
+     * (the MRA had fiscalised it). No QR code: the MRA consultation call is not wired yet.
+     */
+    public static function enterIrn(int $orgId, int $userId, int $id, string $irn): ?string
+    {
+        $irn = trim($irn);
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._\/-]{5,99}$/', $irn) !== 1) {
+            return 'IRN invalide : recopiez l\'identifiant exactement comme sur le portail MRA (6 à 100 caractères, lettres, chiffres, tirets).';
+        }
+        $pdo = Database::connection();
+        $dup = $pdo->prepare('SELECT number FROM facturo_documents WHERE organization_id = :oid AND mra_irn = :irn AND id <> :id LIMIT 1');
+        $dup->execute([':oid' => $orgId, ':irn' => $irn, ':id' => $id]);
+        $other = $dup->fetchColumn();
+        if ($other !== false) {
+            return 'Cet IRN est déjà celui du document ' . $other . '.';
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE facturo_documents
+             SET mra_status = \'fiscalised\', mra_irn = :irn, mra_irn_entered_by = :uid, mra_qr = NULL, mra_error = NULL, mra_fiscalised_at = NOW()
+             WHERE organization_id = :oid AND id = :id AND mra_status = \'unknown\''
+        );
+        $stmt->execute([':irn' => $irn, ':uid' => $userId, ':oid' => $orgId, ':id' => $id]);
+        return $stmt->rowCount() === 1 ? null : 'L\'IRN ne se saisit que pour un document « envoyé sans réponse de la MRA ».';
     }
 
     private static function mraDateTime(string $mysqlDateTime): string

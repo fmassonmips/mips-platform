@@ -56,7 +56,7 @@ $canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], tru
   <?php if ($doc['mra_status'] !== null): ?>
     <div class="mra-box mra-box--<?= $e($doc['mra_status']) ?>">
       <?php if ($doc['mra_status'] === 'fiscalised'): ?>
-        <span><strong>MRA :</strong> fiscalisé le <?= $e(\App\Format::dateTime($doc['mra_fiscalised_at'])) ?> · IRN <?= $e($doc['mra_irn']) ?></span>
+        <span><strong>MRA :</strong> fiscalisé le <?= $e(\App\Format::dateTime($doc['mra_fiscalised_at'])) ?> · IRN <?= $e($doc['mra_irn']) ?><?php if ($doc['mra_irn_entered_by'] !== null): ?> (saisi à la main d’après le portail MRA, sans QR code)<?php endif; ?></span>
       <?php else: ?>
         <span>
           <strong>MRA :</strong>
@@ -70,6 +70,14 @@ $canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], tru
         </span>
         <?php if ($manager): ?>
           <button type="button" class="btn-secondary" data-doc-action="mra" data-id="<?= $id ?>">Envoyer à la MRA maintenant</button>
+        <?php endif; ?>
+        <?php if ($manager && $doc['mra_status'] === 'unknown'): ?>
+          <span class="mra-irn">
+            <label for="mra-irn">Fiscalisé d’après le portail MRA ? IRN :</label>
+            <input type="text" id="mra-irn" maxlength="100" autocomplete="off">
+            <button type="button" class="btn-secondary" data-doc-action="mra_irn" data-irn-input="mra-irn" data-id="<?= $id ?>"
+                    data-confirm="Enregistrer cet IRN ? Le document sera considéré comme fiscalisé et ne sera plus envoyé à la MRA.">Enregistrer l’IRN</button>
+          </span>
         <?php endif; ?>
       <?php endif; ?>
     </div>

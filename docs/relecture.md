@@ -58,7 +58,7 @@ Chaque lot se relit seul, dans cet ordre (les suivants s'appuient sur le socle).
 | 11 | Back-office MIPS + historique d'usage | `src/Backoffice/*`, `public/backoffice.php`, `public/export.php` | 850 | 5903699, b8dc80e | e2e22, e2e27 |
 | 12 | Premiers pas, import, e-mails, export, fermeture | `src/Suite/{Onboarding,Import,Notifications,DataExport,Closure}.php`, `src/Facturo/Reminders.php`, `tools/*` | 1 900 | 08cc84d, f0feba2, ea5a3d9 | e2e23, e2e24, e2e25 |
 | 12 bis | Sauvegardes et surveillance | `tools/{backup,restore,cron}.sh`, `tools/ops.php`, `src/Ops/*`, `public/health.php` | 500 | (ce commit) | e2e29 |
-| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `031` | 1 900 | tous | contrôle § 5 |
+| 13 | Schéma et migrations | `sql/schema.sql`, `sql/migrations/001` → `032` | 1 900 | tous | contrôle § 5 |
 | 14 | JavaScript et gabarits | `public/assets/js/*`, `templates/**` | 5 000 | tous | toutes |
 
 Les gabarits et le JavaScript (lot 14) sont volumineux mais peu risqués : la revue de sécurité a vérifié l'échappement de chaque sortie et l'absence d'`innerHTML`. On peut les parcourir plus vite.
@@ -117,14 +117,14 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 6. ~~ClientBloom : achat issu d'une facture annulable à la main (cashback retiré deux fois) ; double annulation simultanée en erreur 500 ; passage en caisse soumis deux fois~~ : corrigés (`e2e32`, migration 030 : clé par vente).
 7. ~~ShopLokal : annuler une commande déjà facturée~~ : corrigé (facture brouillon supprimée avec la commande ; facture émise : annulation refusée tant qu'un avoir ne la couvre pas ; `e2e32`). Reste : la TVA de la livraison est recalculée au moment de la facture (écart possible si le n° TVA de l'entreprise change entre la commande et la facture).
 8. **Envoi MRA dans la requête web** à l'émission : jusqu'à ~60 s d'attente si la MRA est lente.
-9. **Le jeton MRA** est stocké en clair (la clé de session, elle, est chiffrée).
+9. ~~Le jeton MRA stocké en clair~~ : corrigé (migration 032, chiffré comme la clé de session ; cache illisible = nouvelle authentification ; `e2e30`).
 10. Une restauration ramène les entreprises supprimées depuis la sauvegarde (procédure dans `deploiement.md` § 3).
-11. **Facture « envoyé sans réponse » en fait fiscalisée** : aucun écran pour saisir l'IRN relevé sur le portail MRA, ni pour récupérer le QR code (appel MRA de consultation non branché faute de spec). Procédure manuelle [dév] dans `docs/incidents.md` fiche 4.
+11. **Facture « envoyé sans réponse » en fait fiscalisée** : l'IRN relevé sur le portail MRA se saisit maintenant sur le document (propriétaire et administrateurs ; migration 032 ; `e2e30` ; `docs/incidents.md` fiche 4). Reste : le QR code ne peut pas être récupéré (appel MRA de consultation non branché faute de spec) ; la facture s'imprime avec l'IRN, sans QR.
 
 ## 6. Contrôles mécaniques
 
 - **Lint** : `find src public templates tools -name '*.php' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax'` ne doit rien afficher.
-- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 031), à refaire au moins une fois de 001 à 031.
+- **Migrations = schéma** : sur une base vide, charger le `schema.sql` d'un commit, appliquer la migration suivante, et comparer `mysqldump --no-data` avec le `schema.sql` du commit d'après. Fait à chaque migration pendant le développement (001 → 032), à refaire au moins une fois de 001 à 032.
 - **Requêtes SQL construites par concaténation** : la revue de sécurité les a listées (`docs/revue-securite.md`) ; aucune n'utilise une donnée de la requête HTTP. À garder ainsi.
 
 ## 7. Limites connues, décidées

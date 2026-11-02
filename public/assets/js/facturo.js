@@ -56,6 +56,7 @@
                     action: btn.dataset.docAction,
                     id: Number(btn.dataset.id),
                     status: btn.dataset.status || '',
+                    irn: btn.dataset.irnInput ? document.getElementById(btn.dataset.irnInput).value : '',
                 });
                 window.location.assign(btn.dataset.redirect || editUrl(body.id));
             } catch (err) {

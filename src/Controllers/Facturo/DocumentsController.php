@@ -75,6 +75,9 @@ final class DocumentsController
                 }
                 $this->done($id, $error);
 
+            case 'mra_irn':
+                $this->done($id, Fiscalisation::enterIrn($org['id'], (int) $user['id'], $id, Request::str($data, 'irn', 120)));
+
             case 'status':
                 $error = Documents::setStatus($org['id'], $id, Request::str($data, 'status', 16));
                 if ($error === null) {
@@ -120,7 +123,7 @@ final class DocumentsController
      */
     private static function fiscalAction(int $orgId, string $action, int $id): bool
     {
-        if (in_array($action, ['credit', 'mra'], true)) {
+        if (in_array($action, ['credit', 'mra', 'mra_irn'], true)) {
             return true;
         }
         if (!in_array($action, ['issue', 'status'], true)) {

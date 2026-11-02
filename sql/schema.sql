@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected | unknown (sent, no answer)
     mra_counter        INT UNSIGNED NULL,                   -- EBS invoice counter, never reset
     mra_irn            VARCHAR(100) NULL,                   -- identifier returned by MRA
+    mra_irn_entered_by BIGINT UNSIGNED NULL,                -- user who entered the IRN by hand (read on the MRA portal)
     mra_qr             MEDIUMTEXT   NULL,                   -- base64 PNG returned by MRA
     mra_error          VARCHAR(1000) NULL,
     mra_attempts       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -262,7 +263,7 @@ CREATE TABLE IF NOT EXISTS facturo_document_emails (
 -- ---- mra_tokens (cached MRA authentication per organization) -----------
 CREATE TABLE IF NOT EXISTS mra_tokens (
     organization_id BIGINT UNSIGNED NOT NULL,
-    token           VARCHAR(1000) NOT NULL,
+    token_enc       TEXT          NOT NULL,                 -- token returned by MRA, encrypted at rest
     session_key_enc TEXT          NOT NULL,                 -- AES key returned by MRA, encrypted at rest
     expires_at      DATETIME      NOT NULL,
     PRIMARY KEY (organization_id),

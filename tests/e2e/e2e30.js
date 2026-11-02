@@ -68,6 +68,34 @@ const mu = (days) => new Date(Date.now() + 4 * 3600e3 + days * 86400e3).toISOStr
   assert(sent() === before + 2, 'manual resend once checked');
   step('timeout after MRA accepted the invoice: « envoyé sans réponse… vérifiez sur le portail MRA », the cron never resends it, e-mail blocked, listed by the supervision; the owner resends it by hand');
 
+  // 1 bis. Unanswered send found fiscalised on the MRA portal: the owner enters its IRN, nothing is resent
+  fs.writeFileSync(M + '/TIMEOUT', '');
+  before = sent();
+  const u = await draft('250'); await issue();
+  assert(status(u).startsWith('unknown'), 'unknown again ' + status(u));
+  const enterIrn = async (v) => { await page.fill('#mra-irn', v); await page.click('button[data-doc-action="mra_irn"]'); };
+  await enterIrn('x'); assert((await err()).includes('IRN invalide'), 'short IRN refused');
+  const irnB = sql(`SELECT mra_irn FROM facturo_documents WHERE id = ${b}`);
+  await page.reload(); await enterIrn(irnB); assert((await err()).includes('déjà celui du document'), 'IRN of another document refused');
+  const irnG = '7c1f3a2e-5b8d-4e61-9a0f-2d4c6b8e1a37';
+  await page.reload();
+  await Promise.all([page.waitForSelector('.mra-box--fiscalised'), enterIrn(irnG)]);
+  assert((await mraBox()).includes('IRN ' + irnG) && (await mraBox()).includes('saisi à la main'), 'shown ' + await mraBox());
+  assert(sql(`SELECT CONCAT(mra_status, ' ', mra_irn, ' ', mra_qr IS NULL, ' ', mra_irn_entered_by IS NOT NULL) FROM facturo_documents WHERE id = ${u}`) === `fiscalised ${irnG} 1 1`, 'stored');
+  assert(await page.locator('button[data-doc-action="mra"]').count() === 0, 'no resend button');
+  retry();
+  assert(sent() === before + 1, 'never resent');
+  const printed = await (await page.request.get(B + '/facturo/print.php?id=' + u)).text();
+  assert(printed.includes(irnG) && !printed.includes('data:image/png'), 'printed with the IRN, no QR');
+  const r2 = await page.request.post(B + '/api/facturo/documents', { headers: { 'X-CSRF-Token': await page.getAttribute('meta[name=csrf-token]', 'content') }, data: { action: 'mra_irn', id: Number(a), irn: 'ABCDEF-123' } });
+  assert(r2.status() === 409 && (await r2.text()).includes('envoyé sans réponse'), 'only for an unanswered document ' + r2.status());
+  step('unanswered send found on the MRA portal: the owner enters its IRN (format checked, not another document\'s), the document is fiscalised « saisi à la main », printed with the IRN and no QR, never resent; refused on any other document');
+
+  // 1 ter. The MRA token is encrypted at rest like the session key
+  const tokenEnc = sql('SELECT token_enc FROM mra_tokens LIMIT 1');
+  assert(tokenEnc.length === 128 && Buffer.from(tokenEnc, 'base64').length === 24 + 16 + 54, 'nonce + MAC + 54-character token: ' + tokenEnc.length);
+  step('MRA token stored encrypted (secretbox), not in clear');
+
   // 2. Credentials refused by MRA: every document stays pending, untouched, one authentication per run
   fs.writeFileSync(M + '/BADPASS', '');
   sql('DELETE FROM mra_tokens');

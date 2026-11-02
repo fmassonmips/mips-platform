@@ -66,12 +66,8 @@ La facture est partie, mais la réponse n'est pas revenue (délai dépassé, con
 
 1. Avec le client (c'est **son** compte MRA, il se connecte lui-même ; ne jamais lui demander son mot de passe), chercher la facture par son numéro (`FAC-2026-0123`) sur le portail MRA.
 2. **Absente du portail** : le propriétaire clique « Envoyer à la MRA maintenant ». Elle repart avec le même numéro et le même compteur.
-3. **Présente sur le portail** : ne pas renvoyer. [dév] Noter l'IRN affiché par le portail et passer le document en fiscalisé à la main :
-   ```sql
-   UPDATE facturo_documents SET mra_status = 'fiscalised', mra_irn = '<IRN du portail>', mra_fiscalised_at = NOW(), mra_error = NULL
-   WHERE organization_id = <id> AND number = '<FAC-…>' AND mra_status = 'unknown';
-   ```
-   Le QR code ne peut pas être récupéré pour l'instant (l'appel MRA qui le permet n'est pas branché) : la facture s'imprime sans QR. Le signaler au client et au développeur.
+3. **Présente sur le portail** : ne pas renvoyer. Le propriétaire recopie l'IRN affiché par le portail dans le champ **« Fiscalisé d'après le portail MRA ? IRN »** du document, puis **« Enregistrer l'IRN »**. Le document passe en fiscalisé (« saisi à la main d'après le portail MRA »), ne repart plus jamais à la MRA, et l'e-mail au client est débloqué. Un IRN déjà porté par un autre document est refusé.
+   Le QR code ne peut pas être récupéré pour l'instant (l'appel MRA qui le permet n'est pas branché) : la facture s'imprime avec l'IRN, sans QR. Le signaler au client.
 4. Plusieurs factures dans cet état le même jour : prévenir le développeur (lenteur MRA à remonter, délai `mra.timeout` à revoir).
 
 ## 5. « Échec de l'authentification MRA »
