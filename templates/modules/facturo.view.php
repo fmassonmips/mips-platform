@@ -1,7 +1,7 @@
 <?php
 /**
  * Facturo module router, rendered inside the suite app shell.
- * Pages: invoices (default), quotes, credit_notes, edit, clients, company.
+ * Pages: invoices (default), quotes, credit_notes, edit, clients, accounting (owner/admin), company.
  *
  * @var array<string,mixed> $user
  * @var array{id:int,name:string,role:string} $org
@@ -15,7 +15,10 @@ $e    = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES
 $page = is_string($_GET['p'] ?? null) ? $_GET['p'] : 'invoices';
 
 $listPages = ['invoices' => 'invoice', 'quotes' => 'quote', 'credit_notes' => 'credit_note'];
-$nav       = ['invoices' => 'Factures', 'quotes' => 'Devis', 'credit_notes' => 'Avoirs', 'clients' => 'Clients', 'company' => 'Entreprise'];
+$nav       = ['invoices' => 'Factures', 'quotes' => 'Devis', 'credit_notes' => 'Avoirs', 'clients' => 'Clients', 'accounting' => 'Comptabilité', 'company' => 'Entreprise'];
+if (!Tenant::canManage($org)) {
+    unset($nav['accounting']);
+}
 
 // Load the page's data first so the active tab can follow the document type.
 $view = null;
@@ -48,6 +51,21 @@ switch ($page) {
         $clients = Clients::all($org['id']);
         $profile = Tenant::profile($org['id']);
         $view    = 'clients';
+        break;
+
+    case 'accounting':
+        if (!Tenant::canManage($org)) {
+            break;
+        }
+        // Default: last month (what the accountant asks for). The list: this month, last month, every month with documents.
+        $last   = (new \DateTimeImmutable('first day of last month'))->format('Y-m');
+        $months = array_values(array_unique(array_merge([date('Y-m'), $last], \App\Facturo\Accounting::months($org['id']))));
+        rsort($months);
+        $month  = is_string($_GET['month'] ?? null) && in_array($_GET['month'], $months, true) ? $_GET['month'] : $last;
+        [$from, $to] = \App\Facturo\Accounting::period($month);
+        $vat       = \App\Facturo\Accounting::vatSummary($org['id'], $from, $to);
+        $documents = $vat['documents'] + array_sum($vat['other_currencies']);
+        $view      = 'accounting';
         break;
 
     case 'company':
