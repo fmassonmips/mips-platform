@@ -353,6 +353,7 @@ a.btn-secondary { text-decoration: none; display: inline-block; }
 }
 .totals dt { color: var(--color-muted); }
 .totals dd { margin: 0; text-align: right; }
+.statement tr.is-late td:last-child { color: var(--color-error); font-weight: 600; }
 
 .status {
     display: inline-block;
