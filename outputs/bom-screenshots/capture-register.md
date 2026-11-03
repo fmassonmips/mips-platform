@@ -172,9 +172,9 @@
 | `C04-case-under-review-approver-view.png` | Dossier soumis vu par un approbateur : contrôles passés, boutons Approve / Reject | admin | Vue interne. Depuis le 2026-10-30, les boutons ne s'affichent qu'à un approbateur qui n'a jamais eu la main sur le dossier ; ils sont visibles ici car l'administrateur capturé n'a ni créé, ni instruit, ni réassigné ce dossier. | *Case under review: approver view* |
 | `C05-terms-versions-consent-count.png` | Versions des conditions d'utilisation du portail (non modifiables une fois publiées), nombre d'acceptations, empreinte sha256 du texte, publication d'une nouvelle version réservée aux administrateurs (build `d91d250`) | admin | **Texte de remplissage**, pas les conditions MIPS. Une seule version publiée. | *Versioned terms of use and acceptance record* |
 
-## Schémas (pas des captures d'écran) — ajoutés le 2026-11-01
+## Schémas (pas des captures d'écran) — ajoutés le 2026-11-01, complétés le 2026-11-02
 
-Deux schémas dessinés, sans aucune donnée de transaction, figurent dans la version anglaise pour la BoM
+Trois schémas dessinés, sans aucune donnée de transaction, figurent dans la version anglaise pour la BoM
 (`outputs/recap/MIPS-platform-BoM-EN-DRAFT.pptx`). Ce sont des **descriptions du modèle retenu**, pas des preuves
 qu'un système fonctionne.
 
@@ -184,8 +184,33 @@ qu'un système fonctionne.
 | `outputs/ecosysteme/eco-sequence-en.png` | Une vente dans le temps : autorisation le jour de la vente, règlement par la banque acquéreuse, données et facture de commission en fin de mois. | Le délai de règlement n'est pas indiqué (« timing per acquirer agreement ») : il dépend des contrats, non vérifiés ici. | *One sale, from payment to fee invoice, under the gateway model* |
 | `outputs/ecosysteme/eco-architecture-en.png` | Architecture en couches du prototype : utilisateurs, points d'entrée, contrôles sur chaque requête, modules métier, socle commun, stockage, services externes (BigQuery en lecture, ClamAV, SMTP, fichier MCB). Sans chemins de fichiers. | Décrit la conception du prototype de référence, **pas un déploiement en production**. La réconciliation MCB ↔ MIPS est une réconciliation bancaire ordinaire, pas une preuve de réconciliation du trust. | *Platform architecture: one control layer for every request* |
 
-Versions françaises : `outputs/ecosysteme/eco-overview.png`, `eco-sequence.png` ; page complète :
+Versions françaises : `outputs/ecosysteme/eco-overview.png`, `eco-sequence.png`, `eco-architecture.png` ; page complète :
 `outputs/ecosysteme/ecosysteme-mips.html`.
+
+**À ne pas insérer dans le dossier** : `outputs/ecosysteme/eco-request.png` (chemin d'une requête de dépôt). Il montre
+des codes HTTP et signale que deux refus (419, 429) ne sont pas encore testés : c'est un document pour les développeurs,
+utilisé dans le cahier des charges et la présentation développeurs, pas une pièce pour le régulateur.
+
+Le deck anglais mentionne depuis le 2026-11-03 (diapositives 12 et 13) qu'une **spécification de production existe en
+projet, en revue interne, non approuvée**. Ne rien en citer d'autre devant la Banque : elle contient des propositions non
+tranchées (note du présentateur de la diapositive 13).
+
+## Extraits réutilisés dans la documentation interne — 2026-11-02
+
+Le cahier des charges (`outputs/cahier-des-charges/`) et les specs de `outputs/dev-handover/` reprennent des
+**extraits recadrés** de captures, dans `outputs/cahier-des-charges/img/`. Le bandeau DEMONSTRATION ENVIRONMENT
+(avec le numéro de build) a été conservé en haut de chaque extrait ; aucune donnée n'a été modifiée.
+
+| Extrait | Source | Recadrage |
+|---|---|---|
+| `lot3-blocages-approbation.png` | S02b | image entière, réduite |
+| `lot3-double-regard.png` | C03 | image entière, réduite |
+| `lot4-prequalification.png` | S03a | haut de page (formulaire, début) |
+| `lot4-pieces-antivirus.png` | S04d | tableau des pièces, bandeau rapporté en haut |
+| `lot1-utilisateurs-roles.png`, `lot2-rapport-mensuel.png`, `lot2-factures-regles.png`, `lot5-rapprochement.png` | `outputs/screens/` (25, 16, 17, 21), hors dossier BoM | entière ou partie haute ; pour le rapport mensuel, bandeau rapporté en haut |
+
+**Pour le dossier, utiliser les captures d'origine de ce répertoire, pas ces extraits** : un extrait recadré dont le
+bandeau a été rapporté pourrait être contesté comme montage.
 
 ## Vérification automatique des fonctions montrées (2026-10-30)
 

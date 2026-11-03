@@ -4,6 +4,9 @@ Constat établi le 2026-10-27 sur le dépôt `mips-platform` (commit `590d8d8`, 
 **mis à jour le 2026-10-28** après l'ajout du portail marchand (commit `d91d250`, toujours non déployé).
 **Revu le 2026-10-30** : aucun nouvel écran ; corrections côté serveur et tests automatiques ajoutés
 (voir la fin du registre des captures). Le constat ci-dessous est inchangé, sauf la section 5.
+**Revu le 2026-11-03** : aucun nouvel écran. Le cahier des charges de la version production (v0.1, projet,
+`outputs/cahier-des-charges/`) reprend les points 1 et 5 à 7 de la section 3 comme **fonctions à spécifier
+séparément, hors marché** ; il ne les spécifie pas.
 Une absence dans ce dépôt **ne prouve pas** l'absence dans la plateforme MIPS de production. Ces écrans doivent
 être recherchés dans le système réel (back-office V3, portail marchand) avant de conclure qu'ils n'existent pas.
 
