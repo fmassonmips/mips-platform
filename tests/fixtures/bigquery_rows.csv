@@ -1,0 +1,7 @@
+date_transaction,form_name,form_nickname,sof_proc_nickname,somme_totale,symbole_monnaie,is_for_till_id,fi_name,last_transaction_status,est_test,is_test_order,refund_total_refunded
+2026-10-31 23:30:00,Alpha Test Shop,,MPGS,111.00,MUR,,MCB,SUCCESS,0,0,0
+2026-11-01 02:00:00,Alpha Test Shop,,MPGS,1000.00,MUR,,MCB,SUCCESS,0,0,0
+2026-11-15 12:00:00,Beta Test Hotel,,PowerCardCIM,2500.00,MUR,T01,MCB,SUCCESS,0,0,0
+2026-11-20 09:00:00,Beta Test Hotel,,MyT_money_v2,300.00,MUR,T02,MCB,SUCCESS,1,0,0
+2026-11-30 22:00:00,Gamma Test Kiosk,,IDP_API_JUICE,200.00,MUR,,MCB,SUCCESS,0,0,0
+2026-12-01 01:00:00,Alpha Test Shop,,MPGS,222.00,MUR,,MCB,SUCCESS,0,0,0
