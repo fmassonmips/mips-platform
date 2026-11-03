@@ -144,7 +144,7 @@ footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line)
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">Summary · 25 October → 3 November 2026 · internal</p>
+    <p class="eyebrow">Summary · 25 October → 3 November 2026 · FSC file added · internal</p>
     <h1>Everything built and decided</h1>
     <p class="lede">The prototype platform, the merchant journey, data flows, the two fund-flow models, the BoM file, the production specification and the developer specs for my.mips.mu. Prototype: branch <code>ccr-a3522d3b-pyyp68</code>, PR #10, not merged, never deployed. <b>Internal working map: not a document for submission to the Bank of Mauritius.</b></p>
     <div class="meta"><span>9 modules</span><span>36 screens captured</span><span>1 production specification (draft)</span><span>6 developer specs</span><span>590 automated checks</span><span><a href="https://claude.ai/artifact/8TCmfebPW639hbzRNTqH9y">Ecosystem and architecture (French) →</a></span></div>
@@ -332,6 +332,24 @@ footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line)
     <p class="note" style="margin-top:10px">For the file: only the original screenshots in <code>outputs/bom-screenshots/</code>, not the cropped extracts used in the production specification. The request-path diagram stays with the developers (HTTP codes, untested refusals). The English deck mentions a production specification in draft, not approved, without citing its proposals.</p>
   </section>
 
+  <!-- 5b. FSC -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">5b · FSC file of MIPS INTERNATIONAL — priority</p>
+      <h2>PIS licence: five documents to rework before any screenshot</h2>
+      <p class="lede">The consultant is finalising the application of MIPS INTERNATIONAL PAYMENT SOLUTIONS LTD to the FSC first; the SPIN file for the Bank of Mauritius will be adapted afterwards. <b>The PIS licence is only granted for business conducted exclusively outside Mauritius</b>, and the FSC consults the Bank of Mauritius. Review of 3 November, no document modified.</p>
+    </div>
+    <div class="decisions">
+      <div class="dec"><span class="who block">B01</span><b>Scope missing</b><small>"Exclusively outside Mauritius" appears nowhere; target markets Africa and Indian Ocean, point of sale, local banks.</small></div>
+      <div class="dec"><span class="who block">All</span><b>Merchant funds</b><small>Held according to G01 and B01 (balances, reserves, withdrawals), not held according to the three policies.</small></div>
+      <div class="dec"><span class="who block">B01, G01</span><b>Another provider's platform</b><small>"a Merchant creates an account with Payop" (B01 p.55); interface described from a template.</small></div>
+      <div class="dec"><span class="who">B01, G01</span><b>Unproven activities</b><small>FX executed, third-party payouts without verification, affiliate programme, open banking.</small></div>
+      <div class="dec"><span class="who">B01</span><b>Wrong forecasts</b><small>Retained earnings built on EBITDA, sign of Year 1 operating cash flow, capital stated three ways.</small></div>
+      <div class="dec"><span class="who">Policies</span><b>Undated, not approved</b><small>Placeholders, open drafter comment, conflicting hosting (AWS Ireland / Google Cloud Johannesburg).</small></div>
+    </div>
+    <p class="note">No screenshot inserted: the prototype shows Mauritian business and is not the platform described. Details (French): <code>outputs/fsc/</code>. Draft reply to the consultant prepared.</p>
+  </section>
+
   <!-- 6. Specs -->
   <section>
     <div class="sec-head">
@@ -356,6 +374,9 @@ footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line)
       <h2>Decisions and checks before going further</h2>
     </div>
     <div class="decisions">
+      <div class="dec"><span class="who block">CEO</span><b>Scope of MIPS INTERNATIONAL (FSC)</b><small>Which countries and merchants; how to evidence no business in Mauritius.</small></div>
+      <div class="dec"><span class="who block">CEO</span><b>Does MIPS INTERNATIONAL hold funds? (FSC)</b><small>Yes: safeguarding policy and explanation to the Bank of Mauritius. No: remove balances, reserves, withdrawals from G01 and B01.</small></div>
+      <div class="dec"><span class="who">CEO</span><b>Platform of MIPS INTERNATIONAL (FSC)</b><small>Owner, real features, contract, PCI DSS, screenshots of the real platform.</small></div>
       <div class="dec"><span class="who block">Compliance</span><b>Licence compatible with model A</b><small>Model A adopted on 31 October: check that the licence applied for does not require holding merchant funds.</small></div>
       <div class="dec"><span class="who block">Compliance</span><b>BoM safeguarding requirements</b><small>Licence form and 2018 Act not read at source.</small></div>
       <div class="dec"><span class="who">Compliance</span><b>KYC checklist and thresholds</b><small>Documents, 25 % beneficial ownership, reviews every 1/2/3 years, PEP rule, retention.</small></div>
