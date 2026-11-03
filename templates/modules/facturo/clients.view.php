@@ -54,6 +54,7 @@ $companyLang = DocText::LANGUAGES[$profile['document_language']] ?? 'Français';
               <td><?= $e($c['brn'] ?? '') ?></td>
               <td><?= $c['document_language'] !== null ? $e(DocText::LANGUAGES[$c['document_language']] ?? '') : '<span class="muted">' . $e($companyLang) . ' (par défaut)</span>' ?></td>
               <td class="num">
+                <a class="btn-link" href="/facturo/statement.php?client=<?= (int) $c['id'] ?>" target="_blank" rel="noopener">Relevé</a>
                 <button type="button" class="btn-link" data-edit-client="<?= $e(json_encode($c, JSON_UNESCAPED_UNICODE)) ?>">Modifier</button>
                 <button type="button" class="btn-link" data-delete-client="<?= (int) $c['id'] ?>">Supprimer</button>
               </td>
