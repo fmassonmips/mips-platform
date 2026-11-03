@@ -1,0 +1,377 @@
+<title>MIPS Platform Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one long operational map, sections stacked, each a diagram built from tokens; ink-blue ground lines, lagoon accent, status colours kept semantic. */
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #12233a;
+  --muted: #5a6b80;
+  --line: #d5dde7;
+  --accent: #0f7c8c;
+  --accent-soft: #e2f2f4;
+  --staff: #2f5fa7;
+  --staff-soft: #e6eef9;
+  --merchant: #9a5b13;
+  --merchant-soft: #f8eedf;
+  --ok: #1d7a46;
+  --ok-soft: #e3f3ea;
+  --warn: #9a6a00;
+  --warn-soft: #fbf1d6;
+  --bad: #b3261e;
+  --bad-soft: #fbe7e5;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1520; --surface: #152132; --ink: #e5ecf4; --muted: #9aabbf; --line: #2a3a50;
+    --accent: #43b9c8; --accent-soft: #123640; --staff: #8db3ee; --staff-soft: #1b2c47;
+    --merchant: #e2a75c; --merchant-soft: #3a2a14; --ok: #5cc98c; --ok-soft: #143323;
+    --warn: #e6bb4c; --warn-soft: #3a3012; --bad: #f08a82; --bad-soft: #3d1a18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1520; --surface: #152132; --ink: #e5ecf4; --muted: #9aabbf; --line: #2a3a50;
+  --accent: #43b9c8; --accent-soft: #123640; --staff: #8db3ee; --staff-soft: #1b2c47;
+  --merchant: #e2a75c; --merchant-soft: #3a2a14; --ok: #5cc98c; --ok-soft: #143323;
+  --warn: #e6bb4c; --warn-soft: #3a3012; --bad: #f08a82; --bad-soft: #3d1a18; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 800; letter-spacing: -0.5px; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--accent); }
+header { display: flex; flex-direction: column; gap: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 13px var(--f-mono); color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 18px; }
+.sec-head { display: flex; flex-direction: column; gap: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+/* Architecture */
+.arch { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 2.4fr) auto minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.col-title { font: 600 12px var(--f-mono); text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.box b { display: block; font-weight: 600; }
+.box small { color: var(--muted); font-size: 12.5px; display: block; }
+.arrow { align-self: center; color: var(--muted); font: 22px var(--f-mono); }
+.modules { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 10px; }
+.mod { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--k, var(--staff)); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.mod b { font-weight: 600; }
+.mod ul { margin: 0; padding-left: 16px; color: var(--muted); font-size: 13px; }
+.mod .who { font: 12px var(--f-mono); color: var(--k, var(--staff)); }
+.base { margin-top: 4px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; }
+
+/* Journey */
+.journey { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 10px; counter-reset: s; }
+.step { position: relative; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 12px 10px 12px; display: flex; flex-direction: column; gap: 3px; counter-increment: s; }
+.step::before { content: counter(s); font: 600 12px var(--f-mono); color: var(--c); }
+.step b { font-weight: 600; font-size: 14px; }
+.step small { color: var(--muted); font-size: 12.5px; }
+.step.m { --c: var(--merchant); }
+.step.s { --c: var(--staff); }
+.step.gate { background: var(--accent-soft); }
+
+/* Pipelines */
+.pipes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 18px; }
+.pipe { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip { font-size: 13px; padding: 5px 10px; border-radius: 6px; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--line); }
+.chip.out { background: var(--staff-soft); }
+.sep { color: var(--muted); font-family: var(--f-mono); }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cats span { font: 12px var(--f-mono); padding: 3px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); }
+
+/* Fund models */
+.models { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 18px; }
+.model { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.model .tag { align-self: flex-start; font: 600 12px var(--f-mono); padding: 3px 9px; border-radius: 99px; }
+.tag.now { background: var(--ok-soft); color: var(--ok); }
+.tag.option { background: var(--warn-soft); color: var(--warn); }
+.flow { overflow-x: auto; }
+.flow svg { display: block; min-width: 420px; width: 100%; height: auto; }
+.flow text { font-family: var(--f-body); font-size: 12.5px; fill: var(--ink); }
+.flow .lbl { font-size: 11px; fill: var(--muted); }
+.flow rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
+.flow rect.trust { fill: var(--warn-soft); stroke: var(--warn); }
+.flow rect.mer { fill: var(--merchant-soft); stroke: var(--merchant); }
+.flow rect.mips { fill: var(--staff-soft); stroke: var(--staff); }
+.flow line, .flow path { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.flow .dash { stroke-dasharray: 5 4; }
+.flow .head { fill: var(--muted); stroke: none; }
+.facts { margin: 0; padding-left: 18px; font-size: 13.5px; }
+.facts li + li { margin-top: 4px; }
+
+/* BoM */
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px var(--f-mono); text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td code { font: 12.5px var(--f-mono); }
+.st { display: inline-block; font: 600 12px var(--f-mono); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.st.ok { background: var(--ok-soft); color: var(--ok); }
+.st.part { background: var(--warn-soft); color: var(--warn); }
+.st.no { background: var(--bad-soft); color: var(--bad); }
+
+/* Specs + decisions */
+.specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 10px; }
+.spec { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.spec code { font: 12px var(--f-mono); color: var(--accent); overflow-wrap: anywhere; }
+.spec small { color: var(--muted); font-size: 12.5px; }
+.spec.lead { grid-column: 1 / -1; border-color: var(--accent); border-width: 1.5px; }
+.decisions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; }
+.dec { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; }
+.dec .who { grid-row: span 2; font: 600 11px var(--f-mono); text-transform: uppercase; padding: 3px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.dec .who.block { background: var(--bad-soft); color: var(--bad); }
+.dec small { color: var(--muted); font-size: 12.5px; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 860px) {
+  .arch { grid-template-columns: minmax(0, 1fr); }
+  .arch .arrow { transform: rotate(90deg); justify-self: center; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Summary · 25 October → 3 November 2026 · internal</p>
+    <h1>Everything built and decided</h1>
+    <p class="lede">The prototype platform, the merchant journey, data flows, the two fund-flow models, the BoM file, the production specification and the developer specs for my.mips.mu. Prototype: branch <code>ccr-a3522d3b-pyyp68</code>, PR #10, not merged, never deployed. <b>Internal working map: not a document for submission to the Bank of Mauritius.</b></p>
+    <div class="meta"><span>9 modules</span><span>36 screens captured</span><span>1 production specification (draft)</span><span>6 developer specs</span><span>590 automated checks</span><span><a href="https://claude.ai/artifact/8TCmfebPW639hbzRNTqH9y">Ecosystem and architecture (French) →</a></span></div>
+  </header>
+
+  <!-- 1. Architecture -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">1 · The platform</p>
+      <h2>What comes in, what is processed, what goes out</h2>
+      <div class="legend"><span style="--c: var(--staff)">MIPS staff (admin, finance)</span><span style="--c: var(--merchant)">Merchant / prospect</span><span style="--c: var(--accent)">Common core</span></div>
+    </div>
+    <div class="arch">
+      <div class="col">
+        <p class="col-title">Sources</p>
+        <div class="box"><b>Commission_Data export</b><small>monthly CSV / XLSX</small></div>
+        <div class="box"><b>BigQuery</b><small>direct read of the month</small></div>
+        <div class="box"><b>MCB file</b><small>e-commerce, per Outlet</small></div>
+        <div class="box"><b>Prospects</b><small>through the portal</small></div>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="col">
+        <p class="col-title">Prototype modules</p>
+        <div class="modules">
+          <div class="mod"><b>Monthly reporting</b><span class="who">admin · finance</span><ul><li>Import with fixed rules (= analyze.py)</li><li>12-month trends</li><li>Excel export</li></ul></div>
+          <div class="mod"><b>Billing</b><span class="who">admin · finance</span><ul><li>Fee rules</li><li>Draft → issued → paid / cancelled</li><li>Gap-free numbering</li></ul></div>
+          <div class="mod"><b>MCB ↔ MIPS reconciliation</b><span class="who">admin · finance</span><ul><li>Gaps broken down to 0 unexplained</li><li>Claim candidates</li></ul></div>
+          <div class="mod"><b>Merchants</b><span class="who">admin · finance</span><ul><li>Record, contacts, MID / TUI</li><li>Contracts and notice periods</li></ul></div>
+          <div class="mod"><b>KYC onboarding</b><span class="who">admin · finance</span><ul><li>Documents, parties, screening</li><li>8 blockers; decision by an approver who never handled the case</li><li>Periodic reviews, reminders</li></ul></div>
+          <div class="mod" style="--k: var(--merchant)"><b>Merchant portal</b><span class="who">merchant</span><ul><li>Account + 2FA + versioned terms</li><li>Pre-qualification, documents, tracking</li></ul></div>
+          <div class="mod"><b>Users</b><span class="who">admin</span><ul><li>Activation, roles, 2FA</li></ul></div>
+          <div class="mod"><b>Audit log</b><span class="who">admin</span><ul><li>Append-only, filters</li></ul></div>
+          <div class="mod"><b>Portal terms</b><span class="who">admin</span><ul><li>Versions, acceptances</li></ul></div>
+        </div>
+        <p class="base">Core: sign-in + TOTP two-factor authentication, password reset, CSRF, strict CSP, separate staff / merchant sessions, documents outside the web root with sha256 fingerprint, sign-in lockout per account after 5 failures.</p>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="col">
+        <p class="col-title">Outputs</p>
+        <div class="box"><b>Monthly report</b><small>screen, CSV, Excel</small></div>
+        <div class="box"><b>Invoices</b><small>net + 15 % VAT</small></div>
+        <div class="box"><b>MCB claims</b><small>CSV per category</small></div>
+        <div class="box"><b>Approved merchant</b><small>+ next review date</small></div>
+        <div class="box"><b>Evidence</b><small>audit log, consents</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Journey -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">2 · Merchant journey</p>
+      <h2>From account to approved merchant</h2>
+      <p class="lede">Shaded steps are gates: nothing passes until they are cleared. "Sent to MIPS" is never shown as "approved".</p>
+      <div class="legend"><span style="--c: var(--merchant)">Done by the merchant</span><span style="--c: var(--staff)">Done by MIPS</span></div>
+    </div>
+    <div class="journey">
+      <div class="step m"><b>Account creation</b><small>email confirmed by link</small></div>
+      <div class="step m gate"><b>Two-factor authentication</b><small>mandatory, 10 recovery codes</small></div>
+      <div class="step m gate"><b>Terms of use</b><small>current version, text fingerprint</small></div>
+      <div class="step m"><b>Pre-qualification</b><small>company, activity, volumes, payments</small></div>
+      <div class="step s"><b>Acceptance by an analyst</b><small>creates the merchant, opens the case</small></div>
+      <div class="step m"><b>People and documents</b><small>directors, beneficial owners, signatories</small></div>
+      <div class="step s"><b>Document review</b><small>by someone other than the uploader</small></div>
+      <div class="step m"><b>File submitted</b><small>when nothing is missing</small></div>
+      <div class="step s gate"><b>Approval</b><small>approver never involved, 0 blockers</small></div>
+    </div>
+  </section>
+
+  <!-- 3. Data pipelines -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">3 · Data flows</p>
+      <h2>From transactions to invoices, and the bank check</h2>
+    </div>
+    <div class="pipes">
+      <div class="pipe">
+        <h3>Reporting and billing</h3>
+        <div class="chain">
+          <span class="chip">Commission_Data or BigQuery</span><span class="sep">→</span>
+          <span class="chip">Import: SUCCESS only, tests excluded, refunds counted separately</span><span class="sep">→</span>
+          <span class="chip out">Report · trends · Excel</span><span class="sep">→</span>
+          <span class="chip out">Fee invoices</span>
+        </div>
+        <p class="note">A month with issued invoices can no longer be re-imported. Unit of <code>somme_totale</code> assumed to be MUR, not confirmed.</p>
+      </div>
+      <div class="pipe">
+        <h3>MCB ↔ MIPS reconciliation</h3>
+        <div class="chain">
+          <span class="chip">MCB file</span><span class="sep">+</span><span class="chip">MIPS extract</span><span class="sep">→</span>
+          <span class="chip">Scope checks, MID remaps</span><span class="sep">→</span>
+          <span class="chip out">Gap broken down, unexplained = 0</span>
+        </div>
+        <div class="cats"><span>card verifications</span><span>clearing lag</span><span>watched MIDs</span><span>MIPS only</span><span>MCB only</span><span>real gap</span></div>
+        <p class="note">Compares volumes, not funds: this is not a trust reconciliation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Fund flows -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">4 · Fund flows</p>
+      <h2>Where the money goes: today, and the SPIN file option</h2>
+      <p class="lede"><b>Decision of 31 October: model A adopted</b>, provided the licence applied for does not require holding merchant funds and no flow (wallets, transfer) goes through a MIPS account. Model B will only be considered for a clear business reason.</p>
+    </div>
+    <div class="models">
+      <div class="model">
+        <span class="tag now">A · Gateway — adopted 31 October</span>
+        <div class="flow">
+          <svg viewBox="0 0 440 210" role="img" aria-label="Model A: the payer pays, the acquirer settles the merchant directly, MIPS invoices its fee">
+            <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+            <rect x="10" y="20" width="110" height="44" rx="6"/><text x="65" y="47" text-anchor="middle">Payer</text>
+            <rect x="165" y="20" width="110" height="44" rx="6"/><text x="220" y="40" text-anchor="middle">Acquirer</text><text class="lbl" x="220" y="55" text-anchor="middle">MCB · SBM · ABSA</text>
+            <rect class="mer" x="320" y="20" width="110" height="44" rx="6"/><text x="375" y="47" text-anchor="middle">Merchant</text>
+            <rect class="mips" x="165" y="140" width="110" height="44" rx="6"/><text x="220" y="160" text-anchor="middle">MIPS</text><text class="lbl" x="220" y="175" text-anchor="middle">gateway</text>
+            <line x1="120" y1="42" x2="163" y2="42" marker-end="url(#ah)"/>
+            <line x1="275" y1="42" x2="318" y2="42" marker-end="url(#ah)"/>
+            <text class="lbl" x="297" y="34" text-anchor="middle">settles</text>
+            <path class="dash" d="M220 64 V138"/>
+            <text class="lbl" x="228" y="105">technical transaction</text>
+            <path d="M275 162 H375 V66" marker-end="url(#ah)"/>
+            <text class="lbl" x="330" y="155" text-anchor="middle">monthly invoice</text>
+          </svg>
+        </div>
+        <ul class="facts">
+          <li>Fee <b>invoiced</b>, not withheld.</li>
+          <li>One acquirer contract per merchant (own Outlet).</li>
+          <li>No merchant funds held: no trust to reconcile.</li>
+          <li>To confirm: wallets (MyT Money, Juice) and bank transfer.</li>
+        </ul>
+      </div>
+      <div class="model">
+        <span class="tag option">B · Collection on behalf — not adopted</span>
+        <div class="flow">
+          <svg viewBox="0 0 440 210" role="img" aria-label="Model B: the acquirer settles a trust account, which pays the merchant net of fees and sends the fee to the operating account">
+            <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+            <rect x="10" y="20" width="110" height="44" rx="6"/><text x="65" y="47" text-anchor="middle">Acquirer</text>
+            <rect class="trust" x="165" y="20" width="110" height="44" rx="6"/><text x="220" y="40" text-anchor="middle">Trust account</text><text class="lbl" x="220" y="55" text-anchor="middle">MUR, local bank</text>
+            <rect class="mer" x="320" y="20" width="110" height="44" rx="6"/><text x="375" y="47" text-anchor="middle">Merchants</text>
+            <rect class="mips" x="165" y="140" width="110" height="44" rx="6"/><text x="220" y="160" text-anchor="middle">Operating</text><text x="220" y="175" text-anchor="middle">account</text>
+            <line x1="120" y1="42" x2="163" y2="42" marker-end="url(#ah2)"/>
+            <text class="lbl" x="142" y="13" text-anchor="middle">gross D+1</text>
+            <line x1="275" y1="42" x2="318" y2="42" marker-end="url(#ah2)"/>
+            <text class="lbl" x="297" y="13" text-anchor="middle">net D+1</text>
+            <line x1="210" y1="64" x2="210" y2="138" marker-end="url(#ah2)"/>
+            <text class="lbl" x="164" y="105">fee</text>
+            <line class="dash" x1="232" y1="138" x2="232" y2="66" marker-end="url(#ah2)"/>
+            <text class="lbl" x="240" y="105">shortfall top-up</text>
+          </svg>
+        </div>
+        <ul class="facts">
+          <li>Acquirer contracts to <b>renegotiate</b> (aggregation).</li>
+          <li>Daily reconciliation bank ↔ ledger ↔ merchant entitlements.</li>
+          <li>Shortfall = immediate alert; four-eyes sign-off.</li>
+          <li>BoM requirements not read at source (bom.mu unavailable).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. BoM -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">5 · SPIN DIGITAL / BoM file</p>
+      <h2>What the screenshots prove, and what they do not</h2>
+      <p class="lede">All screenshots come from an undeployed prototype, on fictitious data, with the DEMO banner. B01 and G01 have not been modified.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>View</th><th>Status</th><th>Screenshots</th><th>Main limitation</th></tr></thead>
+        <tbody>
+          <tr><td>S01 Sign-in + terms</td><td><span class="st ok">Present</span></td><td><code>S01a–f</code></td><td>Terms text is placeholder</td></tr>
+          <tr><td>S02 Onboarding journey</td><td><span class="st ok">Present</span></td><td><code>S02a–d</code></td><td>Final decision not shown on the merchant side</td></tr>
+          <tr><td>S03 Pre-qualification</td><td><span class="st ok">Present</span></td><td><code>S03a–b</code></td><td>Signals to be validated by compliance</td></tr>
+          <tr><td>S04 KYB documents</td><td><span class="st ok">Present</span></td><td><code>S04a–d</code></td><td>S04d recaptured with ClamAV and the official signatures ("antivirus OK"); antivirus active on the demo only</td></tr>
+          <tr><td>S05 General portal</td><td><span class="st part">Partial</span></td><td><code>S05, S05b</code></td><td>Onboarding only, no active-merchant area</td></tr>
+          <tr><td>S06 Merchant dashboard</td><td><span class="st part">Substitute</span></td><td><code>S06</code></td><td>Internal volume report, no funds</td></tr>
+          <tr><td>S07 Settlement</td><td><span class="st part">Partial</span></td><td><code>S07</code></td><td>Acquirer reconciliation, no trust</td></tr>
+          <tr><td>Controls (roles, audit, four-eyes, terms)</td><td><span class="st ok">Present</span></td><td><code>C01–C05</code></td><td>Coarse roles, audit protected by database rights</td></tr>
+          <tr><td>Trust, transaction monitoring, disputes, complaints</td><td><span class="st no">Absent</span></td><td>—</td><td>Trust not applicable under model A; monitoring, disputes and complaints not built</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">For the file: only the original screenshots in <code>outputs/bom-screenshots/</code>, not the cropped extracts used in the production specification. The request-path diagram stays with the developers (HTTP codes, untested refusals). The English deck mentions a production specification in draft, not approved, without citing its proposals.</p>
+  </section>
+
+  <!-- 6. Specs -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">6 · For the my.mips.mu developer</p>
+      <h2>One production specification and six specs</h2>
+    </div>
+    <div class="specs">
+      <div class="spec lead"><b>Production specification v0.1 — draft, under internal review (French)</b><code>outputs/cahier-des-charges/my-mips-cahier-des-charges.docx</code><small>Frame for the production build: model A, five work packages, numbered requirements tagged FIXED / TO CONFIRM / PROPOSAL, security, personal data, operations, acceptance on the 590 checks, tiers without dates, 12 figures. Proposals to settle before circulating: 12-character passwords (8 in the prototype), four-eyes on billing and reconciliation, penetration test, operating targets. The six specs below (<code>outputs/dev-handover/</code>, French) carry the business rules and now include reference visuals.</small></div>
+      <div class="spec"><b>Monthly report Excel export</b><code>my-mips-monthly-report-excel-export.md</code><small>Reference code + tests</small></div>
+      <div class="spec"><b>BigQuery read</b><code>my-mips-bigquery-commission-data.md</code><small>Tested on an emulator, not on the real table</small></div>
+      <div class="spec"><b>MCB reconciliation</b><code>my-mips-mcb-reconciliation.md</code><small>Tested on synthetic files</small></div>
+      <div class="spec"><b>KYC onboarding</b><code>my-mips-onboarding-kyc.md</code><small>18 acceptance tests</small></div>
+      <div class="spec"><b>Merchant portal</b><code>my-mips-merchant-portal.md</code><small>29 acceptance tests, 113 checks</small></div>
+      <div class="spec"><b>Trust reconciliation</b><code>my-mips-trust-reconciliation.md</code><small>Do not build: model A adopted</small></div>
+    </div>
+  </section>
+
+  <!-- 7. Decisions -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">7 · Pending</p>
+      <h2>Decisions and checks before going further</h2>
+    </div>
+    <div class="decisions">
+      <div class="dec"><span class="who block">Compliance</span><b>Licence compatible with model A</b><small>Model A adopted on 31 October: check that the licence applied for does not require holding merchant funds.</small></div>
+      <div class="dec"><span class="who block">Compliance</span><b>BoM safeguarding requirements</b><small>Licence form and 2018 Act not read at source.</small></div>
+      <div class="dec"><span class="who">Compliance</span><b>KYC checklist and thresholds</b><small>Documents, 25 % beneficial ownership, reviews every 1/2/3 years, PEP rule, retention.</small></div>
+      <div class="dec"><span class="who">Legal</span><b>Portal terms text</b><small>The portal stays closed until a version is published.</small></div>
+      <div class="dec"><span class="who">Finance</span><b>Open reporting points</b><small>Unit of somme_totale, direction of refunds, VAT on fees, issuer details.</small></div>
+      <div class="dec"><span class="who block">Finance</span><b>Wallet and transfer flows</b><small>Do MyT Money, Juice, BankXfer go through a MIPS account?</small></div>
+      <div class="dec"><span class="who">IT</span><b>Document antivirus</b><small>ClamAV with the clamd daemon, integration tested (under 0.1 s per document, against about 20 s with clamscan): install, keep signatures up to date (freshclam), make mandatory before go-live.</small></div>
+      <div class="dec"><span class="who">CEO</span><b>MIPS INTERNATIONAL / FSC references</b><small>To check in B01 and G01 before submission.</small></div>
+      <div class="dec"><span class="who">IT</span><b>Validation on real data</b><small>MCB reconciliation on a month already reconciled; BigQuery on the real table.</small></div>
+      <div class="dec"><span class="who">CEO</span><b>Independent approvers</b><small>Anyone who handled a KYC case cannot decide it: keep at least one approver outside case handling.</small></div>
+      <div class="dec"><span class="who">IT</span><b>IP lockout threshold</b><small>50 failures in 15 minutes across all accounts: to compare with the office's real traffic.</small></div>
+      <div class="dec"><span class="who">CEO</span><b>Production specification proposals</b><small>12-character passwords, four-eyes on billing and reconciliation, penetration test: to settle before sending it to a contractor.</small></div>
+      <div class="dec"><span class="who">IT</span><b>Running my.mips.mu</b><small>Hosting, backups, monitoring: 99.5 % availability, at most 24 h data loss and recovery within 1 working day are proposals; current hosting is not known.</small></div>
+      <div class="dec"><span class="who">Compliance</span><b>Data Protection Act 2017</b><small>Specific obligations not checked: purposes, retention periods, access rights.</small></div>
+    </div>
+  </section>
+
+  <footer>Prototype <code>fmassonmips/mips-platform</code>, PR #10 in draft. Nothing is in production. Figures in the screenshots are fictitious. French version: <a href="https://claude.ai/artifact/FRhqZ8C9SEQ3NdftUkozt1">Carte MIPS Platform</a>.</footer>
+</div>

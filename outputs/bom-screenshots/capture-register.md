@@ -195,6 +195,10 @@ Le deck anglais mentionne depuis le 2026-11-03 (diapositives 12 et 13) qu'une **
 projet, en revue interne, non approuvée**. Ne rien en citer d'autre devant la Banque : elle contient des propositions non
 tranchées (note du présentateur de la diapositive 13).
 
+**Carte de synthèse en anglais** (2026-11-03, page privée https://claude.ai/artifact/B6rVKst7vYY5sGeK8FHX8x) :
+traduction de la carte française, **document de travail interne, à ne pas joindre au dossier**. Elle expose les
+décisions en attente, les propositions non tranchées du cahier des charges et le modèle B non retenu.
+
 ## Extraits réutilisés dans la documentation interne — 2026-11-02
 
 Le cahier des charges (`outputs/cahier-des-charges/`) et les specs de `outputs/dev-handover/` reprennent des
