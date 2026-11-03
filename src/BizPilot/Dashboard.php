@@ -94,6 +94,63 @@ final class Dashboard
     }
 
     /**
+     * What unpaid MUR invoices should bring in: overdue, each of the next 4 weeks (from
+     * today), later, and without a due date. Amount = total minus credit notes issued
+     * against the invoice (no partial payments in Facturo). Plus the clients most overdue.
+     *
+     * @return array{buckets:list<array{key:string,from:?string,to:?string,cents:int,count:int}>,
+     *               late_clients:list<array{id:int,name:string,cents:int,count:int,oldest:string}>}
+     */
+    public static function cashForecast(int $orgId, int $clients = 5): array
+    {
+        $today = Booking::now()->format('Y-m-d');
+        $stmt  = Database::connection()->prepare(
+            'SELECT i.id, i.client_id, i.due_date, i.total_cents - COALESCE(c.credited, 0) AS owed, cl.name AS client_name
+             FROM facturo_documents i
+             JOIN facturo_clients cl ON cl.id = i.client_id AND cl.organization_id = i.organization_id
+             LEFT JOIN (SELECT source_document_id, SUM(total_cents) AS credited FROM facturo_documents
+                        WHERE organization_id = :oid2 AND type = \'credit_note\' AND status <> \'draft\' GROUP BY source_document_id) c
+                    ON c.source_document_id = i.id
+             WHERE i.organization_id = :oid AND i.type = \'invoice\' AND i.status = \'issued\' AND i.currency = \'MUR\''
+        );
+        $stmt->execute([':oid' => $orgId, ':oid2' => $orgId]);
+
+        $day     = static fn (int $n): string => Booking::now()->modify('+' . $n . ' days')->format('Y-m-d');
+        $buckets = [['key' => 'late', 'from' => null, 'to' => Booking::now()->modify('-1 day')->format('Y-m-d'), 'cents' => 0, 'count' => 0]];
+        for ($w = 0; $w < 4; $w++) {
+            $buckets[] = ['key' => 'week' . ($w + 1), 'from' => $day(7 * $w), 'to' => $day(7 * $w + 6), 'cents' => 0, 'count' => 0];
+        }
+        $buckets[] = ['key' => 'later', 'from' => $day(28), 'to' => null, 'cents' => 0, 'count' => 0];
+        $buckets[] = ['key' => 'no_due', 'from' => null, 'to' => null, 'cents' => 0, 'count' => 0];
+
+        $late = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $owed = (int) $r['owed'];
+            if ($owed <= 0) {
+                continue;
+            }
+            $due = $r['due_date'] !== null ? (string) $r['due_date'] : null;
+            $i = match (true) {
+                $due === null  => 6,
+                $due < $today  => 0,
+                $due >= $day(28) => 5,
+                default        => 1 + intdiv((int) (new \DateTimeImmutable($today))->diff(new \DateTimeImmutable($due))->days, 7),
+            };
+            $buckets[$i]['cents'] += $owed;
+            $buckets[$i]['count']++;
+            if ($i === 0) {
+                $cid = (int) $r['client_id'];
+                $late[$cid] ??= ['id' => $cid, 'name' => (string) $r['client_name'], 'cents' => 0, 'count' => 0, 'oldest' => $due];
+                $late[$cid]['cents'] += $owed;
+                $late[$cid]['count']++;
+                $late[$cid]['oldest'] = min($late[$cid]['oldest'], $due);
+            }
+        }
+        usort($late, static fn (array $a, array $b): int => $b['cents'] <=> $a['cents'] ?: strcmp($a['name'], $b['name']));
+        return ['buckets' => $buckets, 'late_clients' => array_slice($late, 0, $clients)];
+    }
+
+    /**
      * @return list<array{name:string,cents:int}>
      */
     public static function topClients(int $orgId, string $from, string $to, int $limit = 5): array

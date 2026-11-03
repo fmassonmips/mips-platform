@@ -63,6 +63,7 @@ if ($on['facturo']) {
     }
     $trend = D::trend($org['id'], $month);
     $top   = D::topClients($org['id'], $from, $to);
+    $cash  = D::cashForecast($org['id']);
 }
 if ($on['rendezvous']) {
     $r  = D::rendezvous($org['id'], $from, $to);
@@ -227,6 +228,49 @@ if ($on['teamnest'] && ($late = \App\TeamNest\Tasks::overdueCount($org['id'])) >
             </tbody></table>
           <?php endif; ?>
           <?php if ($rc['foreign_docs'] > 0): ?><p class="muted small"><?= (int) $rc['foreign_docs'] ?> document(s) en devise étrangère non comptés ici.</p><?php endif; ?>
+        </div>
+      </div>
+      <?php
+        $cashLabels = ['late' => 'En retard', 'week1' => '7 jours', 'week2' => 'Sem. 2', 'week3' => 'Sem. 3', 'week4' => 'Sem. 4', 'later' => 'Plus tard', 'no_due' => 'Sans éch.'];
+        $cashMax    = max(1, ...array_map(static fn ($b) => $b['cents'], $cash['buckets']));
+        $cashTotal  = array_sum(array_map(static fn ($b) => $b['cents'], $cash['buckets']));
+        $range      = static fn (array $b): string => match (true) {
+            $b['key'] === 'late'   => 'échéance passée',
+            $b['key'] === 'no_due' => 'sans date d’échéance',
+            $b['to'] === null      => 'à partir du ' . \App\Format::date($b['from']),
+            default                => 'du ' . \App\Format::date($b['from']) . ' au ' . \App\Format::date($b['to']),
+        };
+      ?>
+      <div class="bp-grid" id="bp-cash">
+        <figure class="chart">
+          <figcaption class="small muted">Encaissements attendus · factures non payées en roupies, par échéance · total <?= $e($rs($cashTotal)) ?></figcaption>
+          <?php if ($cashTotal === 0): ?>
+            <p class="muted small">Aucune facture en attente de paiement.</p>
+          <?php else: ?>
+            <svg viewBox="0 0 600 220" role="img" aria-label="Encaissements attendus par échéance">
+              <?php foreach ($cash['buckets'] as $i => $b): $x = 14 + $i * 83; $h = (int) round(150 * $b['cents'] / $cashMax); ?>
+                <rect class="<?= $b['key'] === 'late' ? 'bar-late' : 'bar-inv' ?>" x="<?= $x ?>" y="<?= 180 - $h ?>" width="56" height="<?= $h ?>"><title><?= $e($cashLabels[$b['key']] . ' (' . $range($b) . ') : ' . $rs($b['cents']) . ', ' . $b['count'] . ' facture(s)') ?></title></rect>
+                <?php if ($b['cents'] > 0): ?><text x="<?= $x + 28 ?>" y="<?= 172 - $h ?>" text-anchor="middle" class="axis"><?= $e(number_format(intdiv($b['cents'], 100), 0, '.', ',')) ?></text><?php endif; ?>
+                <text x="<?= $x + 28 ?>" y="200" text-anchor="middle" class="axis"><?= $e($cashLabels[$b['key']]) ?></text>
+              <?php endforeach; ?>
+              <line x1="6" y1="180" x2="594" y2="180" class="baseline"></line>
+            </svg>
+          <?php endif; ?>
+        </figure>
+        <div>
+          <p class="small muted">Clients en retard</p>
+          <?php if ($cash['late_clients'] === []): ?>
+            <p class="muted small">Aucun retard de paiement.</p>
+          <?php else: ?>
+            <table class="table"><tbody>
+              <?php foreach ($cash['late_clients'] as $lc): ?>
+                <tr><td><a href="/facturo/statement.php?client=<?= (int) $lc['id'] ?>" target="_blank" rel="noopener"><?= $e($lc['name']) ?></a>
+                  <br><span class="small muted"><?= (int) $lc['count'] ?> facture(s), depuis le <?= $e(\App\Format::date($lc['oldest'])) ?></span></td>
+                  <td class="num"><?= $e($rs($lc['cents'])) ?></td></tr>
+              <?php endforeach; ?>
+            </tbody></table>
+            <p class="small muted">Le nom ouvre le relevé du client, à joindre à une relance.</p>
+          <?php endif; ?>
         </div>
       </div>
     <?php endif; ?>

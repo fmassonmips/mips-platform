@@ -590,6 +590,7 @@ input[type="time"] {
 .chart svg { width: 100%; height: auto; display: block; }
 .bar-inv { fill: var(--color-primary); }
 .bar-col { fill: #6cc28a; }
+.bar-late { fill: var(--color-error); }
 .baseline { stroke: var(--color-border); }
 .axis { font-size: 13px; fill: #6b7280; }
 .axis--current { font-weight: 700; fill: #1b1f24; }

@@ -246,6 +246,7 @@ Page unique du dirigeant, réservée au propriétaire et aux administrateurs. Au
 | Fidélité | Ventes via le programme, nouveaux clients, cashback émis / utilisé / en circulation. |
 | Satisfaction | Score NPS et note moyenne sur toutes les réponses du mois, nombre de réponses. |
 | Support | Tickets reçus et résolus, délai moyen de première réponse, file à traiter. |
+| Encaissements attendus | Sous la facturation (`Dashboard::cashForecast`) : factures non payées en roupies, par échéance (en retard, 7 jours, semaines 2 à 4, plus tard, sans échéance), total moins les avoirs émis sur chaque facture ; les 5 clients les plus en retard, chacun ouvrant son relevé. Pas de paiement partiel : une facture est due en entier ou payée. |
 
 « Factures payées » se fonde sur la date à laquelle la facture est marquée payée (pas de suivi des paiements partiels ni des encaissements bancaires).
 
