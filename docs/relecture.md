@@ -118,7 +118,7 @@ Quatre relectures indépendantes (agents qui ne voyaient pas les conclusions de 
 7. ~~ShopLokal : annuler une commande déjà facturée~~ : corrigé (facture brouillon supprimée avec la commande ; facture émise : annulation refusée tant qu'un avoir ne la couvre pas ; `e2e32`). Reste : la TVA de la livraison est recalculée au moment de la facture (écart possible si le n° TVA de l'entreprise change entre la commande et la facture).
 8. **Envoi MRA dans la requête web** à l'émission : jusqu'à ~60 s d'attente si la MRA est lente.
 9. ~~Le jeton MRA stocké en clair~~ : corrigé (migration 032, chiffré comme la clé de session ; cache illisible = nouvelle authentification ; `e2e30`).
-10. Une restauration ramène les entreprises supprimées depuis la sauvegarde (procédure dans `deploiement.md` § 3).
+10. ~~Une restauration ramène les entreprises supprimées depuis la sauvegarde~~ : corrigé pour une restauration sur le même serveur (journal des fermetures hors de la base, `tools/replay_closures.php`, `e2e25`). Reste : serveur entièrement perdu, vérification manuelle des dernières 24 h.
 11. **Facture « envoyé sans réponse » en fait fiscalisée** : l'IRN relevé sur le portail MRA se saisit maintenant sur le document (propriétaire et administrateurs ; migration 032 ; `e2e30` ; `docs/incidents.md` fiche 4). Reste : le QR code ne peut pas être récupéré (appel MRA de consultation non branché faute de spec) ; la facture s'imprime avec l'IRN, sans QR.
 
 ## 6. Contrôles mécaniques

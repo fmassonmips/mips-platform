@@ -141,6 +141,7 @@ upload_max_filesize = 2M
 date.timezone = Indian/Mauritius
 EOF
 install -d -m 750 -o www-data -g adm /var/log/mips
+install -d -m 750 -o www-data -g www-data /var/lib/mips   # closure journal (ops.closure_journal), survives a database restore
 touch /var/log/mips/php.log /var/log/mips/cron.log; chown www-data:adm /var/log/mips/*.log
 systemctl restart "php$PHPV-fpm"
 

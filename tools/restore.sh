@@ -70,3 +70,4 @@ for t in organizations users facturo_documents; do
     echo "  $t: $(sql "SELECT COUNT(*) FROM \`$db\`.\`$t\`" 2>/dev/null || echo '?') rows"
 done
 echo "Next: point a copy of the application at $db and log in before trusting this backup."
+echo "Restored the production database? Then, as the web user: php tools/replay_closures.php --dry-run, then without --dry-run."

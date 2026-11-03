@@ -155,7 +155,8 @@ Toujours **dans une base à part d'abord** (`docs/deploiement.md` § 3) :
 ```bash
 tools/restore.sh /var/backups/mips/mips-<date>.sql.gz.gpg mips_restore      # sur une machine qui a la clé privée
 ```
-- **Tout le serveur est perdu** : restaurer en `--replace` sur le nouveau serveur, remettre `config.local.php` (copie chiffrée à côté de la sauvegarde), puis relancer aussitôt `php tools/purge_companies.php` (les entreprises supprimées depuis la sauvegarde reviennent sinon).
+- **Tout le serveur est perdu** : restaurer en `--replace` sur le nouveau serveur, remettre `config.local.php` (copie chiffrée à côté de la sauvegarde), puis relancer aussitôt `php tools/purge_companies.php` (les entreprises supprimées depuis la sauvegarde reviennent sinon). Le journal des fermetures était sur le serveur perdu : vérifier à la main les demandes de fermeture et suppressions des dernières 24 h (e-mails « Fermeture de votre compte » / « Votre compte MIPS est supprimé » envoyés depuis la sauvegarde).
+- **Base remplacée sur le même serveur** (`--replace`, base abîmée, migration ratée) : juste après, `sudo -u www-data php tools/replay_closures.php --dry-run` puis sans `--dry-run`. Il relit le journal des fermetures, tenu hors de la base (`/var/lib/mips/closures.jsonl`), et remet chaque entreprise dans l'état demandé depuis la sauvegarde : fermetures demandées ou annulées, suppressions refaites (sans nouvel e-mail au propriétaire).
 - **Un client a supprimé ou modifié quelque chose par erreur** : [dév] retrouver les lignes dans `mips_restore` et ne recopier que celles-là dans la base en production. Ne jamais remplacer toute la base pour une seule entreprise.
 - Une fois fini : `DROP DATABASE mips_restore;` (et `mips_platform_before_restore` après un `--replace` vérifié).
 

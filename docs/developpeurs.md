@@ -57,7 +57,7 @@ src/
 templates/              gabarits PHP ; templates/modules/<app>.view.php = routeur de pages de l'app
 sql/schema.sql          schéma complet d'une base neuve
 sql/migrations/         NNN_nom.sql, une par évolution de structure
-tools/                  tâches planifiées (*.php), install.sh, update.sh, backup.sh, restore.sh, cron.sh, ops.php
+tools/                  tâches planifiées (*.php), install.sh, update.sh, backup.sh, restore.sh + replay_closures.php, cron.sh, ops.php
 tests/e2e/              suites de bout en bout, faux serveurs, run.sh
 ```
 

@@ -68,6 +68,7 @@ final class Closure
             return 'La fermeture est déjà demandée.';
         }
         $when = (string) self::scheduledAt($org['id']);
+        ClosureJournal::record('request', (int) $org['id'], ClosureJournal::state((int) $org['id'])['created'], $when);
         self::mail((string) $user['email'], 'Fermeture de votre compte MIPS : ' . $org['name'],
             "Bonjour,\n\nVous avez demandé la fermeture du compte de " . $org['name'] . " sur MIPS. Les apps et vos pages publiques sont fermées, "
             . "les autres membres n'ont plus accès.\n\nToutes les données seront supprimées définitivement le " . Format::dateTime($when) . ".\n"
@@ -80,7 +81,11 @@ final class Closure
     {
         $upd = Database::connection()->prepare('UPDATE organizations SET deletion_scheduled_at = NULL WHERE id = :o AND deletion_scheduled_at IS NOT NULL');
         $upd->execute([':o' => $orgId]);
-        return $upd->rowCount() === 1 ? null : 'Aucune fermeture en cours.';
+        if ($upd->rowCount() !== 1) {
+            return 'Aucune fermeture en cours.';
+        }
+        ClosureJournal::record('cancel', $orgId, ClosureJournal::state($orgId)['created'], null);
+        return null;
     }
 
     public static function scheduledAt(int $orgId): ?string
@@ -96,12 +101,14 @@ final class Closure
      * that another company still has records about (a former employee's leave,
      * usage days) is anonymised instead, so deleting it does not erase that history.
      *
+     * @param bool $notify e-mail the owners (false when a restore replays a deletion already announced)
      * @return bool false when the company is no longer due (closure cancelled meanwhile)
      */
-    public static function purge(int $orgId): bool
+    public static function purge(int $orgId, bool $notify = true): bool
     {
         $pdo     = Database::connection();
         $profile = Tenant::profile($orgId);
+        $before  = ClosureJournal::state($orgId);
         $owners  = $pdo->prepare('SELECT u.email FROM organization_users ou JOIN users u ON u.id = ou.user_id WHERE ou.organization_id = :o AND ou.role = \'owner\'');
         $owners->execute([':o' => $orgId]);
         $ownerEmails = array_map('strval', $owners->fetchAll(\PDO::FETCH_COLUMN));
@@ -162,7 +169,8 @@ final class Closure
             }
             throw $e;
         }
-        foreach ($ownerEmails as $email) {
+        ClosureJournal::record('purge', $orgId, $before['created'], $before['scheduled']);
+        foreach ($notify ? $ownerEmails : [] as $email) {
             self::mail($email, 'Votre compte MIPS est supprimé',
                 "Bonjour,\n\nComme demandé, le compte de " . $profile['name'] . " et toutes ses données ont été supprimés de MIPS.\n\n"
                 . "Merci d'avoir utilisé MIPS. Pour revenir, il suffit de créer un nouveau compte.\n\nL’équipe MIPS\n");

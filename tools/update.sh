@@ -50,6 +50,7 @@ fi
 
 echo "== Code"
 git merge -q --ff-only "$target"
+install -d -m 750 -o www-data -g www-data /var/lib/mips   # closure journal (servers installed before it existed)
 
 rollback() {
     echo "!! $1 — putting back $(git log -1 --format='%h' "$old")." >&2

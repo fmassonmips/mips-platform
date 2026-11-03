@@ -120,6 +120,8 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
   sql(`UPDATE organizations SET deletion_scheduled_at = NOW() + INTERVAL 1 DAY WHERE id = ${org}`);
   let p = spawnSync('php', [S + '/t/tools/purge_companies.php'], { encoding: 'utf8' });
   assert(p.status === 0 && sql(`SELECT COUNT(*) FROM organizations WHERE id = ${org}`) === '1', 'not before the date');
+  const DBN = process.env.MIPS_E2E_DB || 'mips_platform';
+  fs.writeFileSync(S + '/before-purge.sql', execFileSync('mysqldump', ['--default-character-set=utf8mb4', DBN], { maxBuffer: 1 << 28 }));   // tonight's backup
   sql(`UPDATE organizations SET deletion_scheduled_at = NOW() - INTERVAL 1 MINUTE WHERE id = ${org}`);
   p = spawnSync('php', [S + '/t/tools/purge_companies.php'], { encoding: 'utf8' });
   assert(p.status === 0 && p.stdout.includes(`#${org} deleted`), 'purged ' + p.stdout + p.stderr);
@@ -133,6 +135,27 @@ const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJA
   await q.goto(B + '/login.php'); await q.fill('#email', 'owner@boutique.mu'); await q.fill('#password', 'Owner2026!'); await q.click('#submit-btn');
   await q.waitForSelector('#error-message:not([hidden])');
   step('nothing deleted before the date; after it, tools/purge_companies.php deletes the company, its data and its team\'s accounts (other accounts kept), e-mails the owner « Votre compte MIPS est supprimé », and the back-office log keeps « Entreprise supprimée — Boutique Zen » (Automatique); the owner can no longer log in');
+
+  // 6. a database restore brings the deleted company back; the closure journal (outside the database) deletes it again
+  const journal = fs.readFileSync(S + '/closures.jsonl', 'utf8').trim().split('\n').map(l => JSON.parse(l)).filter(e => e.org === Number(org));
+  assert(journal.map(e => e.event).join(',') === 'request,cancel,request,cancel,request,purge', 'journal ' + JSON.stringify(journal));
+  assert(!fs.readFileSync(S + '/closures.jsonl', 'utf8').includes('Boutique'), 'no names in the journal');
+  execFileSync('mysql', [DBN], { input: fs.readFileSync(S + '/before-purge.sql') });
+  assert(sql(`SELECT COUNT(*) FROM organizations WHERE id = ${org}`) === '1' && sql("SELECT COUNT(*) FROM users WHERE email = 'owner@boutique.mu'") === '1', 'restored: back again');
+  const mailsBefore = mailsTo('owner@boutique.mu').length;
+  p = spawnSync('php', [S + '/t/tools/replay_closures.php', '--dry-run'], { encoding: 'utf8' });
+  assert(p.status === 0 && p.stdout.includes(`#${org} : supprimée le`) && p.stdout.includes('dry run') && sql(`SELECT COUNT(*) FROM organizations WHERE id = ${org}`) === '1', 'dry run changes nothing ' + p.stdout + p.stderr);
+  p = spawnSync('php', [S + '/t/tools/replay_closures.php'], { encoding: 'utf8' });
+  assert(p.status === 0 && p.stdout.includes(`#${org} : supprimée de nouveau`), 'replayed ' + p.stdout + p.stderr);
+  assert(sql(`SELECT CONCAT((SELECT COUNT(*) FROM organizations WHERE id = ${org}), (SELECT COUNT(*) FROM users WHERE email LIKE '%@boutique.mu'))`) === '00', 'gone again');
+  assert(mailsTo('owner@boutique.mu').length === mailsBefore, 'no second goodbye e-mail');
+  p = spawnSync('php', [S + '/t/tools/replay_closures.php'], { encoding: 'utf8' });
+  assert(p.status === 0 && p.stdout.includes('Nothing to replay'), 'second run: nothing ' + p.stdout);
+  fs.chmodSync(S + '/closures.jsonl', 0o444);
+  p = spawnSync('php', [S + '/t/tools/purge_companies.php'], { encoding: 'utf8' });
+  fs.chmodSync(S + '/closures.jsonl', 0o644);
+  assert(process.getuid() === 0 || (p.status === 1 && p.stdout.includes('cannot be written')), 'unwritable journal fails the daily job ' + p.stdout);
+  step('closure requests, cancellations and deletions are journalled outside the database (ids and dates only); after restoring a backup taken before the deletion, the company is back; tools/replay_closures.php --dry-run lists it without changing anything, then deletes it again without a second e-mail; a journal that cannot be written makes the daily purge fail');
 
   // every company table is exported (a new app must add its tables)
   const internal = ['backoffice_log', 'login_attempts', 'mra_tokens', 'notification_log', 'facturo_sequences', 'users', 'user_tokens', 'organization_users', 'organizations', 'organization_modules', 'organization_invitations',

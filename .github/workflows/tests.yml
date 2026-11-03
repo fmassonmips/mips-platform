@@ -132,6 +132,7 @@ jobs:
           sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_platform'" | grep -qv '^0$'
           test "$(sudo mysql -N -e 'SELECT COUNT(*) FROM mips_platform.users')" = 0   # no seed account
           grep -q 'mips-backup' /etc/cron.d/mips
+          sudo -u www-data test -w /var/lib/mips   # closure journal (ops.closure_journal)
           for j in mra_retry rendezvous_reminders bookora_ical_sync reminders clientbloom_expire purge_companies watchdog; do
             sudo -u www-data /var/www/mips/tools/cron.sh "$j" true >/dev/null
           done

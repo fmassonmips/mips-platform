@@ -44,7 +44,7 @@ return [
     'bookora'    => ['ical_allow_private' => true, 'ical_timeout' => 5],
     'backoffice' => ['staff' => ['Staff@MIPS.mu']],
     'billing'    => ['contact_email' => 'abonnement@mips.mu'],
-    'ops'        => ['alert_email' => 'ops@mips.mu'],
+    'ops'        => ['alert_email' => 'ops@mips.mu', 'closure_journal' => '$W/closures.jsonl'],
 ];
 PHP
 
@@ -77,7 +77,7 @@ reset() {
     sed "1,12{/^CREATE DATABASE/,/;/d;/^USE /d}" "$W/t/sql/schema.sql" | mysql "$DB" &&
     sed "/^USE /d" "$W/t/sql/seed.sql" | mysql "$DB" &&
     find "$W/mail" -type f -delete &&
-    rm -f "$W/fakemra/DOWN" "$W/fakemra/EXPIRE" "$W/fakemra/TIMEOUT" "$W/fakemra/BADPASS"
+    rm -f "$W/fakemra/DOWN" "$W/fakemra/EXPIRE" "$W/fakemra/TIMEOUT" "$W/fakemra/BADPASS" "$W/closures.jsonl"
 }
 
 suites=("$@")

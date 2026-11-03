@@ -111,6 +111,9 @@ return [
         'skip_jobs'   => [],
         // Partitions watched for free space (missing ones are ignored).
         'disk_paths'  => [ROOT_PATH, '/var/backups/mips', '/var/lib/mysql'],
+        // Closure requests, cancellations and deletions, kept OUTSIDE the database so a restore
+        // can replay them (tools/replay_closures.php). Must be writable by the web user.
+        'closure_journal' => '/var/lib/mips/closures.jsonl',
     ],
 
     'rate_limit' => [
