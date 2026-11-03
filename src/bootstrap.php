@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 error_reporting(E_ALL);
+date_default_timezone_set('Indian/Mauritius');   // every date the app writes or compares is Mauritius time (the DB session too)
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
@@ -68,5 +69,7 @@ if ($isHttps) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 }
 
-// Start the secure session.
-App\Session::start($config['session']);
+// Start the secure session (not for /health.php: a monitor polling it would leave a session per call).
+if (!defined('MIPS_NO_SESSION')) {
+    App\Session::start($config['session']);
+}

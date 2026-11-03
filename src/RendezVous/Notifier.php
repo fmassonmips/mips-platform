@@ -90,10 +90,11 @@ final class Notifier
         }
         $now  = Booking::now();
         $stmt = Database::connection()->prepare(
-            'SELECT organization_id, id FROM rendezvous_appointments
-             WHERE status = \'booked\' AND email IS NOT NULL AND reminder_sent_at IS NULL
-               AND starts_at > :now AND starts_at <= :limit
-               AND starts_at > created_at + INTERVAL 12 HOUR'
+            'SELECT a.organization_id, a.id FROM rendezvous_appointments a
+             JOIN organizations o ON o.id = a.organization_id AND o.suspended_at IS NULL AND o.deletion_scheduled_at IS NULL
+             WHERE a.status = \'booked\' AND a.email IS NOT NULL AND a.reminder_sent_at IS NULL
+               AND a.starts_at > :now AND a.starts_at <= :limit
+               AND a.starts_at > a.created_at + INTERVAL 12 HOUR'
         );
         $stmt->execute([':now' => $now->format('Y-m-d H:i:s'), ':limit' => $now->modify('+24 hours')->format('Y-m-d H:i:s')]);
         $sent = 0;

@@ -56,6 +56,7 @@
                     action: btn.dataset.docAction,
                     id: Number(btn.dataset.id),
                     status: btn.dataset.status || '',
+                    irn: btn.dataset.irnInput ? document.getElementById(btn.dataset.irnInput).value : '',
                 });
                 window.location.assign(btn.dataset.redirect || editUrl(body.id));
             } catch (err) {
@@ -165,7 +166,7 @@
     // ---- Clients ---------------------------------------------------------
     const clientForm = document.getElementById('client-form');
     if (clientForm) {
-        const fields = ['name', 'email', 'phone', 'address', 'brn', 'vat_number', 'document_language'];
+        const fields = ['name', 'email', 'phone', 'address', 'brn', 'vat_number', 'tan', 'document_language'];
         const title  = document.getElementById('client-form-title');
 
         document.querySelectorAll('[data-edit-client]').forEach(function (btn) {
@@ -287,7 +288,7 @@
         companyForm.addEventListener('submit', async function (ev) {
             ev.preventDefault();
             const payload = {};
-            ['name', 'legal_name', 'address', 'brn', 'vat_number', 'email', 'phone', 'document_language'].forEach(function (f) {
+            ['name', 'legal_name', 'address', 'brn', 'vat_number', 'tan', 'email', 'phone', 'document_language'].forEach(function (f) {
                 payload[f] = companyForm.elements[f].value;
             });
             try {

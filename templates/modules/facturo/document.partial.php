@@ -75,12 +75,12 @@ $title    = $isQuote ? $t['quote'] : ($isCredit ? $t['credit_note'] : (($seller[
     <section class="doc-notes pre"><?php if ($isCredit): ?><strong><?= $e($t['reason']) ?></strong> <?php endif; ?><?= $e($doc['notes']) ?></section>
   <?php endif; ?>
 
-  <?php if ($doc['mra_status'] === 'fiscalised' && $doc['mra_qr'] !== null): ?>
+  <?php if ($doc['mra_status'] === 'fiscalised'): ?>
     <section class="doc-mra">
-      <img src="data:image/png;base64,<?= $e($doc['mra_qr']) ?>" alt="<?= $e($t['mra_qr']) ?>">
+      <?php if ($doc['mra_qr'] !== null): ?><img src="data:image/png;base64,<?= $e($doc['mra_qr']) ?>" alt="<?= $e($t['mra_qr']) ?>"><?php endif; ?>
       <div><?= $e($t['mra_ok']) ?><br>IRN<?= $e($t['colon']) ?> <?= $e($doc['mra_irn']) ?></div>
     </section>
-  <?php elseif (in_array($doc['mra_status'], ['pending', 'rejected'], true)): ?>
+  <?php elseif (in_array($doc['mra_status'], ['pending', 'rejected', 'unknown'], true)): ?>
     <p class="mra-warning"><?= $e($t['mra_pending']) ?></p>
   <?php endif; ?>
 </article>

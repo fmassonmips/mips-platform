@@ -155,7 +155,7 @@ final class Tickets
             return null;
         }
         $rows = self::query('t.token = ?', [$token]);
-        return isset($rows[0]) ? [(int) $rows[0]['organization_id'], $rows[0]] : null;
+        return isset($rows[0]) && \App\Suite\Tenant::isOpen((int) $rows[0]['organization_id']) ? [(int) $rows[0]['organization_id'], $rows[0]] : null;
     }
 
     /**

@@ -14,13 +14,13 @@ final class Clients
     /** Editable fields and their max length. */
     public const FIELDS = [
         'name' => 200, 'email' => 254, 'phone' => 40,
-        'address' => 500, 'brn' => 40, 'vat_number' => 40,
+        'address' => 500, 'brn' => 40, 'vat_number' => 40, 'tan' => 20,
     ];
 
     /** French field names for validation messages. */
     private const FIELD_LABELS = [
         'name' => 'Nom', 'email' => 'E-mail', 'phone' => 'Téléphone',
-        'address' => 'Adresse', 'brn' => 'BRN', 'vat_number' => 'N° TVA',
+        'address' => 'Adresse', 'brn' => 'BRN', 'vat_number' => 'N° TVA', 'tan' => 'TAN',
     ];
 
     /**
@@ -29,7 +29,7 @@ final class Clients
     public static function all(int $orgId): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, name, email, phone, address, brn, vat_number, document_language
+            'SELECT id, name, email, phone, address, brn, vat_number, tan, document_language
              FROM facturo_clients WHERE organization_id = :oid ORDER BY name'
         );
         $stmt->execute([':oid' => $orgId]);
@@ -42,7 +42,7 @@ final class Clients
     public static function find(int $orgId, int $id): ?array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT id, name, email, phone, address, brn, vat_number, document_language
+            'SELECT id, name, email, phone, address, brn, vat_number, tan, document_language
              FROM facturo_clients WHERE organization_id = :oid AND id = :id'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
@@ -78,6 +78,12 @@ final class Clients
         if ($clean['email'] !== null && !filter_var($clean['email'], FILTER_VALIDATE_EMAIL)) {
             return [[], 'L\'e-mail du client est invalide.'];
         }
+        if ($clean['tan'] !== null) {
+            $clean['tan'] = \App\Suite\Tenant::normalizeTan($clean['tan']);
+            if ($clean['tan'] === null) {
+                return [[], 'TAN du client invalide : 8 chiffres (numéro fiscal MRA, différent du n° TVA).'];
+            }
+        }
         return [$clean, null];
     }
 
@@ -98,8 +104,8 @@ final class Clients
 
         if ($id === 0) {
             $pdo->prepare(
-                'INSERT INTO facturo_clients (organization_id, name, email, phone, address, brn, vat_number, document_language)
-                 VALUES (:oid, :name, :email, :phone, :address, :brn, :vat_number, :lang)'
+                'INSERT INTO facturo_clients (organization_id, name, email, phone, address, brn, vat_number, tan, document_language)
+                 VALUES (:oid, :name, :email, :phone, :address, :brn, :vat_number, :tan, :lang)'
             )->execute($params);
             return (int) $pdo->lastInsertId();
         }
@@ -111,7 +117,7 @@ final class Clients
         $pdo->prepare(
             'UPDATE facturo_clients
              SET name = :name, email = :email, phone = :phone, address = :address,
-                 brn = :brn, vat_number = :vat_number, document_language = :lang
+                 brn = :brn, vat_number = :vat_number, tan = :tan, document_language = :lang
              WHERE organization_id = :oid AND id = :id'
         )->execute($params);
         return $id;

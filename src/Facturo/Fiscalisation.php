@@ -29,8 +29,8 @@ final class Fiscalisation
     /** Document types sent to MRA, with their MRA invoice type. */
     public const MRA_TYPES = ['invoice' => 'STD', 'credit_note' => 'CRN'];
 
-    /** Stop retrying a document automatically after this many transient failures. */
-    private const MAX_ATTEMPTS = 50;
+    /** Stop retrying a document automatically after this many transient failures (App\Ops\Health reports it). */
+    public const MAX_ATTEMPTS = 50;
 
     /**
      * Requirements checked when issuing a document that will be fiscalised.
@@ -40,8 +40,18 @@ final class Fiscalisation
      */
     public static function issueBlocker(array $doc, array $seller): ?string
     {
-        if ($seller['vat_number'] === '' || $seller['address'] === '') {
-            return 'La facturation électronique MRA exige votre n° TVA et votre adresse (page Entreprise).';
+        if (($seller['tan'] ?? '') === '' || $seller['address'] === '') {
+            return 'La facturation électronique MRA exige votre TAN (n° fiscal MRA, 8 chiffres) et votre adresse (page Entreprise).';
+        }
+        if ($seller['vat_number'] === '') {
+            // Not registered for VAT: no VAT may be charged, at any rate (not even 0 %, which is for registered sellers).
+            $codes = Database::connection()->prepare('SELECT tax_code FROM facturo_document_lines WHERE document_id = :id ORDER BY position');
+            $codes->execute([':id' => (int) $doc['id']]);
+            foreach ($codes->fetchAll(\PDO::FETCH_COLUMN) as $i => $code) {
+                if ($code !== 'TC03') {
+                    return 'Ligne ' . ($i + 1) . ' : sans n° TVA, vos documents sont « Exonéré / sans TVA » (renseignez votre n° TVA si vous êtes assujetti).';
+                }
+            }
         }
         if ($doc['currency'] !== 'MUR') {
             return 'Facturation électronique MRA : seuls les documents en MUR sont pris en charge pour l\'instant.';
@@ -98,8 +108,8 @@ final class Fiscalisation
                 $result = self::transmitOne($orgId, (int) $id);
                 if ($result === 'fiscalised') {
                     $done++;
-                } elseif ($result === 'transient') {
-                    break;   // MRA unreachable: keep the rest in order for the next attempt
+                } elseif ($result !== 'rejected') {
+                    break;   // MRA unreachable, account problem or unanswered send: keep the rest in order
                 }
             }
         } finally {
@@ -141,6 +151,8 @@ final class Fiscalisation
 
         $buyerVat = (string) ($client['vat_number'] ?? '');
         $buyerBrn = (string) ($client['brn'] ?? '');
+        // Documents issued before the TAN field: the VAT number when it is a plain 8-digit TAN.
+        $buyerTan = (string) ($client['tan'] ?? '') !== '' ? (string) $client['tan'] : (\App\Suite\Tenant::normalizeTan($buyerVat) ?? '');
 
         $invoice = [
             'invoiceCounter'        => (string) $doc['mra_counter'],
@@ -160,7 +172,7 @@ final class Fiscalisation
             'seller' => [
                 'name'            => mb_substr((string) (($seller['legal_name'] ?? '') !== '' ? $seller['legal_name'] : ($seller['name'] ?? '')), 0, 100),
                 'tradeName'       => mb_substr((string) ($seller['name'] ?? ''), 0, 100),
-                'tan'             => (string) ($seller['vat_number'] ?? ''),
+                'tan'             => (string) (($seller['tan'] ?? '') !== '' ? $seller['tan'] : ($seller['vat_number'] ?? '')),   // documents issued before the TAN field
                 'brn'             => (string) ($seller['brn'] ?? ''),
                 'businessAddr'    => mb_substr(preg_replace('/\s+/', ' ', (string) ($seller['address'] ?? '')) ?? '', 0, 250),
                 'businessPhoneNo' => mb_substr(preg_replace('/[^0-9+ ]/', '', (string) ($seller['phone'] ?? '')) ?? '', 0, 20),
@@ -168,7 +180,7 @@ final class Fiscalisation
             ],
             'buyer' => [
                 'name'         => mb_substr((string) ($client['name'] ?? ''), 0, 100),
-                'tan'          => $buyerVat,
+                'tan'          => $buyerTan,
                 'brn'          => $buyerBrn,
                 'businessAddr' => mb_substr(preg_replace('/\s+/', ' ', (string) ($client['address'] ?? '')) ?? '', 0, 100),
                 'buyerType'    => $buyerVat !== '' ? 'VATR' : 'NVTR',
@@ -209,7 +221,7 @@ final class Fiscalisation
     }
 
     /**
-     * @return 'fiscalised'|'rejected'|'transient'
+     * @return 'fiscalised'|'rejected'|'transient'|'account'|'unknown'
      */
     private static function transmitOne(int $orgId, int $id): string
     {
@@ -230,15 +242,27 @@ final class Fiscalisation
                 $response = self::send($orgId, $creds, $payload, true);   // token expired early: re-authenticate once
             }
         } catch (MraException | \RuntimeException $e) {
+            if ($e instanceof MraException && $e->isAccount()) {
+                // Credentials, EBS or configuration: the company's problem, not this document's.
+                // It stays pending, its attempts untouched, and the batch stops.
+                Database::connection()->prepare(
+                    'UPDATE facturo_documents SET mra_error = :e WHERE id = :id AND mra_status = \'pending\''
+                )->execute([':e' => mb_substr($e->getMessage(), 0, 1000), ':id' => $id]);
+                return 'account';
+            }
+            if ($e instanceof MraException && $e->isUncertain()) {
+                self::record($id, 'unknown', null, null, $e->getMessage());
+                return 'unknown';
+            }
             $transient = $e instanceof MraException && $e->isTransient();
             self::record($id, $transient ? 'pending' : 'rejected', null, null, $e->getMessage());
             return $transient ? 'transient' : 'rejected';
         }
 
         $result = $response['fiscalisedInvoices'][0] ?? null;
-        if (is_array($result) && ($result['status'] ?? '') === 'SUCCESS'
-            && is_string($result['qrCode'] ?? null) && base64_decode($result['qrCode'], true) !== false) {
-            self::record($id, 'fiscalised', (string) ($result['uuid'] ?? $result['irn'] ?? ''), $result['qrCode'], null);
+        $qr = is_array($result) && is_string($result['qrCode'] ?? null) ? (string) preg_replace('/\s+/', '', $result['qrCode']) : '';
+        if (is_array($result) && ($result['status'] ?? '') === 'SUCCESS' && $qr !== '' && base64_decode($qr, true) !== false) {
+            self::record($id, 'fiscalised', (string) ($result['uuid'] ?? $result['irn'] ?? ''), $qr, null);
             return 'fiscalised';
         }
 
@@ -267,23 +291,27 @@ final class Fiscalisation
     private static function token(int $orgId, array $creds, bool $fresh): array
     {
         $pdo = Database::connection();
-        if (!$fresh) {
-            $stmt = $pdo->prepare(
-                'SELECT token, session_key_enc FROM mra_tokens
-                 WHERE organization_id = :oid AND expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE)'
-            );
-            $stmt->execute([':oid' => $orgId]);
-            $row = $stmt->fetch();
-            if (is_array($row)) {
-                return [(string) $row['token'], Secrets::decrypt((string) $row['session_key_enc'])];
+        $stmt = $pdo->prepare(
+            'SELECT token_enc, session_key_enc, expires_at > DATE_ADD(NOW(), INTERVAL 10 MINUTE) AS fresh, expires_at > NOW() AS alive
+             FROM mra_tokens WHERE organization_id = :oid'
+        );
+        $stmt->execute([':oid' => $orgId]);
+        $row = $stmt->fetch();
+        if (!$fresh && is_array($row) && (int) $row['fresh'] === 1) {
+            try {
+                return [Secrets::decrypt((string) $row['token_enc']), Secrets::decrypt((string) $row['session_key_enc'])];
+            } catch (\RuntimeException) {
+                // Unreadable cache (app.secret_key changed): authenticate again below.
             }
         }
+        // In the last 10 minutes of a token, MRA expects refreshToken = true (§ 5.1.4).
+        $renewing = !$fresh && is_array($row) && (int) $row['alive'] === 1;
 
-        $auth = Client::fromConfig()->authenticate($creds['username'], $creds['password'], $creds['ebs_id']);
+        $auth = Client::fromConfig()->authenticate($creds['username'], $creds['password'], $creds['ebs_id'], $renewing);
         $pdo->prepare(
-            'INSERT INTO mra_tokens (organization_id, token, session_key_enc, expires_at) VALUES (:oid, :t, :k, :e)
-             ON DUPLICATE KEY UPDATE token = VALUES(token), session_key_enc = VALUES(session_key_enc), expires_at = VALUES(expires_at)'
-        )->execute([':oid' => $orgId, ':t' => $auth['token'], ':k' => Secrets::encrypt($auth['key']), ':e' => $auth['expires_at']]);
+            'INSERT INTO mra_tokens (organization_id, token_enc, session_key_enc, expires_at) VALUES (:oid, :t, :k, :e)
+             ON DUPLICATE KEY UPDATE token_enc = VALUES(token_enc), session_key_enc = VALUES(session_key_enc), expires_at = VALUES(expires_at)'
+        )->execute([':oid' => $orgId, ':t' => Secrets::encrypt($auth['token']), ':k' => Secrets::encrypt($auth['key']), ':e' => $auth['expires_at']]);
         return [$auth['token'], $auth['key']];
     }
 
@@ -306,16 +334,43 @@ final class Fiscalisation
     }
 
     /**
-     * Re-queue a rejected document after the settings were fixed (same counter, same data).
+     * Re-queue a rejected document after the settings were fixed (same counter, same data),
+     * or an unanswered one once the company checked on the MRA portal that it was not fiscalised.
      */
     public static function requeue(int $orgId, int $id): ?string
     {
         $stmt = Database::connection()->prepare(
             'UPDATE facturo_documents SET mra_status = \'pending\', mra_attempts = 0
-             WHERE organization_id = :oid AND id = :id AND mra_status IN (\'pending\', \'rejected\')'
+             WHERE organization_id = :oid AND id = :id AND mra_status IN (\'pending\', \'rejected\', \'unknown\')'
         );
         $stmt->execute([':oid' => $orgId, ':id' => $id]);
         return $stmt->rowCount() === 1 ? null : 'Ce document n\'est pas en attente de la MRA.';
+    }
+
+    /**
+     * Record the IRN the company read on the MRA portal for a document sent without an answer
+     * (the MRA had fiscalised it). No QR code: the MRA consultation call is not wired yet.
+     */
+    public static function enterIrn(int $orgId, int $userId, int $id, string $irn): ?string
+    {
+        $irn = trim($irn);
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._\/-]{5,99}$/', $irn) !== 1) {
+            return 'IRN invalide : recopiez l\'identifiant exactement comme sur le portail MRA (6 à 100 caractères, lettres, chiffres, tirets).';
+        }
+        $pdo = Database::connection();
+        $dup = $pdo->prepare('SELECT number FROM facturo_documents WHERE organization_id = :oid AND mra_irn = :irn AND id <> :id LIMIT 1');
+        $dup->execute([':oid' => $orgId, ':irn' => $irn, ':id' => $id]);
+        $other = $dup->fetchColumn();
+        if ($other !== false) {
+            return 'Cet IRN est déjà celui du document ' . $other . '.';
+        }
+        $stmt = $pdo->prepare(
+            'UPDATE facturo_documents
+             SET mra_status = \'fiscalised\', mra_irn = :irn, mra_irn_entered_by = :uid, mra_qr = NULL, mra_error = NULL, mra_fiscalised_at = NOW()
+             WHERE organization_id = :oid AND id = :id AND mra_status = \'unknown\''
+        );
+        $stmt->execute([':irn' => $irn, ':uid' => $userId, ':oid' => $orgId, ':id' => $id]);
+        return $stmt->rowCount() === 1 ? null : 'L\'IRN ne se saisit que pour un document « envoyé sans réponse de la MRA ».';
     }
 
     private static function mraDateTime(string $mysqlDateTime): string

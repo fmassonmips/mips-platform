@@ -68,6 +68,7 @@ final class Closure
             return 'La fermeture est déjà demandée.';
         }
         $when = (string) self::scheduledAt($org['id']);
+        ClosureJournal::record('request', (int) $org['id'], ClosureJournal::state((int) $org['id'])['created'], $when);
         self::mail((string) $user['email'], 'Fermeture de votre compte MIPS : ' . $org['name'],
             "Bonjour,\n\nVous avez demandé la fermeture du compte de " . $org['name'] . " sur MIPS. Les apps et vos pages publiques sont fermées, "
             . "les autres membres n'ont plus accès.\n\nToutes les données seront supprimées définitivement le " . Format::dateTime($when) . ".\n"
@@ -80,7 +81,11 @@ final class Closure
     {
         $upd = Database::connection()->prepare('UPDATE organizations SET deletion_scheduled_at = NULL WHERE id = :o AND deletion_scheduled_at IS NOT NULL');
         $upd->execute([':o' => $orgId]);
-        return $upd->rowCount() === 1 ? null : 'Aucune fermeture en cours.';
+        if ($upd->rowCount() !== 1) {
+            return 'Aucune fermeture en cours.';
+        }
+        ClosureJournal::record('cancel', $orgId, ClosureJournal::state($orgId)['created'], null);
+        return null;
     }
 
     public static function scheduledAt(int $orgId): ?string
@@ -92,35 +97,71 @@ final class Closure
     }
 
     /**
-     * Delete one company and the accounts that belong to no other one.
+     * Delete one company and the accounts that belong to no other one. An account
+     * that another company still has records about (a former employee's leave,
+     * usage days) is anonymised instead, so deleting it does not erase that history.
+     *
+     * @param bool $notify e-mail the owners (false when a restore replays a deletion already announced)
+     * @return bool false when the company is no longer due (closure cancelled meanwhile)
      */
-    public static function purge(int $orgId): void
+    public static function purge(int $orgId, bool $notify = true): bool
     {
         $pdo     = Database::connection();
         $profile = Tenant::profile($orgId);
+        $before  = ClosureJournal::state($orgId);
         $owners  = $pdo->prepare('SELECT u.email FROM organization_users ou JOIN users u ON u.id = ou.user_id WHERE ou.organization_id = :o AND ou.role = \'owner\'');
         $owners->execute([':o' => $orgId]);
         $ownerEmails = array_map('strval', $owners->fetchAll(\PDO::FETCH_COLUMN));
-        $users = $pdo->prepare(
-            'SELECT ou.user_id FROM organization_users ou
-             WHERE ou.organization_id = :o
-               AND NOT EXISTS (SELECT 1 FROM organization_users x WHERE x.user_id = ou.user_id AND x.organization_id <> :o2)'
-        );
-        $users->execute([':o' => $orgId, ':o2' => $orgId]);
-        $userIds = array_map('intval', $users->fetchAll(\PDO::FETCH_COLUMN));
 
         $pdo->beginTransaction();
         try {
+            // Checked again under lock: the owner or the MIPS team may have cancelled since the list was read.
+            $due = $pdo->prepare('SELECT id FROM organizations WHERE id = :o AND deletion_scheduled_at IS NOT NULL AND deletion_scheduled_at <= NOW() FOR UPDATE');
+            $due->execute([':o' => $orgId]);
+            if ($due->fetchColumn() === false) {
+                $pdo->rollBack();
+                return false;
+            }
+            $users = $pdo->prepare(
+                'SELECT ou.user_id FROM organization_users ou
+                 WHERE ou.organization_id = :o
+                   AND NOT EXISTS (SELECT 1 FROM organization_users x WHERE x.user_id = ou.user_id AND x.organization_id <> :o2)
+                 FOR UPDATE'
+            );
+            $users->execute([':o' => $orgId, ':o2' => $orgId]);
+            $userIds = array_map('intval', $users->fetchAll(\PDO::FETCH_COLUMN));
+            $keep = [];
+            if ($userIds !== []) {
+                $in = implode(',', $userIds);   // integers from the database
+                $keep = array_map('intval', $pdo->query(
+                    "SELECT user_id FROM staffzen_requests WHERE user_id IN ($in) AND organization_id <> $orgId
+                     UNION SELECT a.user_id FROM staffzen_allowances a JOIN staffzen_leave_types t ON t.id = a.type_id
+                           WHERE a.user_id IN ($in) AND t.organization_id <> $orgId
+                     UNION SELECT user_id FROM user_activity WHERE user_id IN ($in) AND organization_id <> $orgId"
+                )->fetchAll(\PDO::FETCH_COLUMN));
+            }
+
             foreach (self::DELETE_ORDER as $sql) {
                 $pdo->prepare($sql)->execute([':o' => $orgId]);
             }
             $pdo->prepare('DELETE FROM organizations WHERE id = :o')->execute([':o' => $orgId]);   // the rest cascades
             if ($userIds !== []) {
-                $in = implode(',', $userIds);   // integers from the database
+                $in = implode(',', $userIds);
                 $pdo->exec("DELETE FROM login_attempts WHERE email IN (SELECT email FROM users WHERE id IN ($in))");
-                $pdo->exec("DELETE FROM users WHERE id IN ($in)");
+                $delete = array_diff($userIds, $keep);
+                if ($delete !== []) {
+                    $pdo->exec('DELETE FROM users WHERE id IN (' . implode(',', $delete) . ')');
+                }
+                $anon = $pdo->prepare(
+                    'UPDATE users SET email = :e, name = \'Ancien membre\', password_hash = :h, is_active = 0, verified_at = NULL WHERE id = :id'
+                );
+                foreach ($keep as $id) {
+                    $anon->execute([':e' => 'supprime-' . $id . '@invalid', ':h' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), ':id' => $id]);
+                    $pdo->prepare('DELETE FROM user_tokens WHERE user_id = :u')->execute([':u' => $id]);
+                }
             }
-            Log::add(null, null, 'purge', $profile['name'] . ' (#' . $orgId . ') : données supprimées à la demande du propriétaire, ' . count($userIds) . ' compte(s) supprimé(s).');
+            Log::add(null, null, 'purge', $profile['name'] . ' (#' . $orgId . ') : données supprimées à la demande du propriétaire, '
+                . count($userIds) . ' compte(s) supprimé(s)' . ($keep !== [] ? ' dont ' . count($keep) . ' anonymisé(s) (historique chez une autre entreprise)' : '') . '.');
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -128,11 +169,13 @@ final class Closure
             }
             throw $e;
         }
-        foreach ($ownerEmails as $email) {
+        ClosureJournal::record('purge', $orgId, $before['created'], $before['scheduled']);
+        foreach ($notify ? $ownerEmails : [] as $email) {
             self::mail($email, 'Votre compte MIPS est supprimé',
                 "Bonjour,\n\nComme demandé, le compte de " . $profile['name'] . " et toutes ses données ont été supprimés de MIPS.\n\n"
                 . "Merci d'avoir utilisé MIPS. Pour revenir, il suffit de créer un nouveau compte.\n\nL’équipe MIPS\n");
         }
+        return true;
     }
 
     private static function mail(string $to, string $subject, string $text): void

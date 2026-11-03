@@ -112,6 +112,7 @@
 
         productForm.addEventListener('reset', function () {
             productForm.dataset.id = '0';
+            f.stock.dataset.was = '';
             title.textContent = 'Nouveau produit';
             image = '';
             preview.hidden = true;
@@ -122,7 +123,7 @@
         guard(productForm, async function () {
             await post({
                 action: 'product', id: Number(productForm.dataset.id), name: f.name.value, description: f.description.value,
-                price: f.price.value.trim(), tax_code: f.tax_code.value, stock: f.stock.value.trim(), active: f.active.checked,
+                price: f.price.value.trim(), tax_code: f.tax_code.value, stock: f.stock.value.trim(), stock_was: f.stock.dataset.was || '', active: f.active.checked,
                 image: image !== '' ? image : (f.remove_image.checked ? 'remove' : ''),
             });
             window.location.reload();
@@ -138,6 +139,7 @@
                 f.description.value = p.description;
                 f.price.value = p.price;
                 f.stock.value = p.stock;
+                f.stock.dataset.was = p.stock;   // sales since the page opened are kept: the server applies the difference
                 f.active.checked = p.active;
                 remove.hidden = !p.has_image;
                 setTimeout(function () { f.tax_code.value = p.tax_code; });

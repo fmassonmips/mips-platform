@@ -31,7 +31,8 @@ $view = null;
 // Working days and holidays for the live day count in request forms.
 $calendar_data = static fn () => $e(json_encode([
     'work' => $settings['work_days'],
-    'holidays' => array_keys(Settings::holidays($org['id'], (int) $now->format('Y')) + Settings::holidays($org['id'], (int) $now->format('Y') + 1)),
+    // Every holiday from this year on: a request for a later year counts right too.
+    'holidays' => array_values(array_filter(array_keys(Settings::holidays($org['id'])), static fn (string $d): bool => $d >= $now->format('Y') . '-01-01')),
 ]));
 
 switch ($page) {

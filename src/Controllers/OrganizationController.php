@@ -59,7 +59,19 @@ final class OrganizationController
             Response::json(['error' => 'E-mail invalide.'], 422);
         }
 
+        $tan = null;
+        if (array_key_exists('tan', $data)) {
+            $raw = Request::str($data, 'tan', 40);
+            $tan = $raw === '' ? '' : Tenant::normalizeTan($raw);
+            if ($tan === null) {
+                Response::json(['error' => 'TAN invalide : 8 chiffres (numéro fiscal MRA, différent du n° TVA).'], 422);
+            }
+        }
+
         Tenant::updateProfile($org['id'], $profile);
+        if ($tan !== null) {
+            Tenant::setTan($org['id'], $tan);
+        }
         Response::json(['success' => true]);
     }
 }

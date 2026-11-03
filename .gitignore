@@ -1,2 +1,5 @@
 # Per-server settings and secrets
 /config/config.local.php
+/tests/.work/
+/tests/e2e/node_modules/
+__pycache__/

@@ -45,7 +45,7 @@ final class ShopController
                 [$id, $error] = Products::save($org['id'], $id, [
                     'name' => Request::str($data, 'name', 300), 'description' => Request::str($data, 'description', 2500),
                     'price' => Request::str($data, 'price', 20), 'tax_code' => Request::str($data, 'tax_code', 4),
-                    'stock' => Request::str($data, 'stock', 10), 'active' => ($data['active'] ?? false) === true,
+                    'stock' => Request::str($data, 'stock', 10), 'stock_was' => Request::str($data, 'stock_was', 10), 'active' => ($data['active'] ?? false) === true,
                     'image' => is_string($data['image'] ?? null) ? $data['image'] : '',
                 ]);
                 break;

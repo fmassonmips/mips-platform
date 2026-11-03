@@ -56,15 +56,28 @@ $canCredit = $manager && $isInvoice && in_array($status, ['issued', 'paid'], tru
   <?php if ($doc['mra_status'] !== null): ?>
     <div class="mra-box mra-box--<?= $e($doc['mra_status']) ?>">
       <?php if ($doc['mra_status'] === 'fiscalised'): ?>
-        <span><strong>MRA :</strong> fiscalisé le <?= $e(\App\Format::dateTime($doc['mra_fiscalised_at'])) ?> · IRN <?= $e($doc['mra_irn']) ?></span>
+        <span><strong>MRA :</strong> fiscalisé le <?= $e(\App\Format::dateTime($doc['mra_fiscalised_at'])) ?> · IRN <?= $e($doc['mra_irn']) ?><?php if ($doc['mra_irn_entered_by'] !== null): ?> (saisi à la main d’après le portail MRA, sans QR code)<?php endif; ?></span>
       <?php else: ?>
         <span>
           <strong>MRA :</strong>
-          <?= $doc['mra_status'] === 'pending' ? 'en attente de fiscalisation (MRA injoignable, nouvel essai automatique).' : 'rejeté.' ?>
+          <?= match (true) {
+              $doc['mra_status'] === 'unknown' => 'envoyé sans réponse de la MRA. Vérifiez sur le portail MRA s’il a été fiscalisé avant de le renvoyer : un second envoi d’un document déjà fiscalisé est refusé ou dédoublé.',
+              $doc['mra_status'] === 'pending' && (int) $doc['mra_attempts'] >= \App\Facturo\Fiscalisation::MAX_ATTEMPTS => 'en attente de fiscalisation : essais automatiques arrêtés après ' . \App\Facturo\Fiscalisation::MAX_ATTEMPTS . ' échecs.',
+              $doc['mra_status'] === 'pending' => 'en attente de fiscalisation (nouvel essai automatique).',
+              default => 'rejeté.',
+          } ?>
           <?php if ($doc['mra_error'] !== null): ?><br><span class="small"><?= $e($doc['mra_error']) ?></span><?php endif; ?>
         </span>
         <?php if ($manager): ?>
           <button type="button" class="btn-secondary" data-doc-action="mra" data-id="<?= $id ?>">Envoyer à la MRA maintenant</button>
+        <?php endif; ?>
+        <?php if ($manager && $doc['mra_status'] === 'unknown'): ?>
+          <span class="mra-irn">
+            <label for="mra-irn">Fiscalisé d’après le portail MRA ? IRN :</label>
+            <input type="text" id="mra-irn" maxlength="100" autocomplete="off">
+            <button type="button" class="btn-secondary" data-doc-action="mra_irn" data-irn-input="mra-irn" data-id="<?= $id ?>"
+                    data-confirm="Enregistrer cet IRN ? Le document sera considéré comme fiscalisé et ne sera plus envoyé à la MRA.">Enregistrer l’IRN</button>
+          </span>
         <?php endif; ?>
       <?php endif; ?>
     </div>

@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     address         VARCHAR(500) NULL,
     brn             VARCHAR(40)  NULL,
     vat_number      VARCHAR(40)  NULL,
+    tan             VARCHAR(8)   NULL,                   -- MRA Tax Account Number (8 digits), VAT-registered or not
     email           VARCHAR(254) NULL,
     phone           VARCHAR(40)  NULL,
     -- Language of documents sent to clients (quotes, invoices, credit notes, e-mails)
@@ -154,6 +155,7 @@ CREATE TABLE IF NOT EXISTS facturo_clients (
     address         VARCHAR(500) NULL,
     brn             VARCHAR(40)  NULL,
     vat_number      VARCHAR(40)  NULL,
+    tan             VARCHAR(8)   NULL,                      -- MRA Tax Account Number, sent as the buyer's TAN
     document_language CHAR(2)    NULL,                      -- fr | en; NULL = the company's language
     clientbloom_customer_id BIGINT UNSIGNED NULL,           -- loyalty customer (FK added after clientbloom tables)
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -188,9 +190,10 @@ CREATE TABLE IF NOT EXISTS facturo_documents (
     language           CHAR(2)      NULL,          -- fr | en, frozen at issue
     public_token       VARCHAR(64)  NULL,                   -- unguessable link sent to the client
     -- MRA fiscalisation (invoices and credit notes of organizations with e-invoicing on)
-    mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected
+    mra_status         VARCHAR(16)  NULL,                   -- pending | fiscalised | rejected | unknown (sent, no answer)
     mra_counter        INT UNSIGNED NULL,                   -- EBS invoice counter, never reset
     mra_irn            VARCHAR(100) NULL,                   -- identifier returned by MRA
+    mra_irn_entered_by BIGINT UNSIGNED NULL,                -- user who entered the IRN by hand (read on the MRA portal)
     mra_qr             MEDIUMTEXT   NULL,                   -- base64 PNG returned by MRA
     mra_error          VARCHAR(1000) NULL,
     mra_attempts       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -260,7 +263,7 @@ CREATE TABLE IF NOT EXISTS facturo_document_emails (
 -- ---- mra_tokens (cached MRA authentication per organization) -----------
 CREATE TABLE IF NOT EXISTS mra_tokens (
     organization_id BIGINT UNSIGNED NOT NULL,
-    token           VARCHAR(1000) NOT NULL,
+    token_enc       TEXT          NOT NULL,                 -- token returned by MRA, encrypted at rest
     session_key_enc TEXT          NOT NULL,                 -- AES key returned by MRA, encrypted at rest
     expires_at      DATETIME      NOT NULL,
     PRIMARY KEY (organization_id),
@@ -329,10 +332,12 @@ CREATE TABLE IF NOT EXISTS clientbloom_transactions (
     balance_after   BIGINT       NOT NULL,
     reference       VARCHAR(100) NULL,                      -- receipt / invoice number, reason
     reversal_of     BIGINT UNSIGNED NULL,
+    request_key     CHAR(32)     NULL,                      -- counter sale: one per submitted form (no double sale)
     created_by      BIGINT UNSIGNED NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_cb_tx_reversal (reversal_of),             -- a transaction is reversed at most once
+    UNIQUE KEY uq_cb_tx_request (organization_id, request_key),
     KEY idx_cb_tx_customer (customer_id, id),
     KEY idx_cb_tx_org_date (organization_id, created_at),
     CONSTRAINT fk_cb_tx_org      FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
@@ -945,6 +950,34 @@ CREATE TABLE IF NOT EXISTS user_activity (
     KEY idx_user_activity_day (organization_id, day),
     CONSTRAINT fk_user_activity_org  FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
     CONSTRAINT fk_user_activity_user FOREIGN KEY (user_id)         REFERENCES users (id)         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Supervision
+-- =======================================================================
+
+-- ---- ops_jobs (last run of each scheduled job, written by tools/cron.sh) ----
+CREATE TABLE IF NOT EXISTS ops_jobs (
+    job         VARCHAR(40) NOT NULL,              -- mra_retry, reminders, backup… (App\Ops\Health::JOBS)
+    last_run_at DATETIME    NOT NULL,
+    last_exit   SMALLINT    NOT NULL,              -- 0 = success
+    last_ok_at  DATETIME    NULL,
+    PRIMARY KEY (job)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- ops_alerts (problems the watchdog has e-mailed about) ------------------
+CREATE TABLE IF NOT EXISTS ops_alerts (
+    problem     VARCHAR(80) NOT NULL,              -- e.g. job:backup:stale, disk
+    since       DATETIME    NOT NULL,
+    notified_at DATETIME    NULL,                  -- NULL: the e-mail has not gone out yet
+    PRIMARY KEY (problem)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---- schema_migrations (migrations received, for tools/update.sh) ----------
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version    VARCHAR(80) NOT NULL,                -- file name in sql/migrations
+    applied_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (version)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional: a dedicated application user rather than root.

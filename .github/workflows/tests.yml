@@ -1,0 +1,177 @@
+# Lint and end-to-end tests (tests/e2e/run.sh) on every pull request.
+# The suites run in four parallel jobs; a failed job keeps its screenshots
+# and received e-mails as an artifact.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [claude/api-login-system-pahfz]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax
+        run: |
+          errors=$(find src public templates tools config -name '*.php' -print0 | xargs -0 -n1 php -l 2>&1 | grep -v '^No syntax errors' || true)
+          [ -z "$errors" ] || { echo "$errors"; exit 1; }
+      - name: JavaScript syntax
+        run: for f in public/assets/js/*.js tests/e2e/*.js; do node --check "$f" || exit 1; done
+      - name: Shell syntax
+        run: bash -n tests/e2e/run.sh
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root   # throwaway container, no data
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      MIPS_E2E_SHARD: ${{ matrix.shard }}/4
+      MIPS_E2E_DB_GRANT_HOST: '%'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, curl, sodium, zip
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Test tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q mariadb-client gnupg rsync   # mariadb-dump for tools/backup.sh
+          pip install cryptography
+          cd tests/e2e && npm ci && npx playwright install --with-deps chromium
+      - name: MariaDB client access
+        run: |
+          printf '[client]\nhost=127.0.0.1\nport=3306\nuser=root\npassword=ci-root\n' > ~/.my.cnf
+          chmod 600 ~/.my.cnf
+          mysql -e 'SELECT VERSION()'
+      - name: End-to-end suites (shard ${{ matrix.shard }}/4)
+        run: tests/e2e/run.sh
+      - name: Keep screenshots and e-mails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shard-${{ matrix.shard }}
+          path: |
+            tests/.work
+            !tests/.work/t
+          include-hidden-files: true   # tests/.work starts with a dot
+          retention-days: 7
+
+  # tools/install.sh on a real Ubuntu 24.04 machine, twice (it must be safe to re-run),
+  # then the checks a fresh pilot server must pass, and one backup + restore.
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove the runner's MySQL (the script installs MariaDB)
+        run: |
+          sudo systemctl stop mysql || true
+          sudo apt-get purge -y -q 'mysql-server*' 'mysql-client*' mysql-common || true
+          sudo rm -rf /var/lib/mysql /etc/mysql
+      - name: Install from /var/www/mips, twice
+        env:
+          MIPS_DOMAIN: mips.test
+          MIPS_ADMIN_EMAIL: ops@example.com
+          MIPS_OFFICE_IPS: 127.0.0.1
+          MIPS_CERTBOT: '0'
+          MIPS_FIREWALL: '0'
+        run: |
+          sudo mkdir -p /var/www && sudo cp -r "$GITHUB_WORKSPACE" /var/www/mips
+          sudo -E /var/www/mips/tools/install.sh
+          sudo -E /var/www/mips/tools/install.sh | tee second-run.log
+          grep -q 'config/config.local.php exists: kept.' second-run.log
+          grep -q 'Database already has' second-run.log
+      - name: Server checks
+        run: |
+          set -x   # show which check fails
+          h() { curl -s -o /dev/null -w '%{http_code}' -H 'Host: mips.test' "http://127.0.0.1$1"; }
+          curl -sI -H 'Host: mips.test' http://127.0.0.1/login.php | grep -qi '^content-security-policy:'
+          [ "$(h /health.php)" = 503 ]                    # jobs have not run yet
+          [ "$(h /backoffice.php)" = 302 ]                # Nginx lets 127.0.0.1 through; the app sends visitors to the login page
+          [ "$(h /src/bootstrap.php)" = 404 ]
+          code=$(h /api/facturo/documents); [ "$code" = 401 ] || [ "$code" = 405 ]
+          sudo test "$(sudo stat -c '%U:%G %a' /var/www/mips/config/config.local.php)" = 'root:www-data 640'
+          sudo mysql -N -e "SHOW GRANTS FOR 'mips_app'@'localhost'" | grep -q 'SELECT, INSERT, UPDATE, DELETE'
+          ! sudo mysql -N -e "SHOW GRANTS FOR 'mips_app'@'localhost'" | grep -qi 'DROP\|ALTER\|ALL PRIVILEGES'
+          sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_platform'" | grep -qv '^0$'
+          test "$(sudo mysql -N -e 'SELECT COUNT(*) FROM mips_platform.users')" = 0   # no seed account
+          grep -q 'mips-backup' /etc/cron.d/mips
+          sudo -u www-data test -w /var/lib/mips   # closure journal (ops.closure_journal)
+          for j in mra_retry rendezvous_reminders bookora_ical_sync reminders clientbloom_expire purge_companies watchdog; do
+            sudo -u www-data /var/www/mips/tools/cron.sh "$j" true >/dev/null
+          done
+          sudo -u mips-backup /var/www/mips/tools/cron.sh backup true >/dev/null
+          [ "$(h /health.php)" = 200 ]
+      - name: Backup as mips-backup, restore
+        run: |
+          export GNUPGHOME=$(mktemp -d)
+          gpg --batch --passphrase '' --quick-gen-key 'MIPS backup CI <ops@example.com>' default default never 2>/dev/null
+          gpg --armor --export ops@example.com | sudo tee /etc/mips/backup-public-key.asc >/dev/null
+          echo 'MIPS_BACKUP_LOCAL_ONLY=1' | sudo tee -a /etc/mips/backup.env >/dev/null
+          sudo -u mips-backup /var/www/mips/tools/cron.sh backup /var/www/mips/tools/backup.sh
+          f=$(sudo ls /var/backups/mips | grep '\.sql\.gz\.gpg$' | tail -1)
+          sudo ls /var/backups/mips | grep -q 'config.php.gpg'
+          ! sudo -u www-data ls /var/backups/mips 2>/dev/null       # the web user cannot read the backups
+          sudo cp "/var/backups/mips/$f" "/var/backups/mips/${f%.sql.gz.gpg}.sha256" /tmp/ && sudo chown "$USER" /tmp/mips-*
+          sudo GNUPGHOME="$GNUPGHOME" /var/www/mips/tools/restore.sh "/tmp/$f" mips_restore
+          test "$(sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_restore'")" = \
+               "$(sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='mips_platform'")"
+      - name: Update with tools/update.sh (one migration), then a broken update rolled back
+        run: |
+          set -x
+          cd /var/www/mips
+          g() { sudo git -c safe.directory=/var/www/mips -c user.name=ci -c user.email=ci@example.com "$@"; }
+          test "$(sudo mysql -N -e 'SELECT COUNT(*) FROM mips_platform.schema_migrations')" = "$(ls sql/migrations/*.sql | wc -l)"
+          base=$(g rev-parse HEAD)
+          echo 'ALTER TABLE organizations ADD COLUMN ci_update INT NULL;' | sudo tee sql/migrations/999_ci_update.sql >/dev/null
+          g add sql/migrations/999_ci_update.sql && g commit -q -m 'CI: one migration'
+          good=$(g rev-parse HEAD)
+          echo '<?php syntax error' | sudo tee -a public/login.php >/dev/null
+          g commit -q -am 'CI: broken login page'
+          bad=$(g rev-parse HEAD)
+          g reset -q --hard "$base"
+          sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$good" MIPS_BACKUP_LOCAL_ONLY=1 tools/update.sh
+          test "$(g rev-parse HEAD)" = "$good"
+          sudo mysql -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='mips_platform' AND table_name='organizations' AND column_name='ci_update'" | grep -q 1
+          sudo mysql -N -e "SELECT 1 FROM mips_platform.schema_migrations WHERE version='999_ci_update.sql'" | grep -q 1
+          sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$good" tools/update.sh | grep -q 'Already at'
+          ! sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$bad" MIPS_UPDATE_BACKUP=0 tools/update.sh
+          test "$(g rev-parse HEAD)" = "$good"                       # code rolled back
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: mips.test' http://127.0.0.1/login.php)" = 200 ]
+          ! sudo MIPS_UPDATE_FETCH=0 MIPS_UPDATE_REF="$base" MIPS_UPDATE_BACKUP=0 tools/update.sh   # never backwards

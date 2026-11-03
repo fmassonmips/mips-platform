@@ -28,8 +28,11 @@ final class Ledger
      *
      * @return array{0:?array{earned:int,redeemed:int,balance:int,purchase_tx_id:int},1:?string}
      */
-    public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference, ?int $rateBp = null, int $capCents = 0): array
+    public static function checkout(int $orgId, int $userId, int $customerId, int $amountCents, int $redeemCents, string $reference, ?int $rateBp = null, int $capCents = 0, ?string $requestKey = null): array
     {
+        if ($requestKey !== null && !preg_match('/^[0-9a-f]{32}$/', $requestKey)) {
+            $requestKey = null;
+        }
         if ($amountCents <= 0 || $amountCents > 10_000_000_00) {
             return [null, 'Saisissez le montant de l\'achat.'];
         }
@@ -43,7 +46,15 @@ final class Ledger
 
         $rate = $rateBp ?? $rules['cashback_bp'];
 
-        return self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $amountCents, $redeemCents, $reference, $rate, $capCents): array {
+        return self::inTransaction($orgId, $customerId, static function (array $c) use ($orgId, $userId, $amountCents, $redeemCents, $reference, $rate, $capCents, $requestKey): array {
+            if ($requestKey !== null) {
+                // The same form sent twice (retry after a lost answer): already recorded, under this lock.
+                $seen = Database::connection()->prepare('SELECT 1 FROM clientbloom_transactions WHERE organization_id = :oid AND request_key = :k');
+                $seen->execute([':oid' => $orgId, ':k' => $requestKey]);
+                if ($seen->fetchColumn() !== false) {
+                    return [null, 'Cette vente est déjà enregistrée (envoyée deux fois) : vérifiez l\'historique du client.'];
+                }
+            }
             $balance = (int) $c['balance_cents'];
             if ($redeemCents > $balance) {
                 return [null, 'Cashback insuffisant (disponible : ' . \App\Facturo\Money::format($balance, 'MUR') . ').'];
@@ -59,6 +70,9 @@ final class Ledger
             }
             $balance += $earned;
             $txId = self::insert($orgId, $userId, (int) $c['id'], 'purchase', $amountCents, $earned, $balance, $reference, null);
+            if ($requestKey !== null) {
+                Database::connection()->prepare('UPDATE clientbloom_transactions SET request_key = :k WHERE id = :id')->execute([':k' => $requestKey, ':id' => $txId]);
+            }
 
             Database::connection()->prepare(
                 'UPDATE clientbloom_customers
@@ -119,8 +133,24 @@ final class Ledger
         if ($tx['type'] === 'reversal' || $tx['type'] === 'expire' || (int) $tx['reversed'] > 0) {
             return 'Cette opération ne peut pas être annulée.';
         }
+        // A purchase earned on a Facturo invoice follows that invoice (status, credit notes): reversing
+        // it here as well would take the cashback back twice.
+        $inv = Database::connection()->prepare(
+            'SELECT number FROM facturo_documents WHERE organization_id = :oid AND clientbloom_tx_id = :id AND type = \'invoice\' LIMIT 1'
+        );
+        $inv->execute([':oid' => $orgId, ':id' => $transactionId]);
+        $number = $inv->fetchColumn();
+        if ($number !== false) {
+            return 'Cet achat vient de la facture ' . $number . ' : il s\'annule depuis Facturo (statut de la facture ou avoir).';
+        }
 
         [, $error] = self::inTransaction($orgId, (int) $tx['customer_id'], static function (array $c) use ($orgId, $userId, $tx): array {
+            // Checked again under the customer lock: two clicks at once reverse it once.
+            $again = Database::connection()->prepare('SELECT COUNT(*) FROM clientbloom_transactions WHERE reversal_of = :id');
+            $again->execute([':id' => (int) $tx['id']]);
+            if ((int) $again->fetchColumn() > 0) {
+                return [null, 'Cette opération vient d\'être annulée.'];
+            }
             $delta   = -(int) $tx['cashback_cents'];
             $balance = (int) $c['balance_cents'] + $delta;
             if ($balance < 0) {

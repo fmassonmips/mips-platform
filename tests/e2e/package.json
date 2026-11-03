@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "End-to-end test dependencies (tests/e2e/run.sh). Browsers: npx playwright install chromium",
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

@@ -1,0 +1,330 @@
+<title>Architecture my.mips.mu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a technical atlas — one wide plate per diagram, captions and legends beside, reading top to bottom from what clients see to what runs underneath. */
+:root {
+  --bg: #f6f7f4;          /* paper with a faint lagoon cast */
+  --surface: #ffffff;
+  --ink: #17252b;
+  --muted: #5b6b70;
+  --line: #c9d3d2;
+  --lagoon: #0f7c86;      /* accent: Mauritian lagoon */
+  --lagoon-soft: #d7eeee;
+  --coral: #c8553d;       /* external services */
+  --coral-soft: #f7e1da;
+  --sand: #e9e2cf;        /* shared foundation */
+  --money: #7a5a10;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171a; --surface: #172629; --ink: #e3ecec; --muted: #9db0b2; --line: #2d4045;
+  --lagoon: #4cc3cc; --lagoon-soft: #12373b; --coral: #ef8a72; --coral-soft: #3a211b; --sand: #2b2a22; --money: #e2c06a;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f171a; --surface: #172629; --ink: #e3ecec; --muted: #9db0b2; --line: #2d4045;
+  --lagoon: #4cc3cc; --lagoon-soft: #12373b; --coral: #ef8a72; --coral-soft: #3a211b; --sand: #2b2a22; --money: #e2c06a;
+  color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; display: grid; gap: 56px; }
+header { display: grid; gap: 12px; max-width: 70ch; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--lagoon); }
+h1 { font: 700 clamp(30px, 5vw, 46px)/1.08 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 clamp(22px, 3vw, 28px)/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 15px/1.3 var(--font-body); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 18px; color: var(--muted); }
+section { display: grid; gap: 20px; }
+.plate { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow-x: auto; }
+.plate svg { display: block; width: 100%; min-width: 860px; height: auto; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px 28px; }
+.cols > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.cols p, .cols li { font-size: 14.5px; color: var(--muted); }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+code { font: 13px var(--font-mono); color: var(--ink); background: var(--lagoon-soft); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 12px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.tbl { overflow-x: auto; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* SVG styling through tokens */
+svg text { font-family: var(--font-body); fill: var(--ink); }
+.t-title { font: 600 15px var(--font-body); }
+.t-sm { font-size: 12px; fill: var(--muted); }
+.t-mono { font: 11.5px var(--font-mono); fill: var(--muted); }
+.t-band { font: 500 11px var(--font-mono); letter-spacing: .08em; fill: var(--muted); }
+.app { fill: var(--surface); stroke: var(--lagoon); stroke-width: 1.5; }
+.app-money { fill: var(--surface); stroke: var(--money); stroke-width: 1.5; }
+.core { fill: var(--sand); stroke: var(--line); }
+.ext { fill: var(--coral-soft); stroke: var(--coral); stroke-width: 1.2; }
+.layer { fill: var(--surface); stroke: var(--line); }
+.layer-accent { fill: var(--lagoon-soft); stroke: var(--lagoon); }
+.band { fill: none; stroke: var(--line); stroke-dasharray: 4 4; }
+.flow { fill: none; stroke: var(--lagoon); stroke-width: 1.6; }
+.flow-ext { fill: none; stroke: var(--coral); stroke-width: 1.4; stroke-dasharray: 5 4; }
+.flow-mute { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.arrow { fill: var(--lagoon); }
+.arrow-ext { fill: var(--coral); }
+.arrow-mute { fill: var(--muted); }
+.pill { fill: var(--bg); stroke: var(--line); }
+@media (max-width: 640px) { .wrap { gap: 40px; padding-block: 28px 48px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">my Saas Software Ltd · MIPS · Maurice</div>
+    <h1>Architecture et écosystème de my.mips.mu</h1>
+    <p class="lede">Dix apps vendues séparément, un seul produit technique. Une entreprise crée un compte, active les apps dont elle a besoin, et ses données ne quittent jamais son espace.</p>
+  </header>
+
+  <!-- 1. Ecosystem -->
+  <section>
+    <h2>L'écosystème : dix apps sur un socle commun</h2>
+    <p>Chaque app a sa propre marque et son domaine d'acquisition ; toutes tournent sur <code>my.mips.mu</code> avec un seul compte. Les flèches sont les liens réels entre apps dans le code, pas des intentions.</p>
+    <div class="plate" role="img" aria-label="Schéma de l'écosystème : dix apps autour du socle commun, leurs liens et les services extérieurs">
+      <svg viewBox="0 0 1080 640" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrow"/></marker>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrow-ext"/></marker>
+        </defs>
+
+        <!-- band labels -->
+        <text x="24" y="34" class="t-band">VENDRE ET ÊTRE PAYÉ</text>
+        <text x="24" y="250" class="t-band">RECEVOIR ET FIDÉLISER</text>
+        <text x="24" y="466" class="t-band">PILOTER L'ENTREPRISE</text>
+
+        <!-- Row 1: money apps -->
+        <rect x="24" y="48" width="200" height="74" rx="6" class="app-money"/>
+        <text x="40" y="76" class="t-title">Facturo</text><text x="40" y="96" class="t-sm">devis, factures, avoirs</text><text x="40" y="112" class="t-mono">facturo.mu</text>
+        <rect x="290" y="48" width="200" height="74" rx="6" class="app-money"/>
+        <text x="306" y="76" class="t-title">ShopLokal</text><text x="306" y="96" class="t-sm">boutique en ligne</text><text x="306" y="112" class="t-mono">shoplokal.mu</text>
+        <rect x="556" y="48" width="200" height="74" rx="6" class="app-money"/>
+        <text x="572" y="76" class="t-title">Bookora</text><text x="572" y="96" class="t-sm">hébergement à la nuit</text><text x="572" y="112" class="t-mono">bookora.com</text>
+        <rect x="822" y="48" width="200" height="74" rx="6" class="app-money"/>
+        <text x="838" y="76" class="t-title">ClientBloom</text><text x="838" y="96" class="t-sm">CRM et cashback</text><text x="838" y="112" class="t-mono">clientbloom.com</text>
+
+        <!-- Row 2 -->
+        <rect x="24" y="264" width="200" height="74" rx="6" class="app"/>
+        <text x="40" y="292" class="t-title">RendezVous</text><text x="40" y="312" class="t-sm">prise de rendez-vous</text><text x="40" y="328" class="t-mono">rendezvous.mu</text>
+        <rect x="290" y="264" width="200" height="74" rx="6" class="app"/>
+        <text x="306" y="292" class="t-title">Formelio</text><text x="306" y="312" class="t-sm">formulaires et sondages</text><text x="306" y="328" class="t-mono">formelio.com</text>
+        <rect x="556" y="264" width="200" height="74" rx="6" class="app"/>
+        <text x="572" y="292" class="t-title">FlowDesk</text><text x="572" y="312" class="t-sm">tickets de support</text><text x="572" y="328" class="t-mono">flowdesk.com</text>
+        <rect x="822" y="264" width="200" height="74" rx="6" class="app"/>
+        <text x="838" y="292" class="t-title">TeamNest</text><text x="838" y="312" class="t-sm">projets, temps facturable</text><text x="838" y="328" class="t-mono">teamnest.com</text>
+
+        <!-- Row 3 -->
+        <rect x="24" y="480" width="200" height="74" rx="6" class="app"/>
+        <text x="40" y="508" class="t-title">StaffZen</text><text x="40" y="528" class="t-sm">congés et absences</text><text x="40" y="544" class="t-mono">staffzen.mu</text>
+        <rect x="290" y="480" width="200" height="74" rx="6" class="app"/>
+        <text x="306" y="508" class="t-title">BizPilot</text><text x="306" y="528" class="t-sm">tableau de bord, résumé du lundi</text><text x="306" y="544" class="t-mono">bizpilot.mu</text>
+
+        <!-- Shared foundation -->
+        <rect x="556" y="470" width="466" height="148" rx="6" class="core"/>
+        <text x="574" y="496" class="t-title">Socle commun</text>
+        <text x="574" y="520" class="t-sm">Compte unique, entreprise, équipe et rôles</text>
+        <text x="574" y="540" class="t-sm">Catalogue, essai 30 jours, lecture seule, abonnement</text>
+        <text x="574" y="560" class="t-sm">Profil d'entreprise partagé (BRN, TVA, TAN)</text>
+        <text x="574" y="580" class="t-sm">Export, fermeture, CGU, back-office MIPS</text>
+        <text x="574" y="604" class="t-mono">src/Suite · src/Auth.php · src/Backoffice</text>
+
+        <!-- Links between apps (solid = data flows in the code) -->
+        <!-- ShopLokal -> Facturo -->
+        <path d="M290,78 L228,78" class="flow" marker-end="url(#a1)"/>
+        <text x="236" y="70" class="t-mono">facture</text>
+        <!-- Bookora -> Facturo (over ShopLokal) -->
+        <path d="M640,48 C640,10 140,10 124,44" class="flow" marker-end="url(#a1)"/>
+        <text x="420" y="40" class="t-mono">facture du séjour</text>
+        <!-- ClientBloom <-> Facturo (money) -->
+        <path d="M922,122 C922,190 124,190 124,126" class="flow" marker-end="url(#a1)" marker-start="url(#a1)"/>
+        <text x="420" y="182" class="t-mono">facture payée → cashback · avoir → cashback repris</text>
+        <!-- TeamNest -> Facturo -->
+        <path d="M900,264 C900,226 200,226 176,126" class="flow" marker-end="url(#a1)"/>
+        <text x="610" y="220" class="t-mono">temps facturable → facture</text>
+        <!-- RendezVous -> Formelio -->
+        <path d="M224,301 L286,301" class="flow" marker-end="url(#a1)"/>
+        <text x="228" y="292" class="t-mono">sondage</text>
+        <!-- Formelio -> FlowDesk -->
+        <path d="M490,301 L552,301" class="flow" marker-end="url(#a1)"/>
+        <text x="494" y="292" class="t-mono">ticket</text>
+        <!-- FlowDesk -> TeamNest -->
+        <path d="M756,301 L818,301" class="flow" marker-end="url(#a1)"/>
+        <text x="760" y="292" class="t-mono">tâche</text>
+        <!-- BizPilot reads everything -->
+        <path d="M390,480 L390,342" class="flow" marker-end="url(#a1)" stroke-dasharray="2 4"/>
+        <path d="M224,517 L286,517" class="flow" marker-end="url(#a1)" stroke-dasharray="2 4"/>
+        <text x="400" y="420" class="t-mono">lit les chiffres de toutes les apps</text>
+        <text x="232" y="508" class="t-mono">absents</text>
+
+        <!-- External services -->
+        <rect x="24" y="580" width="140" height="44" rx="22" class="ext"/>
+        <text x="94" y="607" text-anchor="middle" class="t-sm" style="fill: var(--ink)">MRA e-invoicing</text>
+        <path d="M60,580 C40,420 30,200 70,126" class="flow-ext" marker-end="url(#a2)"/>
+        <rect x="180" y="580" width="150" height="44" rx="22" class="ext"/>
+        <text x="255" y="607" text-anchor="middle" class="t-sm" style="fill: var(--ink)">Airbnb · Booking.com</text>
+        <path d="M330,596 C520,596 690,420 680,126" class="flow-ext" marker-end="url(#a2)"/>
+        <rect x="346" y="580" width="170" height="44" rx="22" class="ext"/>
+        <text x="431" y="607" text-anchor="middle" class="t-sm" style="fill: var(--ink)">E-mail (SMTP) · clients</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background: var(--surface); border-color: var(--money)"></i>App qui encaisse ou facture</span>
+      <span><i class="sw" style="background: var(--surface); border-color: var(--lagoon)"></i>App de relation ou de pilotage</span>
+      <span><i class="sw" style="background: var(--sand)"></i>Socle partagé</span>
+      <span><i class="sw" style="background: var(--coral-soft); border-color: var(--coral)"></i>Service extérieur</span>
+    </div>
+    <div class="cols">
+      <div><h3>Une entreprise, un espace</h3><p>Chaque ligne de chaque table métier porte <code>organization_id</code>. Une contre-relecture indépendante (novembre 2026) n'a trouvé aucun accès d'une entreprise aux données d'une autre.</p></div>
+      <div><h3>Facturo est le pivot de l'argent</h3><p>ShopLokal, Bookora et TeamNest produisent des factures Facturo ; ClientBloom crédite le cashback quand elles sont payées. Facturo transmet ensuite les factures à la MRA.</p></div>
+      <div><h3>Pages publiques</h3><p>Réservation, boutique, formulaires, tickets, carte de fidélité : liens à jeton, sans compte client. Ils ferment quand l'entreprise est suspendue ou en fermeture.</p></div>
+    </div>
+  </section>
+
+  <!-- 2. Technical architecture -->
+  <section>
+    <h2>L'architecture technique</h2>
+    <p>Un serveur Ubuntu, sans framework : PHP 8.3 et MariaDB. Une requête traverse quatre couches ; les tâches de nuit passent par les mêmes classes métier que les pages.</p>
+    <div class="plate" role="img" aria-label="Schéma technique : du navigateur à la base de données, tâches planifiées, sauvegardes et services extérieurs">
+      <svg viewBox="0 0 1080 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrow"/></marker>
+          <marker id="b2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrow-ext"/></marker>
+          <marker id="b3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrow-mute"/></marker>
+        </defs>
+
+        <!-- clients -->
+        <rect x="24" y="24" width="220" height="64" rx="6" class="layer"/>
+        <text x="40" y="50" class="t-title">Navigateur</text>
+        <text x="40" y="70" class="t-sm">JavaScript sans framework, CSP stricte</text>
+
+        <!-- server frame -->
+        <rect x="290" y="12" width="766" height="400" rx="8" class="band"/>
+        <text x="306" y="34" class="t-band">SERVEUR UBUNTU 24.04 · tools/install.sh</text>
+
+        <rect x="306" y="48" width="180" height="64" rx="6" class="layer"/>
+        <text x="322" y="74" class="t-title">Nginx + HTTPS</text>
+        <text x="322" y="94" class="t-sm">racine web = public/</text>
+
+        <rect x="520" y="48" width="250" height="64" rx="6" class="layer-accent"/>
+        <text x="536" y="74" class="t-title">Points d'entrée</text>
+        <text x="536" y="94" class="t-mono">public/*.php · public/api/**</text>
+
+        <rect x="520" y="140" width="250" height="64" rx="6" class="layer-accent"/>
+        <text x="536" y="166" class="t-title">Contrôleurs</text>
+        <text x="536" y="186" class="t-mono">src/Controllers · ModuleApi</text>
+
+        <rect x="520" y="232" width="250" height="64" rx="6" class="layer-accent"/>
+        <text x="536" y="258" class="t-title">Classes métier</text>
+        <text x="536" y="278" class="t-mono">src/Facturo, src/Bookora…</text>
+
+        <rect x="520" y="324" width="250" height="64" rx="6" class="layer"/>
+        <text x="536" y="350" class="t-title">MariaDB 10.11</text>
+        <text x="536" y="370" class="t-mono">compte mips_app, droits limités</text>
+
+        <rect x="306" y="140" width="180" height="64" rx="6" class="layer"/>
+        <text x="322" y="166" class="t-title">Gabarits</text>
+        <text x="322" y="186" class="t-mono">templates/**</text>
+
+        <rect x="306" y="232" width="180" height="156" rx="6" class="layer"/>
+        <text x="322" y="258" class="t-title">Tâches planifiées</text>
+        <text x="322" y="280" class="t-mono">tools/cron.sh &lt;tâche&gt;</text>
+        <text x="322" y="302" class="t-sm">MRA toutes les 5 min</text>
+        <text x="322" y="320" class="t-sm">rappels, iCal, e-mails</text>
+        <text x="322" y="338" class="t-sm">purge, cashback expiré</text>
+        <text x="322" y="356" class="t-sm">surveillance /10 min</text>
+        <text x="322" y="374" class="t-sm">sauvegarde 1 h 45</text>
+
+        <rect x="804" y="48" width="236" height="160" rx="6" class="layer"/>
+        <text x="820" y="74" class="t-title">Règles transverses</text>
+        <text x="820" y="98" class="t-sm">organization_id dans chaque requête</text>
+        <text x="820" y="118" class="t-sm">montants en cents (entiers)</text>
+        <text x="820" y="138" class="t-sm">heure de Maurice (PHP et base)</text>
+        <text x="820" y="158" class="t-sm">verrous FOR UPDATE / GET_LOCK</text>
+        <text x="820" y="178" class="t-sm">CSRF, sessions 12 h, limites</text>
+        <text x="820" y="198" class="t-sm">e-mails réservés avant envoi</text>
+
+        <rect x="804" y="232" width="236" height="156" rx="6" class="layer"/>
+        <text x="820" y="258" class="t-title">Sauvegarde et surveillance</text>
+        <text x="820" y="280" class="t-sm">backup.sh : chiffré (clé publique)</text>
+        <text x="820" y="300" class="t-sm">compte système mips-backup</text>
+        <text x="820" y="320" class="t-sm">ops.php watchdog → e-mail</text>
+        <text x="820" y="340" class="t-sm">/health.php → sonde externe</text>
+        <text x="820" y="360" class="t-sm">update.sh : migrations, retour</text>
+        <text x="820" y="378" class="t-sm">arrière si la vérification échoue</text>
+
+        <!-- request flow -->
+        <path d="M244,56 L302,72" class="flow" marker-end="url(#b1)"/>
+        <path d="M486,80 L516,80" class="flow" marker-end="url(#b1)"/>
+        <path d="M645,112 L645,136" class="flow" marker-end="url(#b1)"/>
+        <path d="M645,204 L645,228" class="flow" marker-end="url(#b1)"/>
+        <path d="M645,296 L645,320" class="flow" marker-end="url(#b1)"/>
+        <path d="M520,172 L490,172" class="flow" marker-end="url(#b1)"/>
+        <path d="M486,300 L516,270" class="flow-mute" marker-end="url(#b3)"/>
+        <path d="M770,350 C800,350 790,300 800,300" class="flow-mute" marker-end="url(#b3)"/>
+
+        <!-- external -->
+        <text x="24" y="450" class="t-band">SERVICES EXTÉRIEURS</text>
+        <rect x="24" y="464" width="190" height="54" rx="27" class="ext"/>
+        <text x="119" y="488" text-anchor="middle" class="t-title">API MRA</text>
+        <text x="119" y="506" text-anchor="middle" class="t-sm">RSA + AES-256, IRN, QR</text>
+        <rect x="232" y="464" width="190" height="54" rx="27" class="ext"/>
+        <text x="327" y="488" text-anchor="middle" class="t-title">Service SMTP</text>
+        <text x="327" y="506" text-anchor="middle" class="t-sm">SPF, DKIM, DMARC</text>
+        <rect x="440" y="464" width="190" height="54" rx="27" class="ext"/>
+        <text x="535" y="488" text-anchor="middle" class="t-title">Calendriers iCal</text>
+        <text x="535" y="506" text-anchor="middle" class="t-sm">Airbnb, Booking.com</text>
+        <rect x="648" y="464" width="190" height="54" rx="27" class="ext"/>
+        <text x="743" y="488" text-anchor="middle" class="t-title">Copie hors serveur</text>
+        <text x="743" y="506" text-anchor="middle" class="t-sm">rclone ou rsync</text>
+        <rect x="856" y="464" width="190" height="54" rx="27" class="ext"/>
+        <text x="951" y="488" text-anchor="middle" class="t-title">Sonde externe</text>
+        <text x="951" y="506" text-anchor="middle" class="t-sm">appelle /health.php</text>
+
+        <path d="M560,296 C430,420 160,400 119,460" class="flow-ext" marker-end="url(#b2)"/>
+        <path d="M600,296 C560,420 360,410 327,460" class="flow-ext" marker-end="url(#b2)"/>
+        <path d="M396,388 C420,430 500,430 535,460" class="flow-ext" marker-end="url(#b2)"/>
+        <path d="M900,388 C880,430 780,430 743,460" class="flow-ext" marker-end="url(#b2)"/>
+        <path d="M951,464 C980,430 1000,410 1000,392" class="flow-ext" marker-end="url(#b2)"/>
+
+        <!-- CI -->
+        <rect x="24" y="536" width="1022" height="56" rx="6" class="core"/>
+        <text x="40" y="560" class="t-title">GitHub Actions, à chaque pull request</text>
+        <text x="40" y="580" class="t-sm">syntaxe PHP/JS/shell · 31 suites de bout en bout sur 4 machines · install.sh deux fois sur Ubuntu neuf · sauvegarde, restauration, mise à jour</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background: var(--lagoon-soft); border-color: var(--lagoon)"></i>Chemin d'une requête</span>
+      <span><i class="sw" style="background: var(--surface)"></i>Composant du serveur</span>
+      <span><i class="sw" style="background: var(--coral-soft); border-color: var(--coral)"></i>Service extérieur</span>
+    </div>
+  </section>
+
+  <!-- 3. Request walkthrough -->
+  <section>
+    <h2>Le trajet d'une facture émise</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Couche</th><th>Fichier</th><th>Ce qui s'y passe</th></tr></thead>
+        <tbody>
+          <tr><td>Navigateur</td><td><code>public/assets/js/facturo.js</code></td><td>POST JSON <code>{"action":"issue","id":42}</code> avec l'en-tête <code>X-CSRF-Token</code>.</td></tr>
+          <tr><td>Point d'entrée</td><td><code>public/api/facturo/documents.php</code></td><td>Charge <code>src/bootstrap.php</code> (config, session, en-têtes de sécurité, heure de Maurice) et appelle le contrôleur.</td></tr>
+          <tr><td>Contrôleur</td><td><code>src/Controllers/Facturo/DocumentsController.php</code></td><td><code>ModuleApi::context('facturo')</code> vérifie POST, session, CSRF, app active ; seuls propriétaire et administrateurs émettent.</td></tr>
+          <tr><td>Métier</td><td><code>src/Facturo/Documents.php</code></td><td>Transaction, brouillon verrouillé, dates dans l'ordre, numéro <code>FAC-2026-0123</code> sans trou (<code>facturo_sequences</code>, <code>FOR UPDATE</code>), compteur MRA.</td></tr>
+          <tr><td>MRA</td><td><code>src/Facturo/Fiscalisation.php</code>, <code>src/Mra/Client.php</code></td><td>JSON chiffré envoyé ; IRN et QR stockés. Sans réponse : état « inconnu », jamais renvoyé seul. Panne : <code>tools/mra_retry.php</code> réessaie.</td></tr>
+          <tr><td>Base</td><td><code>sql/schema.sql</code>, <code>sql/migrations/</code></td><td><code>facturo_documents</code>, <code>facturo_document_lines</code>, toujours filtrées par <code>organization_id</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Code : dépôt <code>fmassonmips/mips-platform</code>, ~23 000 lignes de PHP et gabarits. Documentation : <code>docs/developpeurs.md</code> (pour coder), <code>docs/deploiement.md</code> (pour installer), <code>docs/incidents.md</code> (pour le support), <code>docs/relecture.md</code> (pour relire). État au 2 novembre 2026.</footer>
+</div>

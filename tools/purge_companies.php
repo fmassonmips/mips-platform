@@ -20,12 +20,16 @@ if ((int) $pdo->query("SELECT GET_LOCK('purge_companies', 0)")->fetchColumn() !=
     exit(0);
 }
 $status = 0;
+if (!\App\Suite\ClosureJournal::writable()) {
+    // Without it, a database restore would bring deleted companies back unnoticed.
+    echo "The closure journal (ops.closure_journal = " . \App\Suite\ClosureJournal::path() . ") cannot be written.\n";
+    $status = 1;
+}
 try {
     $due = $pdo->query('SELECT id FROM organizations WHERE deletion_scheduled_at IS NOT NULL AND deletion_scheduled_at <= NOW()')->fetchAll(\PDO::FETCH_COLUMN);
     foreach ($due as $orgId) {
         try {
-            \App\Suite\Closure::purge((int) $orgId);
-            echo "Company #$orgId deleted.\n";
+            echo \App\Suite\Closure::purge((int) $orgId) ? "Company #$orgId deleted.\n" : "Company #$orgId: closure cancelled meanwhile, kept.\n";
         } catch (\Throwable $e) {
             error_log('[purge_companies] #' . $orgId . ': ' . $e->getMessage());
             echo "Company #$orgId could not be deleted: see the PHP log.\n";
