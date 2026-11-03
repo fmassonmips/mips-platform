@@ -2,6 +2,15 @@
 
 ## Avertissement général (à lire avant toute insertion)
 
+> **Mise à jour du 2026-11-03 — à lire en premier.** Les emplacements visés par ce registre (B01 p. 55–62,
+> G01 p. 2–5 et 8) se trouvent dans les documents transmis par le consultant pour la demande de
+> **MIPS INTERNATIONAL PAYMENT SOLUTIONS LTD auprès de la FSC** (licence Payment Intermediary Services), que le
+> consultant traite en priorité. **Ces captures ne doivent pas y être insérées** : elles montrent une activité
+> mauricienne, alors que la licence PIS ne couvre que l'activité hors de Maurice, et elles viennent du prototype,
+> pas de la plateforme décrite dans G01. Voir `outputs/fsc/registre-captures-fsc.md` et
+> `outputs/fsc/validation-documents-fsc.md`. Ce registre reste valable pour le dossier **SPIN DIGITAL auprès de la
+> Banque de Maurice**, une fois que le consultant aura adapté les documents à ce dossier.
+
 - **Système capturé** : prototype `mips-platform`, branche `ccr-a3522d3b-pyyp68`, PR GitHub #10
   **non fusionnée, jamais déployée**. Ce n'est **pas** la plateforme MIPS de production, ni le
   « back-office V3 » de la capture 1 déjà partagée, ni my.mips.mu. Deux versions du prototype :
