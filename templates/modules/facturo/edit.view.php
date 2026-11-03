@@ -7,6 +7,7 @@
  * @var array<string,mixed>|null $doc
  * @var list<array<string,mixed>> $clients
  * @var array<string,string> $profile
+ * @var list<array<string,mixed>> $items catalogue (Facturo\Items)
  * @var array{id:int,name:string,role:string} $org
  */
 use App\Facturo\Documents;
@@ -114,7 +115,20 @@ $lineRow = static function (array $l) use ($e): string {
         </tbody>
       </table>
     </div>
-    <button type="button" id="add-line" class="btn-secondary">Ajouter une ligne</button>
+    <div class="actions">
+      <button type="button" id="add-line" class="btn-secondary">Ajouter une ligne</button>
+      <?php if (($items ?? []) !== [] && !$isCredit): ?>
+        <label for="add-item" class="sr-only">Ajouter un article du catalogue</label>
+        <select id="add-item" data-items="<?= $e(json_encode(array_map(static fn (array $i): array => [
+            'id' => $i['id'], 'name' => $i['name'], 'unit_price' => Money::toInput($i['unit_price_cents']), 'tax_code' => $i['tax_code'], 'nature' => $i['nature'],
+        ], $items), JSON_UNESCAPED_UNICODE)) ?>">
+          <option value="">Ajouter un article du catalogue…</option>
+          <?php foreach ($items as $i): ?>
+            <option value="<?= (int) $i['id'] ?>"><?= $e($i['name']) ?> — <?= $e(Money::format($i['unit_price_cents'], 'MUR')) ?> HT</option>
+          <?php endforeach; ?>
+        </select>
+      <?php endif; ?>
+    </div>
 
     <dl class="totals">
       <dt>Total HT</dt><dd id="total-sub"></dd>

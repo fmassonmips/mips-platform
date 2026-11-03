@@ -1,7 +1,7 @@
 <?php
 /**
  * Facturo module router, rendered inside the suite app shell.
- * Pages: invoices (default), quotes, credit_notes, edit, clients, accounting (owner/admin), company.
+ * Pages: invoices (default), quotes, credit_notes, edit, clients, items, accounting (owner/admin), company.
  *
  * @var array<string,mixed> $user
  * @var array{id:int,name:string,role:string} $org
@@ -15,7 +15,7 @@ $e    = static fn (mixed $v): string => htmlspecialchars((string) $v, ENT_QUOTES
 $page = is_string($_GET['p'] ?? null) ? $_GET['p'] : 'invoices';
 
 $listPages = ['invoices' => 'invoice', 'quotes' => 'quote', 'credit_notes' => 'credit_note'];
-$nav       = ['invoices' => 'Factures', 'quotes' => 'Devis', 'credit_notes' => 'Avoirs', 'clients' => 'Clients', 'accounting' => 'Comptabilité', 'company' => 'Entreprise'];
+$nav       = ['invoices' => 'Factures', 'quotes' => 'Devis', 'credit_notes' => 'Avoirs', 'clients' => 'Clients', 'items' => 'Articles', 'accounting' => 'Comptabilité', 'company' => 'Entreprise'];
 if (!Tenant::canManage($org)) {
     unset($nav['accounting']);
 }
@@ -43,6 +43,7 @@ switch ($page) {
         }
         $clients = Clients::all($org['id']);
         $profile = Tenant::profile($org['id']);
+        $items   = \App\Facturo\Items::all($org['id']);
         $view    = $doc === null || $doc['status'] === 'draft' ? 'edit' : 'show';
         $page    = (string) array_search($type, $listPages, true);
         break;
@@ -51,6 +52,13 @@ switch ($page) {
         $clients = Clients::all($org['id']);
         $profile = Tenant::profile($org['id']);
         $view    = 'clients';
+        break;
+
+    case 'items':
+        $items      = \App\Facturo\Items::all($org['id']);
+        $profile    = Tenant::profile($org['id']);
+        $can_manage = Tenant::canManage($org) && \App\Suite\Modules::isEnabled($org['id'], 'facturo');
+        $view       = 'items';
         break;
 
     case 'accounting':

@@ -6,7 +6,7 @@ Pour les programmeurs de MIPS qui reprennent, corrigent ou étendent la suite. L
 
 - **Un produit, dix apps** : Facturo, ClientBloom, RendezVous, Formelio, FlowDesk, BizPilot, TeamNest, ShopLokal, StaffZen, Bookora. Toutes sous `my.mips.mu`, un seul compte ; une entreprise active les apps dont elle a besoin (essai 30 jours, puis abonnement ou lecture seule).
 - **Pile** : PHP 8.3 sans framework ni Composer, MariaDB 10.11 (MySQL 8 possible), JavaScript sans framework ni étape de build, Nginx + PHP-FPM sur Ubuntu 24.04.
-- **Volume** : environ 23 000 lignes de PHP et de gabarits, 32 migrations, 34 suites de tests de bout en bout.
+- **Volume** : environ 23 000 lignes de PHP et de gabarits, 33 migrations, 35 suites de tests de bout en bout.
 - **Langue** : interface et messages en français ; code, commentaires et noms en anglais ; documents clients en français ou en anglais (`App\Facturo\DocText`, `App\Bookora\Text`…).
 
 ## 2. Démarrer en local
