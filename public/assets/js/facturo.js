@@ -119,6 +119,29 @@
             tbody.appendChild(template.content.cloneNode(true));
             recalc();
         });
+        // Catalogue: picking an item fills a new line (or the only, still empty, one).
+        const addItem = document.getElementById('add-item');
+        if (addItem) {
+            const items = JSON.parse(addItem.dataset.items);
+            addItem.addEventListener('change', function () {
+                const item = items.find(function (i) { return String(i.id) === addItem.value; });
+                addItem.value = '';
+                if (!item) { return; }
+                const rows = tbody.querySelectorAll('tr.line');
+                let row = rows.length === 1 && rows[0].querySelector('[name="description"]').value.trim() === '' ? rows[0] : null;
+                if (!row) {
+                    tbody.appendChild(template.content.cloneNode(true));
+                    row = tbody.querySelector('tr.line:last-child');
+                }
+                row.querySelector('[name="description"]').value = item.name;
+                row.querySelector('[name="unit_price"]').value = item.unit_price;
+                row.querySelector('[name="quantity"]').value = '1';
+                row.querySelector('[name="tax_code"]').value = item.tax_code;
+                row.querySelector('[name="nature"]').value = item.nature;
+                recalc();
+                row.querySelector('[name="quantity"]').focus();
+            });
+        }
         tbody.addEventListener('click', function (ev) {
             const btn = ev.target.closest('[data-remove-line]');
             if (btn && tbody.querySelectorAll('tr.line').length > 1) {
@@ -209,6 +232,49 @@
             });
         });
     }
+
+    // ---- Catalogue -------------------------------------------------------
+    const itemForm = document.getElementById('item-form');
+    if (itemForm) {
+        const itemFields = ['name', 'unit_price', 'tax_code', 'nature'];
+        const itemTitle  = document.getElementById('item-form-title');
+        document.querySelectorAll('[data-edit-item]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const it = JSON.parse(btn.dataset.editItem);
+                itemForm.dataset.id = it.id;
+                itemFields.forEach(function (f) { itemForm.elements[f].value = it[f]; });
+                itemTitle.textContent = 'Modifier l’article';
+                itemForm.scrollIntoView({ block: 'nearest' });
+                itemForm.elements.name.focus();
+            });
+        });
+        itemForm.addEventListener('reset', function () {
+            itemForm.dataset.id = '0';
+            itemTitle.textContent = 'Nouvel article';
+        });
+        itemForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            const payload = { action: 'save', id: Number(itemForm.dataset.id) };
+            itemFields.forEach(function (f) { payload[f] = itemForm.elements[f].value; });
+            try {
+                await post('/api/facturo/items', payload);
+                window.location.reload();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+    }
+    document.querySelectorAll('[data-delete-item]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            if (!window.confirm('Supprimer cet article du catalogue ? Les documents déjà faits ne changent pas.')) { return; }
+            try {
+                await post('/api/facturo/items', { action: 'delete', id: Number(btn.dataset.deleteItem) });
+                window.location.reload();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+    });
 
     // ---- Send by e-mail -------------------------------------------------
     const emailForm = document.getElementById('email-form');
